@@ -2,6 +2,10 @@
 # Installed to ~/.config/rig/shell/zshrc and sourced when use-product-rc is set.
 # Personal extras: overlay/shell.sh or overlay/shell/*.sh (via common.sh)
 
+# Idempotent: login+interactive used to source this twice via zprofile+zshrc.
+[[ -n ${_RIG_PRODUCT_RC:-} ]] && return
+typeset -g _RIG_PRODUCT_RC=1
+
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.

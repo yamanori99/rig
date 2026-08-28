@@ -126,12 +126,16 @@ pub fn link_shell(root: &Path, shell: ShellKind, enable_product_rc: bool) -> Res
 
     let home = dirs_home()?;
     let mut touched = Vec::new();
-    let snippet = managed_snippet(root, &cfg, shell);
-    for name in [rc_name, profile_name] {
-        let path = home.join(name);
-        ensure_snippet(&path, &snippet)?;
-        touched.push(path);
-    }
+    // Login profile: PATH / common only. Interactive product rc (fastfetch etc.)
+    // must not run here — login shells also source ~/.zshrc afterward.
+    let profile_snip = managed_snippet(root, &cfg, shell, false);
+    let rc_snip = managed_snippet(root, &cfg, shell, true);
+    let profile_path = home.join(profile_name);
+    ensure_snippet(&profile_path, &profile_snip)?;
+    touched.push(profile_path);
+    let rc_path = home.join(rc_name);
+    ensure_snippet(&rc_path, &rc_snip)?;
+    touched.push(rc_path);
 
     Ok(LinkReport {
         config_dir: cfg,
@@ -216,10 +220,18 @@ fn resolve_shell_file(root: &Path, rel: &str) -> Result<(PathBuf, &'static str)>
     )))
 }
 
-fn managed_snippet(root: &Path, cfg: &Path, shell: ShellKind) -> String {
+fn managed_snippet(root: &Path, cfg: &Path, shell: ShellKind, with_product_rc: bool) -> String {
     let rc = match shell {
         ShellKind::Zsh => "zshrc",
         ShellKind::Bash => "bashrc",
+    };
+    let product = if with_product_rc {
+        format!(
+            "# product rc (OMZ/p10k on workstation): touch \"$RIG_CONFIG/shell/use-product-rc\"\n\
+             [ -f \"$RIG_CONFIG/shell/use-product-rc\" ] && [ -f \"$RIG_CONFIG/shell/{rc}\" ] && . \"$RIG_CONFIG/shell/{rc}\"\n"
+        )
+    } else {
+        String::new()
     };
     format!(
         "{BEGIN}\n\
@@ -227,8 +239,7 @@ fn managed_snippet(root: &Path, cfg: &Path, shell: ShellKind) -> String {
          export RIG_ROOT=\"{root}\"\n\
          export RIG_CONFIG=\"{cfg}\"\n\
          [ -f \"$RIG_CONFIG/shell/common.sh\" ] && . \"$RIG_CONFIG/shell/common.sh\"\n\
-         # product rc (OMZ/p10k on workstation): touch \"$RIG_CONFIG/shell/use-product-rc\"\n\
-         [ -f \"$RIG_CONFIG/shell/use-product-rc\" ] && [ -f \"$RIG_CONFIG/shell/{rc}\" ] && . \"$RIG_CONFIG/shell/{rc}\"\n\
+         {product}\
          {END}\n",
         root = root.display(),
         cfg = cfg.display(),
