@@ -1,4 +1,4 @@
-# rig bashrc (base product shell)
+# Product bashrc — sourced only when ~/.config/rig/shell/use-product-rc exists.
 if [ -n "${RIG_CONFIG:-}" ] && [ -f "$RIG_CONFIG/shell/common.sh" ]; then
   # shellcheck disable=SC1091
   . "$RIG_CONFIG/shell/common.sh"
@@ -7,4 +7,7 @@ elif [ -n "${RIG_ROOT:-}" ] && [ -f "$RIG_ROOT/templates/shell/common/profile.sh
   . "$RIG_ROOT/templates/shell/common/profile.sh"
 fi
 
+shopt -s histappend 2>/dev/null || true
+HISTSIZE=5000
+HISTFILESIZE=5000
 PS1='\u@\h:\w\$ '

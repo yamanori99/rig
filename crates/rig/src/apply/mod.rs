@@ -2,8 +2,10 @@ use crate::error::{Result, RigError};
 use crate::schema::{Host, Role};
 use std::path::Path;
 
+mod clean;
 mod cursor;
 mod features;
+mod gui;
 mod keys;
 mod link;
 mod packages;
@@ -12,6 +14,7 @@ mod ssh;
 mod state;
 mod tmux;
 
+pub use clean::execute as clean;
 pub use keys::distribute as distribute_keys;
 pub use plan::build_plan;
 pub use ssh::{generate as generate_ssh_config, write_ssh_config};
@@ -64,6 +67,9 @@ pub fn execute(
         ),
     );
     println!("  [ok  ] link-shell  → {}", link.config_dir.display());
+    if !link.sources.is_empty() {
+        println!("           sources: {}", link.sources.join(", "));
+    }
     for p in &link.touched_rcs {
         println!("           snippet → {}", p.display());
     }
@@ -139,6 +145,10 @@ pub fn execute(
                     st.note_file(p);
                 }
                 finish_step(&mut st, "cursor", report)?;
+            }
+            "gui" if !step.skip => {
+                let report = gui::apply_gui(root, &plan.package_sets, os)?;
+                finish_step(&mut st, "gui", report)?;
             }
             "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
                 if step.skip {

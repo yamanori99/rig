@@ -1,5 +1,7 @@
-# Personal overrides (gitignored). Examples:
+# Personal overrides (gitignored). Prefer these over templates/ on apply:
+#   overlay/shell/common/profile.sh
+#   overlay/shell/zsh/zshrc
+#   overlay/shell.sh                 # sourced from common
+#   overlay/shell/*.sh               # sourced from common
 #   overlay/cursor/User/settings.json
-#   overlay/cursor/User/keybindings.json
 #   overlay/tmux.conf
-# When present, `rig apply` prefers these over templates/.

@@ -60,8 +60,7 @@ rig ssh-config [--write]
 
 ## Status
 
-`v0.1.0` — apply core + hostname + remote-login + thunderbolt + tailscale + cursor + tmux + keys;
-clean / gui / sync pending.
+`v0.1.0` — apply + clean + keys; sync still pending.
 
 ## License
 

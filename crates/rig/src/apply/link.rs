@@ -11,6 +11,7 @@ pub struct LinkReport {
     pub config_dir: PathBuf,
     pub written: Vec<PathBuf>,
     pub touched_rcs: Vec<PathBuf>,
+    pub sources: Vec<String>,
 }
 
 pub fn config_dir() -> PathBuf {
@@ -20,47 +21,51 @@ pub fn config_dir() -> PathBuf {
 }
 
 /// Copy shell templates into ~/.config/rig/shell and ensure rc files source them.
+/// Prefers `overlay/shell/...` over `templates/shell/...` when present.
 pub fn link_shell(root: &Path, shell: ShellKind) -> Result<LinkReport> {
     let cfg = config_dir();
     let shell_dir = cfg.join("shell");
     fs::create_dir_all(&shell_dir).map_err(RigError::Io)?;
 
     let mut written = Vec::new();
-    let common_src = paths::templates_dir(root).join("shell/common/profile.sh");
+    let mut sources = Vec::new();
+
+    let (common_src, common_kind) = resolve_shell_file(root, "shell/common/profile.sh")?;
     let common_dst = shell_dir.join("common.sh");
     copy_file(&common_src, &common_dst)?;
     written.push(common_dst);
+    sources.push(format!("common←{common_kind}"));
 
-    let (rc_name, profile_name, tpl_rc, tpl_profile) = match shell {
-        ShellKind::Zsh => (
-            ".zshrc",
-            ".zprofile",
-            "shell/zsh/zshrc",
-            "shell/zsh/zprofile",
-        ),
-        ShellKind::Bash => (
-            ".bashrc",
-            ".bash_profile",
-            "shell/bash/bashrc",
-            "shell/bash/bash_profile",
-        ),
-    };
+    let (rc_name, profile_name, tpl_rc, tpl_profile, rc_dst_name, profile_dst_name) =
+        match shell {
+            ShellKind::Zsh => (
+                ".zshrc",
+                ".zprofile",
+                "shell/zsh/zshrc",
+                "shell/zsh/zprofile",
+                "zshrc",
+                "zprofile",
+            ),
+            ShellKind::Bash => (
+                ".bashrc",
+                ".bash_profile",
+                "shell/bash/bashrc",
+                "shell/bash/bash_profile",
+                "bashrc",
+                "bash_profile",
+            ),
+        };
 
-    let rc_dst = shell_dir.join(match shell {
-        ShellKind::Zsh => "zshrc",
-        ShellKind::Bash => "bashrc",
-    });
-    let profile_dst = shell_dir.join(match shell {
-        ShellKind::Zsh => "zprofile",
-        ShellKind::Bash => "bash_profile",
-    });
-    copy_file(&paths::templates_dir(root).join(tpl_rc), &rc_dst)?;
-    copy_file(
-        &paths::templates_dir(root).join(tpl_profile),
-        &profile_dst,
-    )?;
-    written.push(rc_dst.clone());
-    written.push(profile_dst.clone());
+    let (rc_src, rc_kind) = resolve_shell_file(root, tpl_rc)?;
+    let (profile_src, profile_kind) = resolve_shell_file(root, tpl_profile)?;
+    let rc_dst = shell_dir.join(rc_dst_name);
+    let profile_dst = shell_dir.join(profile_dst_name);
+    copy_file(&rc_src, &rc_dst)?;
+    copy_file(&profile_src, &profile_dst)?;
+    written.push(rc_dst);
+    written.push(profile_dst);
+    sources.push(format!("rc←{rc_kind}"));
+    sources.push(format!("profile←{profile_kind}"));
 
     let home = dirs_home()?;
     let mut touched = Vec::new();
@@ -75,7 +80,22 @@ pub fn link_shell(root: &Path, shell: ShellKind) -> Result<LinkReport> {
         config_dir: cfg,
         written,
         touched_rcs: touched,
+        sources,
     })
+}
+
+fn resolve_shell_file(root: &Path, rel: &str) -> Result<(PathBuf, &'static str)> {
+    let overlay = root.join("overlay").join(rel);
+    if overlay.is_file() {
+        return Ok((overlay, "overlay"));
+    }
+    let tpl = paths::templates_dir(root).join(rel);
+    if tpl.is_file() {
+        return Ok((tpl, "templates"));
+    }
+    Err(RigError::Msg(format!(
+        "missing shell template: overlay/{rel} or templates/{rel}"
+    )))
 }
 
 fn managed_snippet(root: &Path, cfg: &Path, shell: ShellKind) -> String {
@@ -111,7 +131,6 @@ fn ensure_snippet(path: &Path, snippet: &str) -> Result<()> {
         let mut out = String::new();
         out.push_str(&existing[..start]);
         out.push_str(snippet);
-        // skip trailing newline after END if present once
         let rest = existing[end_at..].trim_start_matches('\n');
         if !rest.is_empty() {
             if !out.ends_with('\n') {
@@ -144,7 +163,7 @@ fn ensure_snippet(path: &Path, snippet: &str) -> Result<()> {
 
 fn copy_file(src: &Path, dst: &Path) -> Result<()> {
     if !src.is_file() {
-        return Err(RigError::Msg(format!("missing template: {}", src.display())).into());
+        return Err(RigError::Msg(format!("missing template: {}", src.display())));
     }
     if let Some(parent) = dst.parent() {
         fs::create_dir_all(parent).map_err(RigError::Io)?;

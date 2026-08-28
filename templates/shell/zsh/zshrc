@@ -1,5 +1,5 @@
-# rig zshrc (base product shell — not Oh My Zsh)
-# Linked/sourced via ~/.config/rig/shell/zshrc
+# Product zshrc — sourced only when ~/.config/rig/shell/use-product-rc exists.
+# Not Oh My Zsh / p10k. Put personal thick config in overlay/shell/ instead.
 
 if [ -n "${RIG_CONFIG:-}" ] && [ -f "$RIG_CONFIG/shell/common.sh" ]; then
   # shellcheck disable=SC1091
@@ -10,4 +10,16 @@ elif [ -n "${RIG_ROOT:-}" ] && [ -f "$RIG_ROOT/templates/shell/common/profile.sh
 fi
 
 autoload -Uz colors && colors
+setopt AUTO_CD
+setopt HIST_IGNORE_DUPS
+setopt SHARE_HISTORY
+HISTSIZE=5000
+SAVEHIST=5000
+HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
+
+# Completion (no framework required)
+autoload -Uz compinit
+compinit -C 2>/dev/null || compinit
+
 PROMPT='%F{green}%n@%m%f %F{blue}%~%f %# '
+RPROMPT='%F{240}%T%f'
