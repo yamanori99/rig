@@ -1,83 +1,83 @@
 # rig
 
-[English](README.md) | [日本語](README.ja.md)
+**workstation** (ノート / デスクトップ) と **compute** ノード向けの、
+意見の入ったセットアップ。
 
-Opinionated setup for **workstation** machines and **compute** nodes.
+1 つの CLI でシェル (zsh/bash)、ロール別パッケージ、SSH ホストエントリ、
+そして (将来) sync/clean を設定する。
+個人の IP やプライベートな在庫情報はプロダクトリポジトリに置かない。
 
-One CLI configures shell (zsh/bash), packages by role, SSH host entries,
-and (later) sync/clean — without putting personal IPs or private inventory
-in the product repo.
+## 関連ドキュメント
 
-## Plan
+- 設計・ロードマップ: [docs/plan.md](docs/plan.md)
+- 手順: [docs/quickstart.md](docs/quickstart.md)
+- 移行メモ: [docs/migration.md](docs/migration.md)
+- 秘密情報チェック: [docs/security.md](docs/security.md)
+- Linux 検証 (Apple `container`):
+  [testenv/apple-container/README.md](testenv/apple-container/README.md)
 
-設計・ロードマップは [docs/plan.md](docs/plan.md)。
-手順の詳細は [docs/quickstart.md](docs/quickstart.md)。
-Linux 検証は [testenv/apple-container/README.md](testenv/apple-container/README.md)
-(Apple `container`; ホストの brew は触らない)。
-公開前の秘密情報チェックは [docs/security.md](docs/security.md)。
+## ビルド
 
-## Build
-
-Requires [Rust](https://rustup.rs/) (`cargo`).
+[Rust](https://rustup.rs/) (`cargo`) が必要。
 
 ```bash
 cd /path/to/rig
 cargo build -p rig                  # debug: target/debug/rig
 cargo build -p rig --release        # release: target/release/rig
 cargo install --path crates/rig --force   # ~/.cargo/bin/rig
-cargo run -p rig -- --help          # run without installing
+cargo run -p rig -- --help          # インストールせず実行
 ```
 
-After editing sources, re-run `cargo install --path crates/rig --force`
-(or use `cargo run -p rig -- …`) so PATH picks up the new binary.
+ソースを直したら `cargo install --path crates/rig --force` をやり直し
+(または `cargo run -p rig -- …`) しないと PATH のバイナリは古いまま。
 
-## Status
+## ステータス
 
-`v0.1.0`: schema, roles, package sets, `init` / `host` / `roles`,
-`apply --dry-run` / `apply --yes` (shell snippet, brew/apt, ssh-config, state).
-Hostname/features/clean/self-update still pending.
+`v0.1.0`: スキーマ、ロール、パッケージ、`init` / `host` / `roles`、
+`apply --dry-run` / `apply --yes` (shell スニペット、brew/apt、ssh-config、
+state)。hostname / features / clean / self-update はこれから。
 
-## Quick start (dev)
+## クイックスタート (開発)
 
 ```bash
 cargo install --path crates/rig
 cd /path/to/rig
-rig init --role workstation    # writes hosts/<hostname>.toml (gitignored)
+rig init --role workstation    # hosts/<hostname>.toml (gitignore 済み)
 rig host list
 rig apply --dry-run
 rig ssh-config
 ```
 
-## Roles
+## ロール
 
-| Role | Intent |
+| ロール | 意図 |
 | --- | --- |
-| `workstation` | GUI-friendly laptop/desktop, zsh default |
-| `compute` | Headless node, bash default, remote/tailscale features |
+| `workstation` | GUI 向けノート / デスクトップ、zsh デフォルト |
+| `compute` | ヘッドレス、bash デフォルト、remote/tailscale |
 
-Package sets: `packages/brew/{common,workstation,compute}.Brewfile`
-and `packages/apt/*.list`.
+パッケージセット: `packages/brew/{common,workstation,compute}.Brewfile`
+と `packages/apt/*.list`。
 
-## Privacy
+## プライバシー
 
-- Tracked: examples under `hosts/examples/` only
-- Not tracked: `hosts/*.toml` (your real machines), `overlay/`
-- Do not commit VPN/LAN/Thunderbolt addresses belonging to a lab or home network
+- 追跡する: `hosts/examples/` 配下の例のみ
+- 追跡しない: `hosts/*.toml` (実機)、`overlay/`
+- ラボや自宅ネットの VPN/LAN/Thunderbolt アドレスはコミットしない
 
-## Commands
+## コマンド
 
 ```text
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
-rig apply [--dry-run] [-y]
+rig apply [--dry-run] [-y] [--skip-packages]
 rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
 ```
 
-`rig roles` prints each role's packages (brew / apt), features,
-and default shell.
+`rig roles` でロールごとのパッケージ (brew / apt)、features、
+デフォルトシェルを一覧できる。
 
-## License
+## ライセンス
 
-MIT (planned)
+MIT (予定)

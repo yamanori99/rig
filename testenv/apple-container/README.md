@@ -1,73 +1,75 @@
-# Apple container smoke (macOS)
+# Apple container スモーク (macOS)
 
-Verify **rig** on a Linux VM via Apple
-[`container`](https://github.com/apple/container) — not on the Mac host.
+Apple [`container`](https://github.com/apple/container) 上の Linux VM で
+**rig** を検証する。Mac ホストの brew / 本物の `.zshrc` は触らない。
 
-Two modes:
+モードは 2 つ:
 
-| Mode | What it tests |
+| モード | 検証すること |
 | --- | --- |
-| bind-mount (default) | Fast loop on your local working tree |
-| `--from-github` | **Release gate**: guest clones public repo, then smoke |
+| bind-mount (既定) | 手元の作業ツリーでの速いループ |
+| `--from-github` | **公開ゲート**: ゲストが公開 repo を clone してスモーク |
 
-**Not CI yet.** DistSSHKit-style local harness.
+**CI にはまだ載せない。** DistSSHKit 流のローカル用ハーネス。
 
-## Requirements
+## 要件
 
-- macOS 26+, Apple silicon
+- macOS 26+、Apple silicon
 - [`container`](https://github.com/apple/container) CLI
-- `python3` (reads `container inspect` JSON)
+- `python3` (`container inspect` の JSON を読む)
 
-## Recommended path (public GitHub)
+## 推奨手順 (パブリック GitHub)
 
-1. `gh auth refresh -h github.com` (if `gh` token is stale)
-2. First commit + `gitleaks protect --staged` (see [docs/security.md](../../docs/security.md))
-3. Create/push public repo (`yamanori99/rig` or your fork)
-4. Release-gate smoke:
+1. 必要なら `gh auth refresh -h github.com`
+2. 初回コミット + `gitleaks protect --staged`
+   ([docs/security.md](../../docs/security.md))
+3. パブリック repo を作成・push (`yamanori99/rig` など)
+4. 公開ゲートのスモーク:
 
 ```bash
 ./testenv/apple-container/scripts/up.sh --smoke --from-github
-# or:
-./testenv/apple-container/scripts/up.sh --smoke --from-github=https://github.com/USER/rig.git
+# または:
+./testenv/apple-container/scripts/up.sh \
+  --smoke --from-github=https://github.com/USER/rig.git
 ./testenv/apple-container/scripts/down.sh
 ```
 
-## Local loop (bind-mount)
+## ローカルループ (bind-mount)
 
 ```bash
 ./testenv/apple-container/scripts/up.sh --smoke
 ./testenv/apple-container/scripts/down.sh
 ```
 
-Shell only:
+シェルだけ入る:
 
 ```bash
 ./testenv/apple-container/scripts/up.sh
 ssh -F testenv/apple-container/.generated/ssh_config rig-smoke
 ```
 
-Also install packages inside the guest (apt; slower):
+ゲスト内で apt も回す (遅い):
 
 ```bash
 ./testenv/apple-container/scripts/up.sh --smoke --with-packages
 ```
 
-## Layout
+## 構成
 
-| Path | Role |
+| パス | 役割 |
 | --- | --- |
 | `Dockerfile` / `start.sh` | Ubuntu 24.04 + sshd + Rust |
-| `scripts/up.sh` | system start → build → create `rig-smoke` → SSH config |
-| `scripts/smoke.sh` | host driver (mount or clone, then guest smoke) |
-| `scripts/smoke-guest.sh` | cargo install → init compute → dry-run → apply |
-| `scripts/down.sh` | stop/rm container |
-| `.generated/` | gitignored keys + ssh_config |
+| `scripts/up.sh` | system start → build → `rig-smoke` → SSH config |
+| `scripts/smoke.sh` | ホスト側ドライバ (mount または clone) |
+| `scripts/smoke-guest.sh` | cargo install → init → dry-run → apply |
+| `scripts/down.sh` | コンテナ停止・削除 |
+| `.generated/` | gitignore 済みの鍵と ssh_config |
 
-## Notes
+## 補足
 
-- Default smoke uses `rig apply --yes --skip-packages` (shell snippet +
-  ssh-config + state). Pass `--with-packages` for apt.
-- Hostname / Tailscale / Thunderbolt features are still unimplemented;
-  they show as `[todo]` in apply output.
-- Do not confuse with DistSSHKit workers (`child-1` / `child-2`).
-- SSH as `dev` with the generated config — not `ssh <ip>` as your Mac user.
+- 既定スモークは `rig apply --yes --skip-packages`
+  (shell スニペット + ssh-config + state)。apt は `--with-packages`。
+- hostname / Tailscale / Thunderbolt は未実装で `[todo]` になる。
+- DistSSHKit の `child-1` / `child-2` とは別物。
+- SSH は生成 config でユーザー `dev`。
+  `ssh <ip>` で Mac のユーザー名にしない。

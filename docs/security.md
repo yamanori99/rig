@@ -1,34 +1,35 @@
-# Security scan (gitleaks)
+# 秘密情報スキャン (gitleaks)
 
-## Before the first public push
+## 初回の公開 push の前に
 
 ```bash
 cd ~/rig
-gh auth refresh -h github.com   # if gh reports invalid token
+gh auth refresh -h github.com   # gh の token が無効なとき
 git add -A
 gitleaks protect --staged -c .gitleaks.toml
-# then commit, create public repo, push (confirm with yourself / agent)
+# 問題なければコミット → パブリック repo 作成 → push
 ```
 
-## Prove the published tree works
+## 公開ツリーが動くことの確認
 
-Do **not** rely on bind-mount smoke alone. After push:
+bind-mount スモークだけに頼らない。push 後:
 
 ```bash
 ./testenv/apple-container/scripts/up.sh --smoke --from-github
 ./testenv/apple-container/scripts/down.sh
 ```
 
-That clones `https://github.com/yamanori99/rig.git` (override with
-`--from-github=URL`) inside Apple `container` and runs init/apply there.
+ゲスト内で `https://github.com/yamanori99/rig.git` を clone して
+init / apply する (URL は `--from-github=URL` で変更可)。
 
-## Filesystem scan (noisy)
+## ファイルシステム全体のスキャン (うるさい)
 
-Includes gitignored local keys:
+gitignore 済みのローカル鍵も見る:
 
 ```bash
 gitleaks detect --source . --no-git -c .gitleaks.toml
 ```
 
-Expected local-only hit: `testenv/**/.generated/` SSH private keys
-(gitignored; created by `scripts/gen-keys.sh`).
+想定されるローカル専用ヒット:
+`testenv/**/.generated/` の SSH 秘密鍵
+(`scripts/gen-keys.sh` が作り、gitignore 済み)。
