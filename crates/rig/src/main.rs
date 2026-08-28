@@ -1,5 +1,6 @@
 mod apply;
 mod commands;
+mod embed;
 mod error;
 mod packages;
 mod paths;

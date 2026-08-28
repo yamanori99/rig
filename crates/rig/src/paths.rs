@@ -1,3 +1,4 @@
+use crate::embed;
 use crate::error::RigError;
 use std::path::{Path, PathBuf};
 
@@ -13,17 +14,19 @@ pub fn discover_root(explicit: Option<PathBuf>) -> miette::Result<PathBuf> {
         .into());
     }
 
-    let mut dir = std::env::current_dir().map_err(RigError::Io)?;
-    loop {
-        if looks_like_root(&dir) {
-            return Ok(dir);
-        }
-        if !dir.pop() {
-            break;
+    if let Ok(dir) = std::env::current_dir() {
+        let mut dir = dir;
+        loop {
+            if looks_like_root(&dir) {
+                return Ok(dir);
+            }
+            if !dir.pop() {
+                break;
+            }
         }
     }
 
-    // Fallback: executable near repo (dev): ../../ from target/debug/rig
+    // Dev: executable sitting inside a checkout (target/debug/rig → repo root).
     if let Ok(exe) = std::env::current_exe() {
         if let Some(root) = exe
             .ancestors()
@@ -34,11 +37,15 @@ pub fn discover_root(explicit: Option<PathBuf>) -> miette::Result<PathBuf> {
         }
     }
 
-    Err(RigError::RootNotFound.into())
+    // Standalone binary: materialize embedded roles/packages/templates.
+    Ok(embed::ensure_embedded_root()?)
 }
 
 fn looks_like_root(p: &Path) -> bool {
-    p.join("roles").is_dir() && p.join("crates").is_dir() || p.join("roles").is_dir() && p.join("packages").is_dir()
+    let roles = p.join("roles").is_dir();
+    let packages = p.join("packages").is_dir();
+    let crates = p.join("crates").is_dir();
+    roles && (packages || crates)
 }
 
 pub fn hosts_dir(root: &Path) -> PathBuf {

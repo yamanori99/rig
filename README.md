@@ -5,45 +5,45 @@ Opinionated setup for **workstation** and **compute** machines.
 One CLI configures shell (zsh/bash), role-based packages, and SSH host
 entries — without putting personal IPs in the product repo.
 
-## Install
+**You do not need Rust.** Install the release binary; product files
+(roles / packages / templates) are embedded and unpack on first run.
 
-Needs [Rust](https://rustup.rs/) (`cargo`) for now (CLI is installed from source).
+## Install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
-This clones to `~/rig` (override with `RIG_CLONE_DIR`) and runs
-`cargo install --path crates/rig`.
+Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). Add that dir to
+`PATH` if the installer says so.
 
-Already have a clone:
+Pin a release: `RIG_VERSION=v0.2.0` before the curl line.
 
-```bash
-cd /path/to/rig && ./install.sh
-```
-
-Releases (notes / tags): https://github.com/yamanori99/rig/releases
+Releases: https://github.com/yamanori99/rig/releases
 
 ## Use
 
 ```bash
-cd ~/rig   # or your clone
 rig init --role workstation   # or: --role compute
-# edit hosts/<name>.toml — add peer files with [[ssh]] for machines you reach
+# edit the host file — add peer hosts/*.toml with [[ssh]] for machines you reach
 rig apply --dry-run
 rig apply --yes
 ```
 
-Typical follow-ups:
+Then:
 
 ```bash
-rig ssh-config --write          # ~/.ssh/config.d/rig.conf from hosts/*.toml
-rig keys distribute --yes       # copy your pubkey to peers
-rig check                       # TCP/22 + BatchMode SSH per [[ssh]] path
+rig ssh-config --write
+rig keys distribute --yes
+rig check
 ```
 
-`[[ssh]]` lives on the **peer** host file (alias / ip / link). Examples:
-`hosts/examples/`. Real addresses stay in gitignored `hosts/*.toml`.
+`[[ssh]]` goes on the **peer** host file (`alias` / `ip` / `link`). Seeds:
+`hosts/examples/` (also embedded).
+
+Host files and `overlay/` live in the product data directory when using a
+release binary (created on first run). Use `--root` / `RIG_ROOT` only if you
+point at a checkout.
 
 ## Roles
 
@@ -52,14 +52,9 @@ rig check                       # TCP/22 + BatchMode SSH per [[ssh]] path
 | `workstation` | GUI laptop/desktop, zsh default |
 | `compute` | Headless, bash default, remote/tailscale |
 
-Packages: `packages/brew/{common,workstation,compute}.Brewfile`,
-`packages/apt/*.list`.
-
 ## Privacy
 
-- Tracked: `hosts/examples/` only
-- Not tracked: `hosts/*.toml`, `overlay/`
-- Do not commit real VPN/LAN/Thunderbolt addresses
+Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 
 ## Commands
 
@@ -74,21 +69,27 @@ rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
 ```
 
-## Development
+## For maintainers
+
+Needs [Rust](https://rustup.rs/). Normal users should ignore this section.
 
 ```bash
-cargo install --path crates/rig --force
-# or: cargo run -p rig -- …
+git clone https://github.com/yamanori99/rig.git
+cd rig
+RIG_FORCE_SOURCE=1 ./install.sh
+# or: cargo install --path crates/rig --force
 ```
 
-Linux smoke (Apple `container`): [testenv/apple-container/README.md](testenv/apple-container/README.md).
+Inside a checkout, `rig` uses that tree; otherwise it materializes embedded
+assets. Tag `v*` publishes binaries via GitHub Actions.
+
+Linux smoke: [testenv/apple-container/README.md](testenv/apple-container/README.md).
 
 Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.1.1` — user-chosen `[[ssh]]` aliases; optional workstation Thunderbolt;
-OS hostname left to the user.
+`v0.2.0` — release binary first; embedded product tree; Rust only for maintainers.
 
 ## License
 
