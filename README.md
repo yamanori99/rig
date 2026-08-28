@@ -59,7 +59,7 @@ rig ssh-config [--write]
 
 ## Status
 
-`v0.1.0` — apply core works; hostname/features/clean/self-update pending.
+`v0.1.0` — apply core + hostname + remote-login; clean / remaining features pending.
 
 ## License
 

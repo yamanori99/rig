@@ -18,6 +18,14 @@ ssh -F testenv/apple-container/.generated/ssh_config rig-smoke
 
 Use user `dev` and that config (not `ssh <ip>` as your Mac user).
 
+Interactive shells: `CARGO_HOME` must be `~/.cargo` (writable). New images set
+this in `.bashrc`. On an old guest already running:
+
+```bash
+export CARGO_HOME="$HOME/.cargo"
+export PATH="$CARGO_HOME/bin:/opt/cargo/bin:$PATH"
+```
+
 | Flag | Meaning |
 | --- | --- |
 | `--smoke` | install + init + apply dry-run + apply `--skip-packages` |

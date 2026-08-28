@@ -5,6 +5,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV SSH_USER=dev
+# Toolchain lives under /opt; installs write to per-user ~/.cargo (see profile).
 ENV RUSTUP_HOME=/opt/rustup
 ENV CARGO_HOME=/opt/cargo
 ENV PATH=/opt/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -33,21 +34,25 @@ RUN curl --proto '=https' --tlsv1.2 -fsSL https://sh.rustup.rs \
     && chmod -R a+rX /opt/rustup /opt/cargo \
     && printf '%s\n' \
          'export RUSTUP_HOME=/opt/rustup' \
-         'export CARGO_HOME=/opt/cargo' \
-         'export PATH="/opt/cargo/bin:$PATH"' \
+         'export CARGO_HOME="${HOME}/.cargo"' \
+         'export PATH="${CARGO_HOME}/bin:/opt/cargo/bin:${PATH}"' \
        > /etc/profile.d/rust.sh \
     && printf '%s\n' \
          'RUSTUP_HOME=/opt/rustup' \
-         'CARGO_HOME=/opt/cargo' \
          'PATH=/opt/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
        >> /etc/environment
 
 RUN mkdir -p /run/sshd /mounted-keys \
-    && mkdir -p "/home/${SSH_USER}/.ssh" \
+    && mkdir -p "/home/${SSH_USER}/.ssh" "/home/${SSH_USER}/.cargo/bin" \
+    && printf '%s\n' \
+         'export RUSTUP_HOME=/opt/rustup' \
+         'export CARGO_HOME="$HOME/.cargo"' \
+         'export PATH="$CARGO_HOME/bin:/opt/cargo/bin:$PATH"' \
+       >> "/home/${SSH_USER}/.bashrc" \
     && chmod 700 "/home/${SSH_USER}/.ssh" \
     && touch "/home/${SSH_USER}/.ssh/authorized_keys" \
     && chmod 600 "/home/${SSH_USER}/.ssh/authorized_keys" \
-    && chown -R "${SSH_USER}:${SSH_USER}" "/home/${SSH_USER}/.ssh" \
+    && chown -R "${SSH_USER}:${SSH_USER}" "/home/${SSH_USER}" \
     && sed -i 's/#PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config \
     && ssh-keygen -A

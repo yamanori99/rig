@@ -2,6 +2,7 @@ use crate::error::{Result, RigError};
 use crate::schema::{Host, Role};
 use std::path::Path;
 
+mod features;
 mod link;
 mod packages;
 mod plan;
@@ -101,26 +102,50 @@ pub fn execute(
     println!("  [ok  ] ssh-config → {}", ssh_path.display());
 
     for step in &plan.steps {
-        if matches!(
-            step.id.as_str(),
-            "hostname" | "gui" | "cursor" | "remote-login" | "tailscale" | "thunderbolt"
-        ) {
-            if step.skip {
-                st.note_step(&step.id, "skipped");
-                println!("  [skip] {:<14} {}", step.id, step.detail);
-            } else {
-                st.note_step(&step.id, format!("not implemented yet: {}", step.detail));
-                println!(
-                    "  [todo] {:<14} {} (not implemented yet)",
-                    step.id, step.detail
-                );
+        match step.id.as_str() {
+            "hostname" => {
+                let report = features::apply_hostname(&host.name, os)?;
+                finish_step(&mut st, "hostname", report)?;
             }
+            "remote-login" if !step.skip => {
+                let report = features::apply_remote_login(os)?;
+                finish_step(&mut st, "remote-login", report)?;
+            }
+            "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
+                if step.skip {
+                    st.note_step(&step.id, "skipped");
+                    println!("  [skip] {:<14} {}", step.id, step.detail);
+                } else {
+                    st.note_step(&step.id, format!("not implemented yet: {}", step.detail));
+                    println!(
+                        "  [todo] {:<14} {} (not implemented yet)",
+                        step.id, step.detail
+                    );
+                }
+            }
+            _ => {}
         }
     }
 
     let state_path = state::save(&st)?;
     println!();
     println!("state → {}", state_path.display());
-    println!("apply complete (core steps). features/hostname still pending.");
+    println!("apply complete.");
     Ok(())
+}
+
+fn finish_step(
+    st: &mut state::RigState,
+    id: &str,
+    report: features::StepReport,
+) -> Result<()> {
+    st.note_step(id, &report.detail);
+    if report.ok {
+        println!("  [ok  ] {id:<14} {}", report.detail);
+        Ok(())
+    } else {
+        println!("  [fail] {id:<14} {}", report.detail);
+        let _ = state::save(st);
+        Err(RigError::Msg(format!("{id} failed: {}", report.detail)))
+    }
 }
