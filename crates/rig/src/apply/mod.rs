@@ -181,6 +181,16 @@ pub fn execute(
     println!();
     println!("state → {}", state_path.display());
     println!("apply complete.");
+    println!();
+    println!("customize later:");
+    println!(
+        "  host     {}/hosts/{}.toml",
+        root.display(),
+        host.name
+    );
+    println!("  overlay  {}/overlay/", root.display());
+    println!("  (do not edit templates/ — put personal files in overlay/)");
+    println!("peers: add hosts/<peer>.toml with [[ssh]], then rig ssh-config --write");
     Ok(())
 }
 

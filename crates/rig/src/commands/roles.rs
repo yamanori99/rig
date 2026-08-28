@@ -35,6 +35,9 @@ pub fn run(root: &std::path::Path, name: Option<&str>, os_filter: Option<&str>) 
         return Ok(());
     }
 
+    println!("root: {}", root.display());
+    println!();
+
     for (i, role_name) in names.iter().enumerate() {
         if i > 0 {
             println!();

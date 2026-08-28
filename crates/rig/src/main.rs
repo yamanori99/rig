@@ -9,10 +9,48 @@ mod schema;
 use clap::{Parser, Subcommand};
 use miette::Result;
 
+// Per-target help: each release binary only mentions its own default data dir.
+#[cfg(target_os = "macos")]
+const AFTER_HELP: &str = "\
+Data (run `rig root` anytime):
+  hosts/      edit this host + peers  ([[ssh]], packages add/remove)
+  overlay/    personal shell / tmux / Cursor overrides
+  templates/  product defaults — do not edit; override via overlay/
+
+Default data dir (this OS): ~/Library/Application Support/dev.rig.rig/product/
+Absolute path: `rig root`. Most commands also print it on stderr.
+";
+
+#[cfg(target_os = "linux")]
+const AFTER_HELP: &str = "\
+Data (run `rig root` anytime):
+  hosts/      edit this host + peers  ([[ssh]], packages add/remove)
+  overlay/    personal shell / tmux / Cursor overrides
+  templates/  product defaults — do not edit; override via overlay/
+
+Default data dir (this OS): ~/.local/share/rig/product/
+Absolute path: `rig root`. Most commands also print it on stderr.
+";
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+const AFTER_HELP: &str = "\
+Data (run `rig root` anytime):
+  hosts/      edit this host + peers  ([[ssh]], packages add/remove)
+  overlay/    personal shell / tmux / Cursor overrides
+  templates/  product defaults — do not edit; override via overlay/
+
+Unsupported OS — pass --root / RIG_ROOT. Absolute path: `rig root`.
+";
+
 #[derive(Parser, Debug)]
-#[command(name = "rig", version, about = "Opinionated setup for workstation and compute machines")]
+#[command(
+    name = "rig",
+    version,
+    about = "Opinionated setup for workstation and compute machines",
+    after_help = AFTER_HELP
+)]
 struct Cli {
-    /// Root of the rig project (defaults to discovery from cwd / env)
+    /// Product root containing hosts/ overlay/ templates/ (cwd / RIG_ROOT / embedded)
     #[arg(long, global = true, env = "RIG_ROOT")]
     root: Option<std::path::PathBuf>,
 
@@ -22,7 +60,8 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Create local host config from an example
+    /// Create local host.toml and print paths to edit
+    #[command(after_help = AFTER_HELP)]
     Init {
         /// Role to seed: workstation or compute
         #[arg(long, default_value = "workstation")]
@@ -35,6 +74,7 @@ enum Commands {
     #[command(subcommand)]
     Host(HostCmd),
     /// Apply configuration for this machine
+    #[command(after_help = AFTER_HELP)]
     Apply {
         #[arg(long)]
         dry_run: bool,
@@ -73,6 +113,9 @@ enum Commands {
         #[arg(long)]
         os: Option<String>,
     },
+    /// Print product data root (hosts / overlay live here)
+    #[command(after_help = AFTER_HELP)]
+    Root,
 }
 
 #[derive(Subcommand, Debug)]
@@ -101,6 +144,11 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let root = paths::discover_root(cli.root)?;
 
+    // Always remind — paths are easy to forget. stderr keeps stdout pipe-safe.
+    if !matches!(cli.command, Commands::Root) {
+        paths::eprint_data_hint(&root);
+    }
+
     match cli.command {
         Commands::Init { role, name } => commands::init::run(&root, &role, name.as_deref())?,
         Commands::Host(HostCmd::List) => commands::host::list(&root)?,
@@ -124,6 +172,17 @@ fn main() -> Result<()> {
         }
         Commands::Roles { name, os } => {
             commands::roles::run(&root, name.as_deref(), os.as_deref())?
+        }
+        Commands::Root => {
+            // First line = path only (scripts: `$(rig root | head -1)`).
+            println!("{}", root.display());
+            println!("  os={}  (auto-detect; override in hosts/*.toml)", schema::detect_os().as_str());
+            println!("  hosts/     {}/", root.join("hosts").display());
+            println!("  overlay/   {}/", root.join("overlay").display());
+            println!(
+                "  templates/ {}/  (product — prefer overlay/)",
+                root.join("templates").display()
+            );
         }
     }
     Ok(())

@@ -17,6 +17,7 @@ pub fn distribute(root: &std::path::Path, yes: bool, dry_run: bool) -> Result<()
         if dry_run { " (dry-run)" } else { "" }
     );
     println!("  self={}  pubkey=~/.ssh/id_ed25519.pub", self_host.name);
+    println!("  hosts={}/", root.join("hosts").display());
     println!("  order per peer: lan/tb links first, then vpn");
     if !dry_run && !yes {
         println!("  tip: pass --yes (-y) to install; without it only probes / plans");

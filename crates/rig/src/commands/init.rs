@@ -48,9 +48,18 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
 
     fs::create_dir_all(paths::hosts_dir(root)).map_err(RigError::Io)?;
     fs::write(&dest, body).map_err(RigError::Io)?;
+    let overlay = root.join("overlay");
     println!("wrote {}", dest.display());
+    println!();
+    println!("edit (this machine):");
+    println!("  host     {}", dest.display());
+    println!("           role / [[ssh]] / [packages] add·remove");
+    println!("  overlay  {}/", overlay.display());
+    println!("           personal shell / tmux / cursor overrides");
+    println!("  leave templates/ alone — use overlay/ instead");
+    println!();
     println!("os/shell auto-detect at apply (override in the toml if needed)");
-    println!("edit [[ssh]] aliases by hand if needed, then: rig apply --dry-run");
+    println!("next: rig apply --dry-run");
     Ok(())
 }
 

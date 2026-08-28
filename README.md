@@ -17,10 +17,10 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). Add that dir to
 `PATH` if the installer says so.
 
-Pin a release: `RIG_VERSION=v0.2.0` on the **pipe side** (env must apply to `sh`, not only `curl`):
+Pin a release: `RIG_VERSION=v0.2.1` on the **pipe side** (env must apply to `sh`, not only `curl`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_VERSION=v0.2.0 sh
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_VERSION=v0.2.1 sh
 # optional install dir:
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_BIN_DIR=/tmp/rig-bin sh
 ```
@@ -48,7 +48,7 @@ This does not undo shell snippets or packages from `rig apply` — run
 
 ```bash
 rig init --role workstation   # or: --role compute
-# edit the host file — add peer hosts/*.toml with [[ssh]] for machines you reach
+# init prints the paths to edit — then:
 rig apply --dry-run
 rig apply --yes
 ```
@@ -61,12 +61,22 @@ rig keys distribute --yes
 rig check
 ```
 
-`[[ssh]]` goes on the **peer** host file (`alias` / `ip` / `link`). Seeds:
-`hosts/examples/` (also embedded).
+### What to edit
 
-Host files and `overlay/` live in the product data directory when using a
-release binary (created on first run). Use `--root` / `RIG_ROOT` only if you
-point at a checkout.
+Release installs unpack product files under the OS data dir — run `rig root`
+to see the absolute path (macOS: `~/Library/Application Support/dev.rig.rig/product/`;
+Linux: typically `~/.local/share/rig/product/`). Checkout / `--root` uses that
+tree instead.
+
+| Path | You edit? | Purpose |
+| --- | --- | --- |
+| `hosts/<this-host>.toml` | yes | role, `[[ssh]]`, package add/remove |
+| `hosts/<peer>.toml` | yes | peer reachability (`alias` / `ip` / `link`) |
+| `overlay/` | yes | personal shell / tmux / Cursor overrides |
+| `templates/` | no | product defaults — override via `overlay/` |
+
+`[[ssh]]` goes on the **peer** host file. Seeds: `hosts/examples/` (also
+embedded). Use `--root` / `RIG_ROOT` only if you point at a checkout.
 
 ## Roles
 
@@ -82,6 +92,7 @@ Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 ## Commands
 
 ```text
+rig root                         # product data path (hosts / overlay)
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
@@ -91,6 +102,8 @@ rig keys distribute [--dry-run] [-y]
 rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
 ```
+
+Most commands also print the data root on stderr so the path stays visible.
 
 ## For maintainers
 
@@ -122,7 +135,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.0` — release binary first; embedded product tree; Rust only for maintainers.
+`v0.2.1` — clearer data-path guidance (`rig root`, help, stderr hints); macOS + Linux.
 
 ## License
 

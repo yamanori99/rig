@@ -9,6 +9,7 @@ pub fn run(
 ) -> Result<()> {
     let state = crate::paths::state_path();
     println!("rig clean{}", if dry_run { " (dry-run)" } else { "" });
+    println!("  root: {}", root.display());
     println!("  state file: {}", state.display());
     println!(
         "  packages: {}",

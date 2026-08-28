@@ -16,6 +16,7 @@ pub fn run(root: &std::path::Path) -> Result<()> {
 
     println!("rig check");
     println!("  self={self_name}");
+    println!("  hosts={}/", root.join("hosts").display());
     println!();
 
     let peers: Vec<&Host> = hosts

@@ -20,6 +20,7 @@ pub fn run(
     let plan = build_plan(host, &role);
 
     println!("rig apply{}", if dry_run { " (dry-run)" } else { "" });
+    println!("  root={}", root.display());
     println!(
         "  host={}  role={}  os={}{}  shell={}  user={}",
         plan.host,

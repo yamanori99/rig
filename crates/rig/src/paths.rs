@@ -48,6 +48,17 @@ fn looks_like_root(p: &Path) -> bool {
     roles && (packages || crates)
 }
 
+/// Remind where product data lives. stderr so piped stdout (e.g. ssh-config) stays clean.
+pub fn eprint_data_hint(root: &Path) {
+    let os = crate::schema::detect_os().as_str();
+    eprintln!("rig data: {}  (os={os})", root.display());
+    eprintln!(
+        "  edit → {}/   {}/",
+        hosts_dir(root).display(),
+        root.join("overlay").display()
+    );
+}
+
 pub fn hosts_dir(root: &Path) -> PathBuf {
     root.join("hosts")
 }
