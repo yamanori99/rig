@@ -1,70 +1,52 @@
 # rig
 
-**workstation** (ノート / デスクトップ) と **compute** ノード向けの、
-意見の入ったセットアップ。
+Opinionated setup for **workstation** and **compute** machines.
 
-1 つの CLI でシェル (zsh/bash)、ロール別パッケージ、SSH ホストエントリ、
-そして (将来) sync/clean を設定する。
-個人の IP やプライベートな在庫情報はプロダクトリポジトリに置かない。
+One CLI configures shell (zsh/bash), role-based packages, and SSH host
+entries — without putting personal IPs in the product repo.
 
-## 関連ドキュメント
+## Build
 
-- 設計・ロードマップ: [docs/plan.md](docs/plan.md)
-- 手順: [docs/quickstart.md](docs/quickstart.md)
-- 移行メモ: [docs/migration.md](docs/migration.md)
-- 秘密情報チェック: [docs/security.md](docs/security.md)
-- Linux 検証 (Apple `container`):
-  [testenv/apple-container/README.md](testenv/apple-container/README.md)
-
-## ビルド
-
-[Rust](https://rustup.rs/) (`cargo`) が必要。
+Needs [Rust](https://rustup.rs/) (`cargo`).
 
 ```bash
-cd /path/to/rig
-cargo build -p rig                  # debug: target/debug/rig
-cargo build -p rig --release        # release: target/release/rig
-cargo install --path crates/rig --force   # ~/.cargo/bin/rig
-cargo run -p rig -- --help          # インストールせず実行
+cargo install --path crates/rig --force
 ```
 
-ソースを直したら `cargo install --path crates/rig --force` をやり直し
-(または `cargo run -p rig -- …`) しないと PATH のバイナリは古いまま。
+Re-run after editing sources (or use `cargo run -p rig -- …`).
 
-## ステータス
-
-`v0.1.0`: スキーマ、ロール、パッケージ、`init` / `host` / `roles`、
-`apply --dry-run` / `apply --yes` (shell スニペット、brew/apt、ssh-config、
-state)。hostname / features / clean / self-update はこれから。
-
-## クイックスタート (開発)
+## Quick start
 
 ```bash
-cargo install --path crates/rig
 cd /path/to/rig
-rig init --role workstation    # hosts/<hostname>.toml (gitignore 済み)
-rig host list
+rig init --role workstation   # hosts/<hostname>.toml (gitignored)
+rig roles
 rig apply --dry-run
-rig ssh-config
+rig apply --yes               # shell snippet, brew/apt, ssh-config, state
 ```
 
-## ロール
+Linux smoke (Apple `container`, not the Mac host):
+see [testenv/apple-container/README.md](testenv/apple-container/README.md).
 
-| ロール | 意図 |
+Before push: `gitleaks protect --staged -c .gitleaks.toml`
+
+## Roles
+
+| Role | Intent |
 | --- | --- |
-| `workstation` | GUI 向けノート / デスクトップ、zsh デフォルト |
-| `compute` | ヘッドレス、bash デフォルト、remote/tailscale |
+| `workstation` | GUI laptop/desktop, zsh default |
+| `compute` | Headless, bash default, remote/tailscale |
 
-パッケージセット: `packages/brew/{common,workstation,compute}.Brewfile`
-と `packages/apt/*.list`。
+Packages: `packages/brew/{common,workstation,compute}.Brewfile`,
+`packages/apt/*.list`.
 
-## プライバシー
+## Privacy
 
-- 追跡する: `hosts/examples/` 配下の例のみ
-- 追跡しない: `hosts/*.toml` (実機)、`overlay/`
-- ラボや自宅ネットの VPN/LAN/Thunderbolt アドレスはコミットしない
+- Tracked: `hosts/examples/` only
+- Not tracked: `hosts/*.toml`, `overlay/`
+- Do not commit real VPN/LAN/Thunderbolt addresses
 
-## コマンド
+## Commands
 
 ```text
 rig init [--role workstation|compute] [--name HOST]
@@ -75,9 +57,10 @@ rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
 ```
 
-`rig roles` でロールごとのパッケージ (brew / apt)、features、
-デフォルトシェルを一覧できる。
+## Status
 
-## ライセンス
+`v0.1.0` — apply core works; hostname/features/clean/self-update pending.
 
-MIT (予定)
+## License
+
+MIT (planned)
