@@ -18,3 +18,7 @@
 testenv/**/.generated/
 testenv/**/mounted-keys/**
 !testenv/**/mounted-keys/.gitkeep
+
+# Cursor User JSON under templates (live copies; seeds are *.example)
+/templates/cursor/User/settings.json
+/templates/cursor/User/keybindings.json

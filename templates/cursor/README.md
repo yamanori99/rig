@@ -1,9 +1,10 @@
 # Cursor templates
 
-Product Cursor User files live in `templates/cursor/User/`.
+Tracked seeds (safe to commit):
+`templates/cursor/User/{settings,keybindings}.json.example`
 
-Optional personal overrides (gitignored):
-`overlay/cursor/User/{settings,keybindings}.json`.
+Live `settings.json` / `keybindings.json` under templates are gitignored —
+Cursor edits must not dirty the product tree. On apply, missing User files are
+**copied** from `.example` (not symlinked).
 
-Prefer overlay when present; otherwise templates are linked on apply
-(`features.cursor`).
+Personal overrides (gitignored): `overlay/cursor/User/*.json` (symlinked when present).

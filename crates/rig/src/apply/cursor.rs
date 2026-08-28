@@ -8,7 +8,7 @@ use super::features::StepReport;
 
 const FILES: &[&str] = &["settings.json", "keybindings.json"];
 
-/// Symlink Cursor User settings from overlay (preferred) or templates.
+/// Install Cursor User settings from overlay (symlink) or templates (copy from seed).
 pub fn apply_cursor(root: &Path, os: OsKind) -> Result<(StepReport, Vec<PathBuf>)> {
     let dest_dir = cursor_user_dir(os)?;
     fs::create_dir_all(&dest_dir).map_err(RigError::Io)?;
@@ -34,13 +34,13 @@ pub fn apply_cursor(root: &Path, os: OsKind) -> Result<(StepReport, Vec<PathBuf>
             used_templates = true;
         }
         let dst = dest_dir.join(name);
-        match link_one(&src, &dst)? {
-            LinkOutcome::Already => notes.push(format!("{name} already linked")),
-            LinkOutcome::Linked { backed_up } => {
+        match install_one(&src, &dst, from_overlay)? {
+            InstallOutcome::Already => notes.push(format!("{name} already in place")),
+            InstallOutcome::Installed { backed_up, mode } => {
                 if backed_up {
-                    notes.push(format!("{name} linked (backed up previous)"));
+                    notes.push(format!("{name} {mode} (backed up previous)"));
                 } else {
-                    notes.push(format!("{name} linked"));
+                    notes.push(format!("{name} {mode}"));
                 }
                 linked.push(dst);
             }
@@ -51,7 +51,7 @@ pub fn apply_cursor(root: &Path, os: OsKind) -> Result<(StepReport, Vec<PathBuf>
         return Ok((
             StepReport {
                 ok: true,
-                detail: "no cursor templates — add templates/cursor/User or overlay/cursor/User"
+                detail: "no cursor templates — add *.example under templates/cursor/User or overlay/cursor/User"
                     .into(),
             },
             linked,
@@ -78,9 +78,14 @@ fn resolve_src(root: &Path, name: &str) -> Option<(PathBuf, bool)> {
     if overlay.is_file() {
         return Some((overlay, true));
     }
-    let tpl = paths::templates_dir(root).join("cursor/User").join(name);
-    if tpl.is_file() {
-        return Some((tpl, false));
+    let tpl_dir = paths::templates_dir(root).join("cursor/User");
+    let live = tpl_dir.join(name);
+    if live.is_file() {
+        return Some((live, false));
+    }
+    let example = tpl_dir.join(format!("{name}.example"));
+    if example.is_file() {
+        return Some((example, false));
     }
     None
 }
@@ -95,21 +100,53 @@ fn cursor_user_dir(os: OsKind) -> Result<PathBuf> {
     })
 }
 
-enum LinkOutcome {
+enum InstallOutcome {
     Already,
-    Linked { backed_up: bool },
+    Installed { backed_up: bool, mode: &'static str },
 }
 
-fn link_one(src: &Path, dst: &Path) -> Result<LinkOutcome> {
+fn install_one(src: &Path, dst: &Path, symlink: bool) -> Result<InstallOutcome> {
+    if symlink {
+        return link_one(src, dst);
+    }
+    // Product templates: copy so Cursor edits stay out of the repo tree.
+    if dst.is_file() && !dst.is_symlink() {
+        return Ok(InstallOutcome::Already);
+    }
+    let mut backed_up = false;
+    if dst.is_symlink() || dst.is_file() {
+        let bak = PathBuf::from(format!("{}.bak.{}", dst.display(), epoch_secs()));
+        fs::rename(dst, &bak).map_err(RigError::Io)?;
+        backed_up = true;
+    } else if dst.exists() {
+        return Err(RigError::Msg(format!(
+            "refusing to replace non-file Cursor path: {}",
+            dst.display()
+        )));
+    }
+    if let Some(parent) = dst.parent() {
+        fs::create_dir_all(parent).map_err(RigError::Io)?;
+    }
+    fs::copy(src, dst).map_err(RigError::Io)?;
+    Ok(InstallOutcome::Installed {
+        backed_up,
+        mode: "copied",
+    })
+}
+
+fn link_one(src: &Path, dst: &Path) -> Result<InstallOutcome> {
     if dst.is_symlink() {
         if let Ok(current) = fs::read_link(dst) {
             if current == src {
-                return Ok(LinkOutcome::Already);
+                return Ok(InstallOutcome::Already);
             }
         }
         fs::remove_file(dst).map_err(RigError::Io)?;
         std::os::unix::fs::symlink(src, dst).map_err(RigError::Io)?;
-        return Ok(LinkOutcome::Linked { backed_up: false });
+        return Ok(InstallOutcome::Installed {
+            backed_up: false,
+            mode: "linked",
+        });
     }
 
     let mut backed_up = false;
@@ -128,7 +165,10 @@ fn link_one(src: &Path, dst: &Path) -> Result<LinkOutcome> {
         fs::create_dir_all(parent).map_err(RigError::Io)?;
     }
     std::os::unix::fs::symlink(src, dst).map_err(RigError::Io)?;
-    Ok(LinkOutcome::Linked { backed_up })
+    Ok(InstallOutcome::Installed {
+        backed_up,
+        mode: "linked",
+    })
 }
 
 fn epoch_secs() -> u64 {
