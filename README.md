@@ -28,6 +28,22 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RI
 
 Releases: https://github.com/yamanori99/rig/releases
 
+## Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | sh
+```
+
+Removes `~/.local/bin/rig` (override with `RIG_BIN_DIR`). Product data
+(hosts / overlay / state) is kept by default. Purge it too:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | RIG_PURGE=1 sh
+```
+
+This does not undo shell snippets or packages from `rig apply` — run
+`rig clean` first while the binary is still installed if you want that.
+
 ## Use
 
 ```bash
