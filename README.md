@@ -65,4 +65,4 @@ rig ssh-config [--write]
 
 ## License
 
-MIT (planned)
+[MIT](LICENSE)
