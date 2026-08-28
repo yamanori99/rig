@@ -85,11 +85,6 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         detail: "generate ssh config from hosts/*.toml".into(),
         skip: false,
     });
-    steps.push(ApplyStep {
-        id: "hostname".into(),
-        detail: format!("set hostname to {}", host.name),
-        skip: false,
-    });
 
     let f = &role.features;
     steps.push(feature_step("gui", f.gui, "install / enable GUI apps"));

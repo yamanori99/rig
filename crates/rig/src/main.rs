@@ -26,7 +26,7 @@ enum Commands {
         /// Role to seed: workstation or compute
         #[arg(long, default_value = "workstation")]
         role: String,
-        /// Host name (defaults to current short hostname)
+        /// Inventory name / SSH prefix (defaults to current short hostname for matching)
         #[arg(long)]
         name: Option<String>,
     },

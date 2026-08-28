@@ -138,10 +138,6 @@ pub fn execute(
 
     for step in &plan.steps {
         match step.id.as_str() {
-            "hostname" => {
-                let report = features::apply_hostname(&host.name, os)?;
-                finish_step(&mut st, "hostname", report)?;
-            }
             "remote-login" if !step.skip => {
                 let report = features::apply_remote_login(os)?;
                 finish_step(&mut st, "remote-login", report)?;

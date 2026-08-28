@@ -91,7 +91,8 @@ fn strip_os_assignment(toml: &str) -> String {
 
 fn default_host_toml(role: &str) -> String {
     format!(
-        r#"# Local host file (gitignored). Edit addresses by hand — no auto-discovery.
+        r#"# Local host file (gitignored). Edit name and addresses by hand.
+# name = inventory / SSH prefix; OS hostname is not changed by rig.
 name = "change-me"
 role = "{role}"
 schema_version = 1

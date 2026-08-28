@@ -1,6 +1,9 @@
 # Host example for role=compute.
 # Copy via:  rig init --role compute
-# Or copy this file to ../<hostname>.toml and edit.
+# Or copy this file to ../<name>.toml and edit.
+#
+# `name` is yours: inventory id and SSH Host prefix. rig never changes the
+# OS hostname. Keep `name` equal to the short hostname so apply finds this host.
 #
 # Real lab IPs belong only in your local hosts/*.toml (gitignored).
 # Never commit real vpn / lan / thunderbolt addresses to a shared repo.
