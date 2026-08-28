@@ -41,12 +41,24 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         detail: format!("role={} schema={}", host.role, host.schema_version),
         skip: false,
     });
+    if matches!(shell, ShellKind::Zsh) {
+        steps.push(ApplyStep {
+            id: "omz".into(),
+            detail: "ensure Oh My Zsh + powerlevel10k + plugins".into(),
+            skip: false,
+        });
+    }
     steps.push(ApplyStep {
         id: "link-shell".into(),
         detail: format!(
-            "templates/shell/{{common,{}}} -> ~/.{}rc",
+            "templates/shell/{{common,{}}} -> ~/.{}rc{}",
             shell.as_str(),
-            shell.as_str()
+            shell.as_str(),
+            if matches!(shell, ShellKind::Zsh) {
+                " + OMZ/p10k product rc"
+            } else {
+                ""
+            }
         ),
         skip: false,
     });

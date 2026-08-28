@@ -1,0 +1,566 @@
+# dotfiles Tips
+# A random tip is displayed on each shell startup
+#
+# [TIP:DOT] = Features specific to this dotfiles environment
+# [TIP:XXX] = General tips (XXX = category like SHELL, GIT, etc.)
+
+# === This dotfiles features (★) ===
+[TIP:DOT] 'z dirname' - jump to directory instantly (zoxide)
+[TIP:DOT] 'Ctrl+R' - fuzzy search command history (fzf)
+[TIP:DOT] 'fuck' - auto-correct mistyped commands
+[TIP:DOT] 'tldr command' - show simplified help
+[TIP:DOT] 'mon' - launch system monitor (btop)
+[TIP:DOT] 'r' - reload shell configuration
+[TIP:DOT] 'dotpush' - sync dotfiles easily
+[TIP:DOT] 'gs' = git status, 'gp' = git push, 'glog' = graph log
+[TIP:DOT] 'ssh-status' - Show all machine connection status (TS/TB)
+[TIP:DOT] 'ssh-list' - List all SSH connection methods
+[TIP:DOT] 'ssh-connect mini/mini2' - Auto-select best connection method
+[TIP:DOT] 'ssh-check' - Check and enable SSH service on current machine
+[TIP:DOT] 'ssh m4-mini-ts' - SSH via Tailscale
+[TIP:DOT] 'ssh m4-mini-tb' - SSH via Thunderbolt Bridge
+[TIP:DOT] 'jlp' - start Julia with project environment
+[TIP:DOT] 'pskill' - select and kill process with fzf
+[TIP:DOT] 'ports' - list ports in use
+[TIP:DOT] 'weather' - show weather, 'weather Osaka' for other cities
+[TIP:DOT] 'sysinfo' / 'ff' - short system info (fastfetch)
+[TIP:DOT] 'sysinfo-full' / 'ffl' - full system info (fastfetch)
+[TIP:DOT] 'quote' - display random quote (cowsay)
+[TIP:DOT] 'game2048', 'tetris', 'snake' - play terminal games
+[TIP:DOT] tmux: 'Ctrl+b |' vertical, 'Ctrl+b -' horizontal split
+[TIP:DOT] tmux: 'Ctrl+b h/j/k/l' - navigate panes
+[TIP:DOT] tmux: 'Ctrl+b r' - reload config
+[TIP:DOT] '..' go up 1 dir, '...' go up 2 dirs
+[TIP:DOT] 'cat' is aliased to bat (syntax highlighting)
+[TIP:DOT] 'ls', 'll' are aliased to eza
+[TIP:DOT] Commands >10s trigger notification
+[TIP:DOT] Transient prompt: simplified in same dir, full on cd (RUN/dir kept)
+[TIP:DOT] Prompt turns orange when connected via SSH
+[TIP:DOT] 'clip' to copy, 'paste' to paste
+[TIP:DOT] 'port 8080' - check what's using port 8080
+[TIP:DOT] 'lt' - tree view (eza -T)
+[TIP:DOT] 'la' - list all including hidden (eza -la)
+[TIP:DOT] 'catp' - cat with pager (bat with paging)
+[TIP:DOT] 'clipfile file' - copy file contents to clipboard
+[TIP:DOT] 'dotstat' - check dotfiles git status
+[TIP:DOT] 'dotpull' - pull latest dotfiles
+[TIP:DOT] 'reload' or 'r' - reload shell config
+[TIP:DOT] 'top'/'htop' are aliased to btop
+[TIP:DOT] 'psg pattern' - search processes (ps aux | grep)
+[TIP:DOT] 'free' - show memory (vm_stat on macOS)
+[TIP:DOT] 'cpuinfo' - show CPU info
+[TIP:DOT] 'gl' - git pull
+[TIP:DOT] 'gb' - git branch
+[TIP:DOT] 'gco branch' - git checkout
+[TIP:DOT] 'ga file' - git add file
+[TIP:DOT] 'gaa' - git add all
+[TIP:DOT] 'jlup' - update Julia via juliaup
+[TIP:DOT] 'jlbuild' - build Julia project
+[TIP:DOT] 'Rscript' runs with --vanilla flag
+[TIP:DOT] 'py' = python, 'pip' = uv pip
+[TIP:DOT] 'venv' - create venv with uv
+[TIP:DOT] 'pyrun' - run Python with uv
+[TIP:DOT] 'cc' - cargo check (Rust)
+[TIP:DOT] 'cf' - cargo fmt (Rust)
+[TIP:DOT] 'clippy' - cargo clippy (Rust linter)
+[TIP:DOT] 'cmake-build' - mkdir build && cmake && make
+[TIP:DOT] 'jc' = javac, 'jr' = java
+[TIP:DOT] 'gradle' runs ./gradlew
+[TIP:DOT] 'tailscale' command is aliased
+[TIP:DOT] zsh-autosuggestions: right arrow to accept suggestion
+[TIP:DOT] zsh-syntax-highlighting: commands colored as you type
+[TIP:DOT] Type partial command then up arrow to search history
+[TIP:DOT] '....' goes up 3 directories
+[TIP:DOT] Prompt shows RUN time for commands >3 seconds
+[TIP:DOT] Prompt shows TIME (current time)
+[TIP:DOT] Prompt shows virtualenv when activated
+[TIP:DOT] Prompt shows Julia project when Project.toml exists
+[TIP:DOT] Prompt shows Python project when pyproject.toml exists
+[TIP:DOT] Prompt shows Rust project when Cargo.toml exists
+[TIP:DOT] Prompt shows C/C++ project when Makefile/CMakeLists.txt exists
+[TIP:DOT] Prompt shows Java project when pom.xml/build.gradle exists
+[TIP:DOT] Prompt shows R project when .Rproj exists
+[TIP:DOT] Git branch shown in prompt with status icons
+[TIP:DOT] Prompt char turns red on last command failure
+[TIP:DOT] Background jobs count shown in prompt
+[TIP:DOT] tmux status bar shows CPU and RAM usage
+[TIP:DOT] tmux status bar shows hostname and time
+[TIP:DOT] 'weather Tokyo' or just 'weather' for default city
+[TIP:DOT] Terminal startup shows short sysinfo; use 'ffl' for full
+[TIP:DOT] 'quote' shows random fortune with random cowsay character
+
+# === Basic shell ===
+[TIP:SHELL] 'Tab' - autocomplete
+[TIP:SHELL] 'Ctrl+C' - interrupt command
+[TIP:SHELL] 'Ctrl+L' - clear screen
+[TIP:SHELL] 'Ctrl+A' - cursor to line start
+[TIP:SHELL] 'Ctrl+E' - cursor to line end
+[TIP:SHELL] 'Ctrl+U' - delete before cursor
+[TIP:SHELL] 'Ctrl+K' - delete after cursor
+[TIP:SHELL] 'Ctrl+W' - delete one word
+[TIP:SHELL] 'Ctrl+Z' - suspend, 'fg' to resume
+[TIP:SHELL] 'Ctrl+D' - exit shell
+[TIP:SHELL] '!!' - re-run last command
+[TIP:SHELL] '!$' - last argument of previous command
+[TIP:SHELL] 'command &' - run in background
+[TIP:SHELL] 'cmd1 && cmd2' - cmd2 if cmd1 succeeds
+[TIP:SHELL] 'cmd1 || cmd2' - cmd2 if cmd1 fails
+[TIP:SHELL] 'cmd1 | cmd2' - pipe output
+[TIP:SHELL] '>' overwrite, '>>' append to file
+[TIP:SHELL] '2>&1' - redirect stderr to stdout
+[TIP:SHELL] '$(cmd)' - command substitution
+[TIP:SHELL] 'cd -' - go to previous directory
+[TIP:SHELL] 'which cmd' - show command path
+[TIP:SHELL] 'type cmd' - show command type
+[TIP:SHELL] 'man cmd' - manual (q to quit)
+[TIP:SHELL] 'alias' - list all aliases
+[TIP:SHELL] 'jobs' - list background jobs
+[TIP:SHELL] 'kill %1' - kill job 1
+[TIP:SHELL] 'killall name' - kill by name
+[TIP:SHELL] 'chmod +x file' - make executable
+[TIP:SHELL] 'ln -s target link' - symlink
+[TIP:SHELL] 'find . -name "*.txt"' - find files
+[TIP:SHELL] 'grep pattern file' - search in file
+[TIP:SHELL] 'head -n 10' / 'tail -n 10' - first/last lines
+[TIP:SHELL] 'tail -f file' - monitor file
+[TIP:SHELL] 'wc -l' - count lines
+[TIP:SHELL] 'sort' / 'uniq' - sort and dedupe
+[TIP:SHELL] 'tar -czf a.tar.gz dir/' - compress
+[TIP:SHELL] 'tar -xzf a.tar.gz' - extract
+[TIP:SHELL] 'du -sh dir/' - directory size
+[TIP:SHELL] 'df -h' - disk usage
+[TIP:SHELL] 'scp file user@host:path' - copy to remote
+[TIP:SHELL] 'rsync -av src/ dest/' - sync dirs
+
+# === Git ===
+[TIP:GIT] 'git init' - new repo
+[TIP:GIT] 'git clone url' - clone repo
+[TIP:GIT] 'git add .' - stage all
+[TIP:GIT] 'git commit -m "msg"' - commit
+[TIP:GIT] 'git push' / 'git pull' - sync
+[TIP:GIT] 'git status' / 'git diff' - check
+[TIP:GIT] 'git log --oneline' - compact log
+[TIP:GIT] 'git branch' - list branches
+[TIP:GIT] 'git checkout -b name' - new branch
+[TIP:GIT] 'git merge branch' - merge
+[TIP:GIT] 'git stash' / 'git stash pop' - save/restore
+[TIP:GIT] 'git reset --hard HEAD' - discard all (dangerous!)
+[TIP:GIT] 'git revert commit' - undo (safe)
+
+# === Shortcuts (★) ===
+[TIP:DOT] 'ga'/'gaa' = git add / git add -A
+[TIP:DOT] 'gc "msg"' = git commit -m
+[TIP:DOT] 'gd' = diff, 'gco' = checkout
+[TIP:DOT] 'cr'/'cb'/'ct' = cargo run/build/test
+[TIP:DOT] 'py' = python, 'pytest' = test
+[TIP:DOT] 'mk'/'mkc' = make / make clean
+
+# === Python ===
+[TIP:PYTHON] 'python -m venv .venv' - create venv
+[TIP:PYTHON] 'source .venv/bin/activate' - activate
+[TIP:PYTHON] 'deactivate' - deactivate
+[TIP:PYTHON] 'pip freeze > requirements.txt' - export
+[TIP:PYTHON] 'python -m http.server 8000' - web server
+[TIP:PYTHON] 'python -i script.py' - run then REPL
+[TIP:PYTHON] 'uv' is faster than pip
+[TIP:DOT] 'pyinstall'/'pysync' - aliases
+
+# === Julia (★) ===
+[TIP:DOT] 'jl' = julia, 'jlp' = julia --project=.
+[TIP:JULIA] ']' Pkg mode, '?' help, ';' shell
+[TIP:DOT] 'jlpkg'/'jltest'/'jladd' - aliases
+[TIP:DOT] 'jlgen PackageName' - new package, 'jluuid' - UUID
+[TIP:JULIA] '@time' / '@btime' - benchmark
+[TIP:JULIA] 'using Revise' - auto-reload
+
+# === R ===
+[TIP:DOT] 'R' starts with --quiet
+[TIP:R] 'Rscript file.R' - run script
+[TIP:R] Prompt shows 'R:proj' with .Rproj
+
+# === macOS ===
+[TIP:MAC] 'open .' - Finder here
+[TIP:MAC] 'open -a "App" file' - open with app
+[TIP:MAC] 'pbcopy' / 'pbpaste' - clipboard
+[TIP:MAC] 'say "Hello"' - text to speech
+[TIP:MAC] 'caffeinate' - prevent sleep
+[TIP:MAC] 'mdfind keyword' - Spotlight
+[TIP:MAC] 'screencapture -i f.png' - screenshot
+
+# === Network ===
+[TIP:NET] 'ping host' - connectivity
+[TIP:NET] 'curl -I url' - headers only
+[TIP:NET] 'nc -zv host port' - port check
+[TIP:NET] 'lsof -i :8080' - who uses port
+[TIP:NET] 'dig' / 'nslookup' - DNS
+[TIP:NET] 'ssh -L 8080:localhost:80 host' - tunnel
+
+# === Performance ===
+[TIP:PERF] 'time cmd' - execution time
+[TIP:PERF] 'watch -n 1 cmd' - repeat every 1s
+[TIP:PERF] 'nohup cmd &' - survive logout
+[TIP:PERF] 'top -o cpu' - sort by CPU
+
+# === Text ===
+[TIP:TEXT] 'sed "s/old/new/g"' - replace
+[TIP:TEXT] 'awk "{print $1}"' - 1st column
+[TIP:TEXT] 'cut -d"," -f1' - 1st CSV column
+[TIP:TEXT] 'tr "a-z" "A-Z"' - uppercase
+[TIP:TEXT] 'tee file' - screen + file
+[TIP:TEXT] 'diff f1 f2' - compare files
+
+# === One-liners ===
+[TIP:ONE] 'for f in *.txt; do echo $f; done'
+[TIP:ONE] 'find . -name "*.log" -delete'
+[TIP:ONE] 'grep -r "pattern" .' - recursive
+[TIP:ONE] 'du -sh * | sort -h' - size sorted
+[TIP:ONE] 'date +%Y%m%d_%H%M%S' - timestamp
+
+# === tmux ===
+[TIP:TMUX] 'tmux new -s name' - named session
+[TIP:TMUX] 'tmux ls' - list sessions
+[TIP:TMUX] 'tmux a -t name' - attach
+[TIP:TMUX] 'Ctrl+b d' - detach
+[TIP:TMUX] 'Ctrl+b c' - new window
+[TIP:TMUX] 'Ctrl+b n/p' - next/prev window
+[TIP:TMUX] 'Ctrl+b z' - zoom pane
+[TIP:TMUX] 'Ctrl+b [' - copy mode
+
+# === Security ===
+[TIP:SEC] 'ssh-keygen -t ed25519' - gen key
+[TIP:SEC] 'ssh-copy-id user@host' - copy key
+[TIP:SEC] 'chmod 600 ~/.ssh/id_*' - key perms
+[TIP:SEC] 'shasum -a 256 file' - hash
+
+# === Debug ===
+[TIP:DEBUG] 'set -x' / 'set +x' - debug on/off
+[TIP:DEBUG] 'echo $?' - last exit code
+[TIP:DEBUG] 'lsof -p PID' - files by process
+
+# === Trivia ===
+[TIP:TRIVIA] zsh = Z shell (1990)
+[TIP:TRIVIA] bash = Bourne Again Shell
+[TIP:TRIVIA] 'grep' = g/re/p
+[TIP:TRIVIA] 'awk' = Aho, Weinberger, Kernighan
+[TIP:TRIVIA] '/dev/null' = the black hole
+[TIP:TRIVIA] 42 = answer to everything
+
+# === More Basic ===
+[TIP:SHELL] 'clear' or 'Ctrl+L' - clear terminal
+[TIP:SHELL] 'reset' - reset terminal completely
+[TIP:SHELL] 'history -c' - clear command history
+[TIP:SHELL] 'fc' - edit last command in editor
+[TIP:SHELL] 'Ctrl+R' then 'Ctrl+R' - cycle through matches
+[TIP:SHELL] 'Ctrl+G' - cancel reverse search
+[TIP:SHELL] 'Alt+.' - insert last argument (repeat for older)
+[TIP:SHELL] 'Ctrl+X Ctrl+E' - edit command in $EDITOR
+[TIP:SHELL] '{ cmd1; cmd2; }' - group commands
+[TIP:SHELL] 'cmd < file' - read input from file
+[TIP:SHELL] 'cmd <<< "string"' - here-string input
+[TIP:SHELL] 'echo {1..10}' - brace expansion (1 2 3...10)
+[TIP:SHELL] 'echo {a,b,c}' - brace expansion (a b c)
+[TIP:SHELL] 'cp file{,.bak}' - copy file to file.bak
+[TIP:SHELL] 'mv file.{txt,md}' - rename extension
+[TIP:SHELL] 'touch file{1..5}.txt' - create 5 files
+[TIP:SHELL] 'mkdir -p a/b/c' - create nested dirs
+[TIP:SHELL] 'rm -rf dir/' - force remove dir (careful!)
+[TIP:SHELL] 'ls -lh' - human readable sizes
+[TIP:SHELL] 'ls -ltr' - sort by time, oldest first
+[TIP:SHELL] 'ls -S' - sort by size
+[TIP:SHELL] 'file filename' - detect file type
+[TIP:SHELL] 'stat file' - detailed file info
+[TIP:SHELL] 'readlink -f file' - resolve symlink
+[TIP:SHELL] 'basename /path/to/file' - get filename
+[TIP:SHELL] 'dirname /path/to/file' - get directory
+[TIP:SHELL] 'realpath file' - absolute path
+[TIP:SHELL] 'pushd dir' / 'popd' - directory stack
+[TIP:SHELL] 'dirs -v' - show directory stack
+[TIP:SHELL] 'cd ~2' - go to stack position 2
+
+# === More Git ===
+[TIP:GIT] 'git add -p' - interactive staging
+[TIP:GIT] 'git commit --amend' - edit last commit
+[TIP:GIT] 'git commit --amend --no-edit' - add to last commit
+[TIP:GIT] 'git diff --staged' - diff staged changes
+[TIP:GIT] 'git diff HEAD~3' - diff last 3 commits
+[TIP:GIT] 'git show commit' - show commit details
+[TIP:GIT] 'git blame file' - who changed each line
+[TIP:GIT] 'git log -p file' - history of file
+[TIP:GIT] 'git log --author="name"' - commits by author
+[TIP:GIT] 'git log --since="2 weeks ago"' - recent commits
+[TIP:GIT] 'git reflog' - all HEAD movements
+[TIP:GIT] 'git checkout -- file' - discard file changes
+[TIP:GIT] 'git restore file' - discard file changes (new)
+[TIP:GIT] 'git restore --staged file' - unstage file
+[TIP:GIT] 'git clean -fd' - remove untracked files
+[TIP:GIT] 'git tag v1.0' - create tag
+[TIP:GIT] 'git push --tags' - push all tags
+[TIP:GIT] 'git remote -v' - list remotes
+[TIP:GIT] 'git fetch --prune' - clean up deleted branches
+[TIP:GIT] 'git branch -d name' - delete local branch
+[TIP:GIT] 'git push origin --delete name' - delete remote
+[TIP:GIT] 'git rebase -i HEAD~3' - interactive rebase
+[TIP:GIT] 'git bisect' - binary search for bugs
+[TIP:GIT] 'git worktree' - multiple working trees
+[TIP:GIT] 'git submodule update --init' - init submodules
+
+# === More Python ===
+[TIP:PYTHON] 'python -m json.tool' - format JSON
+[TIP:PYTHON] 'python -m zipfile -c a.zip files' - create zip
+[TIP:PYTHON] 'python -m base64 -d file' - decode base64
+[TIP:PYTHON] 'python -m calendar 2024' - show calendar
+[TIP:PYTHON] 'python -m timeit "code"' - benchmark code
+[TIP:PYTHON] 'pip show pkg' - package info
+[TIP:PYTHON] 'pip list --outdated' - outdated packages
+[TIP:PYTHON] 'pip install --upgrade pip' - upgrade pip
+[TIP:PYTHON] 'pip cache purge' - clear pip cache
+[TIP:PYTHON] 'PYTHONDONTWRITEBYTECODE=1' - no .pyc files
+[TIP:PYTHON] 'breakpoint()' - debug breakpoint (3.7+)
+[TIP:PYTHON] 'python -O script.py' - optimized mode
+[TIP:PYTHON] '__import__("pprint").pprint(obj)' - pretty print
+
+# === More Julia ===
+[TIP:JULIA] 'julia -e "code"' - run one-liner
+[TIP:JULIA] 'julia -p 4' - start with 4 workers
+[TIP:JULIA] 'julia --threads=auto' - use all CPU threads
+[TIP:JULIA] '@show variable' - debug print with name
+[TIP:JULIA] '@info "msg"' / '@warn' / '@error' - logging
+[TIP:JULIA] '@assert condition' - assertion
+[TIP:JULIA] '@elapsed expr' - time in seconds
+[TIP:JULIA] '@allocated expr' - memory allocated
+[TIP:JULIA] 'methods(func)' - list function methods
+[TIP:JULIA] 'typeof(x)' / 'sizeof(x)' - type/size info
+[TIP:JULIA] 'fieldnames(Type)' - struct fields
+[TIP:JULIA] 'varinfo()' - variables in scope
+[TIP:JULIA] 'versioninfo()' - Julia version details
+[TIP:JULIA] '] up' - update all packages
+[TIP:JULIA] '] gc' - garbage collect packages
+[TIP:JULIA] '] precompile' - precompile all packages
+
+# === More R ===
+[TIP:R] 'R --vanilla' - start without saving/loading
+[TIP:R] 'R CMD BATCH script.R' - batch mode
+[TIP:R] 'str(obj)' - structure of object
+[TIP:R] 'summary(obj)' - statistical summary
+[TIP:R] 'head(df)' / 'tail(df)' - first/last rows
+[TIP:R] 'class(obj)' / 'typeof(obj)' - object type
+[TIP:R] 'ls()' - list objects in environment
+[TIP:R] 'rm(list=ls())' - clear environment
+[TIP:R] 'gc()' - garbage collection
+[TIP:R] '.libPaths()' - library paths
+[TIP:R] 'sessionInfo()' - R session info
+[TIP:R] 'options(warn=2)' - treat warnings as errors
+[TIP:R] 'traceback()' - show error stack trace
+[TIP:R] 'debug(func)' / 'undebug(func)' - debugging
+[TIP:R] 'browser()' - breakpoint in code
+
+# === More Rust ===
+[TIP:RUST] 'cargo new project' - new project
+[TIP:RUST] 'cargo init' - init in current dir
+[TIP:RUST] 'cargo add package' - add dependency
+[TIP:RUST] 'cargo update' - update dependencies
+[TIP:RUST] 'cargo doc --open' - generate and open docs
+[TIP:RUST] 'cargo bench' - run benchmarks
+[TIP:RUST] 'cargo clean' - remove target dir
+[TIP:RUST] 'cargo tree' - dependency tree
+[TIP:RUST] 'cargo fix' - auto-fix warnings
+[TIP:RUST] 'cargo audit' - security audit
+[TIP:RUST] 'RUST_BACKTRACE=1' - show backtrace
+[TIP:RUST] 'rustup update' - update Rust
+[TIP:RUST] 'rustup doc' - open Rust docs
+[TIP:RUST] 'rustfmt file.rs' - format code
+
+# === More C/C++ ===
+[TIP:C] 'gcc -Wall -Wextra -o out file.c' - compile with warnings
+[TIP:C] 'gcc -g file.c' - compile with debug info
+[TIP:C] 'gcc -O2 file.c' - optimize level 2
+[TIP:C] 'gcc -E file.c' - preprocessor only
+[TIP:C] 'gcc -S file.c' - assembly output
+[TIP:C] 'clang-format -i file.c' - format code
+[TIP:C] 'valgrind ./program' - memory leak check
+[TIP:C] 'gdb ./program' - debugger
+[TIP:C] 'lldb ./program' - debugger (macOS)
+[TIP:C] 'make -j4' - parallel make (4 jobs)
+[TIP:C] 'cmake -B build -DCMAKE_BUILD_TYPE=Release'
+[TIP:C] 'ccache gcc' - compiler cache
+[TIP:C] 'nm binary' - list symbols
+[TIP:C] 'objdump -d binary' - disassemble
+[TIP:C] 'ldd binary' - shared library deps (Linux)
+[TIP:C] 'otool -L binary' - shared library deps (macOS)
+
+# === More Network ===
+[TIP:NET] 'curl -o file url' - save as file
+[TIP:NET] 'curl -L url' - follow redirects
+[TIP:NET] 'curl -u user:pass url' - basic auth
+[TIP:NET] 'curl -H "Header: value" url' - custom header
+[TIP:NET] 'curl -d @file url' - POST file contents
+[TIP:NET] 'wget -c url' - resume download
+[TIP:NET] 'wget -r url' - recursive download
+[TIP:NET] 'wget --mirror url' - mirror site
+[TIP:NET] 'ssh -N -f -L ...' - background tunnel
+[TIP:NET] 'ssh-add ~/.ssh/key' - add key to agent
+[TIP:NET] 'ssh-add -l' - list keys in agent
+[TIP:NET] 'sshfs user@host:path mount/' - mount remote
+[TIP:NET] 'rsync -avz --progress' - sync with progress
+[TIP:NET] 'rsync --dry-run' - preview sync
+[TIP:NET] 'arp -a' - show ARP table
+[TIP:NET] 'route -n get default' - default gateway (macOS)
+[TIP:NET] 'networkQuality' - speed test (macOS 12+)
+
+# === More macOS ===
+[TIP:MAC] 'ditto src dst' - smart copy (preserves metadata)
+[TIP:MAC] 'hdiutil create -format UDZO -srcfolder dir img.dmg'
+[TIP:MAC] 'hdiutil attach img.dmg' - mount DMG
+[TIP:MAC] 'pkgutil --expand pkg dir' - extract PKG
+[TIP:MAC] 'codesign -v app' - verify code signature
+[TIP:MAC] 'spctl --assess app' - Gatekeeper check
+[TIP:MAC] 'xattr -d com.apple.quarantine file' - remove quarantine
+[TIP:MAC] 'dscl . list /Users' - list users
+[TIP:MAC] 'sudo purge' - clear disk cache
+[TIP:MAC] 'sudo periodic daily weekly monthly' - run maintenance
+[TIP:MAC] 'pmset -g' - power management status
+[TIP:MAC] 'ioreg -l' - I/O registry
+[TIP:MAC] 'launchctl list' - list services
+[TIP:MAC] 'fs_usage' - filesystem activity
+[TIP:MAC] 'mdls file' - Spotlight metadata
+
+# === More Performance ===
+[TIP:PERF] 'time -v cmd' - detailed timing (GNU)
+[TIP:PERF] '/usr/bin/time -l cmd' - detailed timing (macOS)
+[TIP:PERF] 'hyperfine cmd' - benchmarking tool
+[TIP:PERF] 'timeout 10 cmd' - kill after 10 seconds
+[TIP:PERF] 'nice -n -20 cmd' - high priority (needs root)
+[TIP:PERF] 'renice -n 10 -p PID' - change priority
+[TIP:PERF] 'ionice -c 3 cmd' - low I/O priority (Linux)
+[TIP:PERF] 'cpulimit -l 50 cmd' - limit CPU usage
+[TIP:PERF] 'taskset -c 0,1 cmd' - pin to CPUs (Linux)
+[TIP:PERF] 'numactl --cpubind=0 cmd' - NUMA control
+
+# === More Text ===
+[TIP:TEXT] 'sed -n "5,10p" file' - print lines 5-10
+[TIP:TEXT] 'sed -i "" "s/old/new/g" file' - in-place (macOS)
+[TIP:TEXT] 'awk "NR==5" file' - print line 5
+[TIP:TEXT] 'awk "{sum+=$1} END {print sum}"' - sum column
+[TIP:TEXT] 'grep -c pattern' - count matches
+[TIP:TEXT] 'grep -l pattern *' - files with matches
+[TIP:TEXT] 'grep -L pattern *' - files without matches
+[TIP:TEXT] 'grep -A3 -B3 pattern' - 3 lines context
+[TIP:TEXT] 'grep -E "pat1|pat2"' - extended regex (OR)
+[TIP:TEXT] 'grep -v pattern' - invert match
+[TIP:TEXT] 'sort -u' - sort and unique
+[TIP:TEXT] 'sort -n' - numeric sort
+[TIP:TEXT] 'sort -k2' - sort by column 2
+[TIP:TEXT] 'sort -t"," -k2' - sort CSV by col 2
+[TIP:TEXT] 'uniq -c' - count occurrences
+[TIP:TEXT] 'uniq -d' - show only duplicates
+[TIP:TEXT] 'join file1 file2' - join on first field
+[TIP:TEXT] 'fmt -w 80' - wrap at 80 chars
+[TIP:TEXT] 'fold -w 80' - hard wrap at 80
+[TIP:TEXT] 'expand' / 'unexpand' - tabs to spaces
+[TIP:TEXT] 'nl file' - number lines
+[TIP:TEXT] 'pr -3 file' - format as 3 columns
+[TIP:TEXT] 'split -l 1000 file prefix' - split by lines
+[TIP:TEXT] 'csplit file /pattern/' - split at pattern
+
+# === More One-liners ===
+[TIP:ONE] 'while read line; do echo "$line"; done < file'
+[TIP:ONE] 'while true; do cmd; sleep 1; done' - loop forever
+[TIP:ONE] 'until cmd; do sleep 1; done' - retry until success
+[TIP:ONE] 'cmd1 & cmd2 & wait' - parallel commands
+[TIP:ONE] 'seq 1 10 | xargs -P4 -I{} cmd {}' - parallel xargs
+[TIP:ONE] 'find . -mtime -7' - modified in last 7 days
+[TIP:ONE] 'find . -size +100M' - files larger than 100MB
+[TIP:ONE] 'find . -empty -delete' - delete empty files
+[TIP:ONE] 'find . -type f -print0 | xargs -0 cmd' - handle spaces
+[TIP:ONE] 'ls | parallel gzip' - parallel gzip
+[TIP:ONE] 'cat file | sort | uniq -c | sort -rn' - frequency count
+[TIP:ONE] 'diff <(cmd1) <(cmd2)' - process substitution
+[TIP:ONE] 'comm -23 <(sort f1) <(sort f2)' - lines only in f1
+[TIP:ONE] 'paste -sd+ file | bc' - sum numbers in file
+[TIP:ONE] 'awk "{print length}" file | sort -n | tail -1' - longest line
+[TIP:ONE] 'tr -dc "a-zA-Z0-9" < /dev/urandom | head -c 16' - random string
+[TIP:ONE] 'yes | cmd' - auto-answer yes
+[TIP:ONE] 'cmd | tee >(cmd2) | cmd3' - tee to command
+
+# === More tmux ===
+[TIP:TMUX] 'tmux set -g mouse on' - enable mouse
+[TIP:TMUX] 'Ctrl+b ?' - list all keybindings
+[TIP:TMUX] 'Ctrl+b t' - show clock
+[TIP:TMUX] 'Ctrl+b w' - window list
+[TIP:TMUX] 'Ctrl+b s' - session list
+[TIP:TMUX] 'Ctrl+b &' - kill window
+[TIP:TMUX] 'Ctrl+b $' - rename session
+[TIP:TMUX] 'Ctrl+b Space' - cycle layouts
+[TIP:TMUX] 'Ctrl+b {' / '}' - swap panes
+[TIP:TMUX] 'Ctrl+b q' - show pane numbers
+[TIP:TMUX] 'Ctrl+b o' - next pane
+[TIP:TMUX] 'Ctrl+b !' - pane to new window
+[TIP:TMUX] 'tmux capture-pane -p' - capture pane content
+[TIP:TMUX] 'tmux save-buffer file' - save buffer to file
+[TIP:TMUX] 'tmux pipe-pane -o "cat >> log"' - log pane output
+
+# === More Security ===
+[TIP:SEC] 'ssh-keygen -R host' - remove known host
+[TIP:SEC] 'ssh -o StrictHostKeyChecking=no' - skip check
+[TIP:SEC] 'ssh -v host' - verbose (debug)
+[TIP:SEC] 'ssh -J jump host' - jump host
+[TIP:SEC] 'openssl s_client -connect host:443' - test SSL
+[TIP:SEC] 'openssl x509 -in cert.pem -text' - view cert
+[TIP:SEC] 'openssl genrsa -out key.pem 4096' - generate key
+[TIP:SEC] 'openssl enc -aes-256-cbc -in f -out f.enc' - encrypt
+[TIP:SEC] 'gpg --gen-key' - generate GPG key
+[TIP:SEC] 'gpg --list-keys' - list keys
+[TIP:SEC] 'gpg --export -a "Name"' - export public key
+[TIP:SEC] 'gpg --import key.pub' - import key
+[TIP:SEC] 'gpg -e -r recipient file' - encrypt for recipient
+[TIP:SEC] 'age -p -o file.age file' - encrypt with passphrase
+[TIP:SEC] 'pass insert name' - password manager
+
+# === More Debug ===
+[TIP:DEBUG] 'bash -x script.sh' - debug script
+[TIP:DEBUG] 'zsh -x -c "cmd"' - debug zsh command
+[TIP:DEBUG] 'trap "cmd" ERR' - run cmd on error
+[TIP:DEBUG] 'trap "cmd" EXIT' - run cmd on exit
+[TIP:DEBUG] 'trap "cmd" SIGINT' - handle Ctrl+C
+[TIP:DEBUG] 'exec 2> error.log' - redirect stderr
+[TIP:DEBUG] 'script output.txt' - record session
+[TIP:DEBUG] 'tee /dev/stderr' - duplicate to stderr
+[TIP:DEBUG] 'declare -p var' - show variable type
+[TIP:DEBUG] 'typeset -p' - all variables with types
+
+# === Misc Tips ===
+[TIP:MISC] 'cal' - show calendar
+[TIP:MISC] 'cal 2024' - show year calendar
+[TIP:MISC] 'date -r 1234567890' - timestamp to date
+[TIP:MISC] 'date -v+1d' - tomorrow (macOS)
+[TIP:MISC] 'uptime' - system uptime
+[TIP:MISC] 'w' / 'who' - logged in users
+[TIP:MISC] 'last' - login history
+[TIP:MISC] 'id' - current user info
+[TIP:MISC] 'groups' - user groups
+[TIP:MISC] 'printenv' - environment variables
+[TIP:MISC] 'locale' - locale settings
+[TIP:MISC] 'uname -a' - system info
+[TIP:MISC] 'hostname' - machine name
+[TIP:MISC] 'arch' - CPU architecture
+[TIP:MISC] 'getconf -a' - system configuration
+[TIP:MISC] 'yes "" | cmd' - press enter repeatedly
+[TIP:MISC] 'sleep 5 && cmd' - delay execution
+[TIP:MISC] 'at now + 5 minutes' - schedule command
+[TIP:MISC] 'crontab -e' - edit cron jobs
+[TIP:MISC] 'crontab -l' - list cron jobs
+
+# === Fun ===
+[TIP:FUN] 'cowsay "message"' - cow says message
+[TIP:FUN] 'fortune' - random quote
+[TIP:FUN] 'sl' - steam locomotive (if installed)
+[TIP:FUN] 'cmatrix' - Matrix screensaver
+[TIP:FUN] 'figlet "TEXT"' - ASCII art text
+[TIP:FUN] 'toilet "TEXT"' - colored ASCII art
+[TIP:FUN] 'lolcat' - rainbow output
+[TIP:FUN] 'nyancat' - nyan cat animation
+[TIP:FUN] 'asciiquarium' - fish tank
+[TIP:FUN] 'pipes.sh' - pipes screensaver
+[TIP:FUN] 'curl parrot.live' - party parrot
+[TIP:FUN] 'curl wttr.in' - weather in terminal
+[TIP:FUN] 'telnet towel.blinkenlights.nl' - Star Wars

@@ -8,6 +8,7 @@ mod features;
 mod gui;
 mod keys;
 mod link;
+mod omz;
 mod packages;
 mod plan;
 mod ssh;
@@ -50,7 +51,20 @@ pub fn execute(
     st.note_step("validate", format!("role={} ok", host.role));
     println!("  [ok  ] validate");
 
-    let link = link::link_shell(root, shell)?;
+    let thick_zsh = matches!(shell, crate::schema::ShellKind::Zsh);
+    if thick_zsh {
+        let omz = omz::ensure_omz_stack()?;
+        st.note_step("omz", &omz.detail);
+        if omz.ok {
+            println!("  [ok  ] omz           {}", omz.detail);
+        } else {
+            println!("  [fail] omz           {}", omz.detail);
+            let _ = state::save(&st);
+            return Err(RigError::Msg(format!("omz failed: {}", omz.detail)));
+        }
+    }
+
+    let link = link::link_shell(root, shell, thick_zsh)?;
     for p in &link.written {
         st.note_file(p);
     }
@@ -60,10 +74,11 @@ pub fn execute(
     st.note_step(
         "link-shell",
         format!(
-            "config={} files={} rcs={}",
+            "config={} files={} rcs={} product_rc={}",
             link.config_dir.display(),
             link.written.len(),
-            link.touched_rcs.len()
+            link.touched_rcs.len(),
+            thick_zsh
         ),
     );
     println!("  [ok  ] link-shell  → {}", link.config_dir.display());
@@ -73,14 +88,17 @@ pub fn execute(
     for p in &link.touched_rcs {
         println!("           snippet → {}", p.display());
     }
-    println!("           sources common.sh only (keeps existing OMZ/p10k).");
-    println!(
-        "           product rc: touch {}/shell/use-product-rc",
-        link.config_dir.display()
-    );
+    if thick_zsh {
+        println!("           product rc enabled (OMZ + p10k)");
+    } else {
+        println!("           thin shell (common.sh); product rc optional");
+    }
 
     let tmux = tmux::link_tmux(root)?;
     if let Some(p) = &tmux.linked {
+        st.note_file(p);
+    }
+    for p in &tmux.extra {
         st.note_file(p);
     }
     st.note_step("link-tmux", &tmux.detail);

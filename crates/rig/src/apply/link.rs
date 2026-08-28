@@ -22,7 +22,10 @@ pub fn config_dir() -> PathBuf {
 
 /// Copy shell templates into ~/.config/rig/shell and ensure rc files source them.
 /// Prefers `overlay/shell/...` over `templates/shell/...` when present.
-pub fn link_shell(root: &Path, shell: ShellKind) -> Result<LinkReport> {
+///
+/// When `enable_product_rc` is true (workstation / zsh), create `use-product-rc`
+/// so the thick product zshrc (OMZ + p10k) is sourced.
+pub fn link_shell(root: &Path, shell: ShellKind, enable_product_rc: bool) -> Result<LinkReport> {
     let cfg = config_dir();
     let shell_dir = cfg.join("shell");
     fs::create_dir_all(&shell_dir).map_err(RigError::Io)?;
@@ -62,10 +65,64 @@ pub fn link_shell(root: &Path, shell: ShellKind) -> Result<LinkReport> {
     let profile_dst = shell_dir.join(profile_dst_name);
     copy_file(&rc_src, &rc_dst)?;
     copy_file(&profile_src, &profile_dst)?;
-    written.push(rc_dst);
+    written.push(rc_dst.clone());
     written.push(profile_dst);
     sources.push(format!("rc←{rc_kind}"));
     sources.push(format!("profile←{profile_kind}"));
+
+    if matches!(shell, ShellKind::Zsh) {
+        // p10k + helper assets for workstation product shell
+        if let Ok((p10k_src, kind)) = resolve_shell_file(root, "shell/zsh/p10k.zsh") {
+            let p10k_dst = shell_dir.join("p10k.zsh");
+            copy_file(&p10k_src, &p10k_dst)?;
+            written.push(p10k_dst.clone());
+            sources.push(format!("p10k←{kind}"));
+            // Keep ~/.p10k.zsh pointing at managed copy (p10k tooling expects this path).
+            let home_p10k = dirs_home()?.join(".p10k.zsh");
+            link_or_replace_symlink(&p10k_dst, &home_p10k)?;
+            written.push(home_p10k);
+        }
+        copy_tree_if_present(
+            root,
+            "shell/scripts",
+            &shell_dir.join("scripts"),
+            &mut written,
+            &mut sources,
+        )?;
+        copy_tree_if_present(
+            root,
+            "shell/fastfetch",
+            &shell_dir.join("fastfetch"),
+            &mut written,
+            &mut sources,
+        )?;
+        if let Ok((tips_src, kind)) = resolve_shell_file(root, "shell/tips.txt") {
+            let tips_dst = shell_dir.join("tips.txt");
+            copy_file(&tips_src, &tips_dst)?;
+            written.push(tips_dst);
+            sources.push(format!("tips←{kind}"));
+        }
+        // Make scripts executable
+        if let Ok(entries) = fs::read_dir(shell_dir.join("scripts")) {
+            for e in entries.flatten() {
+                let p = e.path();
+                if p.is_file() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        let _ = fs::set_permissions(&p, fs::Permissions::from_mode(0o755));
+                    }
+                }
+            }
+        }
+    }
+
+    let marker = shell_dir.join("use-product-rc");
+    if enable_product_rc {
+        fs::write(&marker, b"").map_err(RigError::Io)?;
+        written.push(marker);
+        sources.push("product-rc=on".into());
+    }
 
     let home = dirs_home()?;
     let mut touched = Vec::new();
@@ -82,6 +139,67 @@ pub fn link_shell(root: &Path, shell: ShellKind) -> Result<LinkReport> {
         touched_rcs: touched,
         sources,
     })
+}
+
+fn copy_tree_if_present(
+    root: &Path,
+    rel: &str,
+    dst_dir: &Path,
+    written: &mut Vec<PathBuf>,
+    sources: &mut Vec<String>,
+) -> Result<()> {
+    let overlay = root.join("overlay").join(rel);
+    let tpl = paths::templates_dir(root).join(rel);
+    let src_dir = if overlay.is_dir() {
+        sources.push(format!("{rel}←overlay"));
+        overlay
+    } else if tpl.is_dir() {
+        sources.push(format!("{rel}←templates"));
+        tpl
+    } else {
+        return Ok(());
+    };
+    fs::create_dir_all(dst_dir).map_err(RigError::Io)?;
+    for e in fs::read_dir(&src_dir).map_err(RigError::Io)? {
+        let e = e.map_err(RigError::Io)?;
+        let src = e.path();
+        if !src.is_file() {
+            continue;
+        }
+        let dst = dst_dir.join(e.file_name());
+        fs::copy(&src, &dst).map_err(RigError::Io)?;
+        written.push(dst);
+    }
+    Ok(())
+}
+
+fn link_or_replace_symlink(src: &Path, dst: &Path) -> Result<()> {
+    if dst.is_symlink() {
+        if let Ok(cur) = fs::read_link(dst) {
+            if cur == src {
+                return Ok(());
+            }
+        }
+        fs::remove_file(dst).map_err(RigError::Io)?;
+    } else if dst.is_file() {
+        let bak = PathBuf::from(format!("{}.bak.{}", dst.display(), epoch_secs()));
+        fs::rename(dst, &bak).map_err(RigError::Io)?;
+    } else if dst.exists() {
+        return Err(RigError::Msg(format!(
+            "refusing to replace non-file: {}",
+            dst.display()
+        )));
+    }
+    std::os::unix::fs::symlink(src, dst).map_err(RigError::Io)?;
+    Ok(())
+}
+
+fn epoch_secs() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 fn resolve_shell_file(root: &Path, rel: &str) -> Result<(PathBuf, &'static str)> {
@@ -109,7 +227,7 @@ fn managed_snippet(root: &Path, cfg: &Path, shell: ShellKind) -> String {
          export RIG_ROOT=\"{root}\"\n\
          export RIG_CONFIG=\"{cfg}\"\n\
          [ -f \"$RIG_CONFIG/shell/common.sh\" ] && . \"$RIG_CONFIG/shell/common.sh\"\n\
-         # optional product rc (PROMPT etc.): touch \"$RIG_CONFIG/shell/use-product-rc\"\n\
+         # product rc (OMZ/p10k on workstation): touch \"$RIG_CONFIG/shell/use-product-rc\"\n\
          [ -f \"$RIG_CONFIG/shell/use-product-rc\" ] && [ -f \"$RIG_CONFIG/shell/{rc}\" ] && . \"$RIG_CONFIG/shell/{rc}\"\n\
          {END}\n",
         root = root.display(),

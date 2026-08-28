@@ -1,25 +1,436 @@
-# Product zshrc — sourced only when ~/.config/rig/shell/use-product-rc exists.
-# Not Oh My Zsh / p10k. Put personal thick config in overlay/shell/ instead.
+# Workstation product zshrc (Oh My Zsh + Powerlevel10k)
+# Installed to ~/.config/rig/shell/zshrc and sourced when use-product-rc is set.
+# Personal extras: overlay/shell.sh or overlay/shell/*.sh (via common.sh)
 
-if [ -n "${RIG_CONFIG:-}" ] && [ -f "$RIG_CONFIG/shell/common.sh" ]; then
-  # shellcheck disable=SC1091
-  . "$RIG_CONFIG/shell/common.sh"
-elif [ -n "${RIG_ROOT:-}" ] && [ -f "$RIG_ROOT/templates/shell/common/profile.sh" ]; then
-  # shellcheck disable=SC1091
-  . "$RIG_ROOT/templates/shell/common/profile.sh"
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-autoload -Uz colors && colors
-setopt AUTO_CD
-setopt HIST_IGNORE_DUPS
-setopt SHARE_HISTORY
-HISTSIZE=5000
-SAVEHIST=5000
-HISTFILE="${HISTFILE:-$HOME/.zsh_history}"
+# Homebrew を PATH の先頭に追加
+# cargo install で入れた CLI (例: writing-rings) は ~/.cargo/bin に置かれる
+export PATH="/opt/homebrew/bin:$HOME/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
-# Completion (no framework required)
-autoload -Uz compinit
-compinit -C 2>/dev/null || compinit
+# Path to your Oh My Zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
 
-PROMPT='%F{green}%n@%m%f %F{blue}%~%f %# '
-RPROMPT='%F{240}%T%f'
+# Auto-install missing plugins
+if [[ ! -d "$ZSH/custom/plugins/zsh-autosuggestions" ]]; then
+    echo "📦 Installing zsh-autosuggestions..."
+    git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH/custom/plugins/zsh-autosuggestions" 2>/dev/null
+fi
+
+if [[ ! -d "$ZSH/custom/plugins/zsh-syntax-highlighting" ]]; then
+    echo "📦 Installing zsh-syntax-highlighting..."
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH/custom/plugins/zsh-syntax-highlighting" 2>/dev/null
+fi
+
+# Set name of the theme to load --- if set to "random", it will
+# load a random theme each time Oh My Zsh is loaded, in which case,
+# to know which specific one was loaded, run: echo $RANDOM_THEME
+# See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+ZSH_THEME="powerlevel10k/powerlevel10k"
+
+# Set list of themes to pick from when loading at random
+# Setting this variable when ZSH_THEME=random will cause zsh to load
+# a theme from this variable instead of looking in $ZSH/themes/
+# If set to an empty array, this variable will have no effect.
+# ZSH_THEME_RANDOM_CANDIDATES=( "robbyrussell" "agnoster" )
+
+# Uncomment the following line to use case-sensitive completion.
+# CASE_SENSITIVE="true"
+
+# Uncomment the following line to use hyphen-insensitive completion.
+# Case-sensitive completion must be off. _ and - will be interchangeable.
+# HYPHEN_INSENSITIVE="true"
+
+# Uncomment one of the following lines to change the auto-update behavior
+# zstyle ':omz:update' mode disabled  # disable automatic updates
+# zstyle ':omz:update' mode auto      # update automatically without asking
+# zstyle ':omz:update' mode reminder  # just remind me to update when it's time
+
+# Uncomment the following line to change how often to auto-update (in days).
+# zstyle ':omz:update' frequency 13
+
+# Uncomment the following line if pasting URLs and other text is messed up.
+# DISABLE_MAGIC_FUNCTIONS="true"
+
+# Uncomment the following line to disable colors in ls.
+# DISABLE_LS_COLORS="true"
+
+# Uncomment the following line to disable auto-setting terminal title.
+# DISABLE_AUTO_TITLE="true"
+
+# Uncomment the following line to enable command auto-correction.
+# ENABLE_CORRECTION="true"
+
+# Uncomment the following line to display red dots whilst waiting for completion.
+# You can also set it to another string to have that shown instead of the default red dots.
+# e.g. COMPLETION_WAITING_DOTS="%F{yellow}waiting...%f"
+# Caution: this setting can cause issues with multiline prompts in zsh < 5.7.1 (see #5765)
+# COMPLETION_WAITING_DOTS="true"
+
+# Uncomment the following line if you want to disable marking untracked files
+# under VCS as dirty. This makes repository status check for large repositories
+# much, much faster.
+# DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+# Uncomment the following line if you want to change the command execution time
+# stamp shown in the history command output.
+# You can set one of the optional three formats:
+# "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
+# or set a custom format using the strftime function format specifications,
+# see 'man strftime' for details.
+# HIST_STAMPS="mm/dd/yyyy"
+
+# Would you like to use another custom folder than $ZSH/custom?
+# ZSH_CUSTOM=/path/to/new-custom-folder
+
+# Which plugins would you like to load?
+# Standard plugins can be found in $ZSH/plugins/
+# Custom plugins may be added to $ZSH_CUSTOM/plugins/
+# Example format: plugins=(rails git textmate ruby lighthouse)
+# Add wisely, as too many plugins slow down shell startup.
+plugins=(
+  git
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+)
+
+source $ZSH/oh-my-zsh.sh
+
+# User configuration
+
+# export MANPATH="/usr/local/man:$MANPATH"
+
+# You may need to manually set your language environment
+# export LANG=en_US.UTF-8
+
+# Preferred editor for local and remote sessions
+# if [[ -n $SSH_CONNECTION ]]; then
+#   export EDITOR='vim'
+# else
+#   export EDITOR='nvim'
+# fi
+
+# Compilation flags
+# export ARCHFLAGS="-arch $(uname -m)"
+
+# Set personal aliases, overriding those provided by Oh My Zsh libs,
+# plugins, and themes. Aliases can be placed here, though Oh My Zsh
+# users are encouraged to define aliases within a top-level file in
+# the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+# - $ZSH_CUSTOM/aliases.zsh
+# - $ZSH_CUSTOM/macos.zsh
+# For a full list of active aliases, run `alias`.
+#
+# Example aliases
+# alias zshconfig="mate ~/.zshrc"
+# alias ohmyzsh="mate ~/.oh-my-zsh"
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ -f ${RIG_CONFIG:-}/shell/p10k.zsh ]] && source "$RIG_CONFIG/shell/p10k.zsh"
+[[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
+
+test -e "${HOME}/.iterm2_shell_integration.zsh" && source "${HOME}/.iterm2_shell_integration.zsh"
+
+# Tailscale: App Store version on Air, Homebrew version on mini
+[[ -f "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]] && \
+    alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+# 便利なエイリアス
+alias jobs='jobs -l'              # ジョブ詳細表示
+alias psg='ps aux | grep'         # プロセス検索
+alias ll='ls -lahG'               # 詳細リスト
+alias df='df -h'                  # ディスク容量 (人間が読める形式)
+alias du='du -h'                  # ディレクトリサイズ (人間が読める形式)
+alias free='vm_stat'              # メモリ状況 (macOS)
+alias cpuinfo='sysctl -n machdep.cpu.brand_string'  # CPU情報
+
+# Git ショートカット
+alias gs='git status'
+alias ga='git add'
+alias gaa='git add -A'
+alias gc='git commit -m'
+alias gp='git push'
+alias gl='git pull'
+alias gd='git diff'
+alias glog='git log --oneline --graph'
+alias gb='git branch'
+alias gco='git checkout'
+
+# === SSH Connection Management ===
+alias ssh-check='rig check'
+
+# Tips and aliases viewer
+alias tips='$RIG_CONFIG/shell/scripts/tips.sh'
+alias aliases='$RIG_CONFIG/shell/scripts/aliases.sh'
+
+# Sync all machines
+
+# --- SSH 接続時にバナー表示: 接続元 IP → 接続先 IP + 経路 (罫線と同幅 56 文字) ---
+if [[ -n "$SSH_CONNECTION" ]]; then
+    _client_ip=$(echo "$SSH_CONNECTION" | awk '{print $1}')
+    _server_ip=$(echo "$SSH_CONNECTION" | awk '{print $3}')
+    if [[ $_server_ip == 100.* ]]; then
+        export DOTS_SSH_ROUTE="Tailscale"
+    elif [[ $_server_ip == 10.10.10.* ]]; then
+        export DOTS_SSH_ROUTE="TB"
+    else
+        export DOTS_SSH_ROUTE="SSH"
+    fi
+    _sb="─── SSH: $_client_ip → $_server_ip ($DOTS_SSH_ROUTE) ───"
+    [[ ${#_sb} -gt 56 ]] && _sb="${_sb:0:56}"
+    echo "\033[36m${(r:56::─:)_sb}\033[0m"
+    unset _client_ip _server_ip _sb
+fi
+
+# クイックナビゲーション
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias ~='cd ~'
+
+# Julia
+alias jl='julia'
+alias jlp='julia --project=.'
+alias jlpkg='julia --project=. -e "using Pkg; Pkg.status()"'
+alias jlu='juliaup'              # jlu list, jlu status, etc.
+alias jlup='juliaup update'
+alias jltest='julia --project=. -e "using Pkg; Pkg.test(ARGS...)"'
+alias jlbuild='julia --project=. -e "using Pkg; Pkg.build(ARGS...)"'
+alias jladd='julia --project=. -e "using Pkg; Pkg.add(ARGS...)"'
+alias jluuid='julia -e "using UUIDs; println(uuid4())"'  # UUID 発行
+jlgen() { julia -e "using Pkg; Pkg.generate(\"$1\")"; }  # 新規パッケージ作成 (jlgen PackageName)
+
+# R
+alias R='R --quiet'
+alias Rscript='Rscript --vanilla'
+
+# Python (uv)
+# Use system python3; uv handles pip
+alias py='python3'
+alias pip='uv pip'
+alias venv='uv venv'
+alias pyrun='uv run python'
+alias pytest='uv run pytest'
+alias pyinstall='uv pip install'
+alias pysync='uv sync'
+
+# Rust
+alias cr='cargo run'
+alias cb='cargo build'
+alias ct='cargo test'
+alias cc='cargo check'
+alias cf='cargo fmt'
+alias clippy='cargo clippy'
+
+# C/C++
+alias mk='make'
+alias mkc='make clean'
+alias cmake-build='mkdir -p build && cd build && cmake .. && make'
+
+# Java
+alias jc='javac'
+alias jr='java'
+alias mvn='mvn'
+alias gradle='./gradlew'
+
+# fzf (インストール済みの場合)
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# zoxide (ディレクトリジャンプ)
+eval "$(zoxide init zsh)" 2>/dev/null
+
+# thefuck (コマンド修正)
+eval $(thefuck --alias) 2>/dev/null
+
+# モダンなツール (bat, eza)
+alias cat='bat --paging=never'
+alias catp='bat'                    # ページャー付き
+alias ls='eza'
+alias ll='eza -la --git'
+alias lt='eza -T'                   # ツリー表示
+alias la='eza -la'
+
+# クリップボード連携
+alias clip='pbcopy'
+alias paste='pbpaste'
+alias clipfile='pbcopy <'           # ファイル内容をコピー
+
+# rig checkout helpers (optional local git workflow)
+__rigpush() {
+  local repo="${RIG_ROOT:-}"
+  [[ -n "$repo" ]] || { echo "RIG_ROOT not set"; return 1; }
+  local prev="$PWD"
+  cd "$repo" || return 1
+  git add -A
+  if git diff --cached --quiet; then
+    echo "No changes to commit."
+    cd "$prev" || true
+    return 0
+  fi
+  git commit -m "Update"
+  git push
+  local ret=$?
+  cd "$prev" || true
+  return $ret
+}
+
+__rigpull() {
+  local repo="${RIG_ROOT:-}"
+  [[ -n "$repo" ]] || { echo "RIG_ROOT not set"; return 1; }
+  local prev="$PWD"
+  cd "$repo" || return 1
+  git fetch origin main && git merge --ff-only origin/main
+  local ret=$?
+  cd "$prev" || true
+  return $ret
+}
+
+__rigstat() {
+  local repo="${RIG_ROOT:-}"
+  [[ -n "$repo" ]] || { echo "RIG_ROOT not set"; return 1; }
+  local prev="$PWD"
+  cd "$repo" || return 1
+  git status
+  local ret=$?
+  cd "$prev" || true
+  return $ret
+}
+
+alias rigpush='__rigpush'
+alias rigpull='__rigpull'
+alias rigstat='__rigstat'
+alias dotpush='rigpush'
+alias dotpull='rigpull'
+alias dotstat='rigstat'
+
+
+# 設定リロード
+alias reload='source ~/.zshrc'
+alias r='source ~/.zshrc'
+
+# システムモニタリング
+alias top='btop'                    # top の代わりに btop
+alias htop='btop'                   # htop の代わりに btop
+alias mon='btop'                    # 短いエイリアス
+
+# プロセス管理
+pskill() {
+  ps aux | fzf --height 40% | awk '{print $2}' | xargs kill -9
+}
+
+# ポート確認
+ports() {
+  lsof -i -P -n | grep LISTEN
+}
+
+# 特定ポートで何が動いているか
+port() {
+  lsof -i :$1
+}
+
+# 長時間コマンド通知 (60秒以上で通知)
+notify_on_complete() {
+  local last_status=$?
+  local last_cmd=$(fc -ln -1)
+  local duration=$SECONDS
+  # Remote SSH sessions do not have local NotificationCenter access.
+  if [[ -n "$SSH_CONNECTION" ]]; then
+    return
+  fi
+
+  if [[ $duration -ge 60 ]]; then
+    if command -v terminal-notifier >/dev/null 2>&1; then
+      terminal-notifier \
+        -title "Command Complete" \
+        -subtitle "Took ${duration}s (exit: $last_status)" \
+        -message "$last_cmd" >/dev/null 2>&1 || true
+    else
+      osascript -e "display notification \"$last_cmd\" with title \"Command Complete\" subtitle \"Took ${duration}s (exit: $last_status)\"" >/dev/null 2>&1 || true
+    fi
+  fi
+}
+# PROMPT_COMMAND に追加 (zsh では precmd)
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd notify_on_complete
+
+# SSH を切ってローカルに戻った直後にバナーと同じ色の罫線を表示
+_dots_precmd_after_ssh() {
+  if [[ -n "${_dots_just_ran_ssh:-}" && -z "$SSH_CONNECTION" ]]; then
+    echo "\033[36m$(printf '─%.0s' {1..56})\033[0m"
+    unset _dots_just_ran_ssh
+  fi
+}
+add-zsh-hook precmd _dots_precmd_after_ssh
+
+# コマンド開始時間を記録
+preexec() {
+  SECONDS=0
+  [[ "$1" == ssh* && -z "$SSH_CONNECTION" ]] && _dots_just_ran_ssh=1
+}
+
+# ターミナルリサイズ時にプロンプトを再描画
+TRAPWINCH() {
+  zle && zle reset-prompt
+}
+
+# ========================================
+# 起動時の表示
+# ========================================
+# 起動時の sysinfo 表示 (true で有効、'ff' で手動表示可)
+typeset -g DOTS_SHOW_STARTUP_INFO=true
+
+_show_fastfetch() {
+  echo "$(printf '─%.0s' {1..56})"
+  fastfetch -c "$RIG_CONFIG/shell/fastfetch/config.jsonc" --pipe false
+}
+
+if $DOTS_SHOW_STARTUP_INFO; then
+  _show_fastfetch
+  echo "$(printf '─%.0s' {1..56})"
+fi
+
+# Tips (起動時表示: true で有効、'tips' で手動表示可)
+typeset -g DOTS_SHOW_STARTUP_TIP=false
+if $DOTS_SHOW_STARTUP_TIP && [[ -f "$RIG_CONFIG/shell/tips.txt" ]]; then
+  grep -v '^#' "$RIG_CONFIG/shell/tips.txt" | grep -v '^$' | sort -R | head -1
+fi
+
+# ========================================
+# 便利なコマンド (手動で実行)
+# ========================================
+
+# 天気表示
+weather() {
+  curl -s "wttr.in/${1:-Tokyo}?format=3" 2>/dev/null
+}
+
+# システム情報表示 (ショート版)
+sysinfo() {
+  fastfetch -c "$RIG_CONFIG/shell/fastfetch/config.jsonc" --pipe false
+}
+alias ff='sysinfo'
+
+# システム情報表示 (ロング版)
+sysinfo-full() {
+  fastfetch --pipe false
+}
+alias ffl='sysinfo-full'
+
+# ランダム名言
+quote() {
+  fortune -s | cowsay -f "$(ls /opt/homebrew/share/cowsay/cows/*.cow | sort -R | head -1)"
+}
+
+# ターミナルゲーム
+alias game2048='/opt/homebrew/bin/2048'
+alias tetris='/opt/homebrew/bin/tetris'
+alias snake='nsnake'
+# pyenv (if installed)
+command -v pyenv &>/dev/null && eval "$(pyenv init -)"
+export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+export PATH="$HOME/.julia/bin:$PATH"

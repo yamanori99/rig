@@ -61,7 +61,7 @@ rig ssh-config [--write]
 
 ## Status
 
-`v0.1.0` — apply + clean + keys + check. No multi-host sync (use SSH + apply per machine).
+`v0.1.0` — workstation OMZ/p10k shell parity; compute stays thin bash.
 
 ## License
 
