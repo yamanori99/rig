@@ -12,7 +12,17 @@ elif [ -x /usr/local/bin/brew ]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
 
+# Shared PATH bits for login shells (bash/zsh thin profiles also source common.sh)
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/bin:$PATH"
+
+# Homebrew rustup is keg-only
+if command -v brew >/dev/null 2>&1; then
+  _rig_rustup="$(brew --prefix rustup 2>/dev/null || true)"
+  if [ -n "${_rig_rustup:-}" ] && [ -d "$_rig_rustup/bin" ]; then
+    export PATH="$_rig_rustup/bin:$PATH"
+  fi
+  unset _rig_rustup
+fi
 
 # Safer defaults
 set -o noclobber 2>/dev/null || true

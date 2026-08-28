@@ -8,17 +8,25 @@
 # frei0r, …; not GUI casks; not toys like c2048/nsnake/vitetris).
 
 # Build / languages
+# Julia → juliaup | Python → uv+pyenv | R → r | C/C++ → cmake/ninja/llvm
+# Rust → rustup (rustup default stable) | Java → openjdk@17
 brew "cmake"
 brew "ninja"
-brew "pkg-config"
+brew "pkgconf"
+brew "llvm"
 brew "uv"
 brew "pyenv"
+brew "openssl@3"
+brew "readline"
+brew "sqlite"
+brew "xz"
+brew "zlib"
 brew "juliaup"
 brew "r"
 brew "openjdk@17"
-brew "rust"
+brew "maven"
+brew "rustup"
 brew "zeromq"
-brew "sqlite"
 
 # Containers / remote / VCS
 brew "gh"

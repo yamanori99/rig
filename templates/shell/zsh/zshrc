@@ -436,5 +436,32 @@ alias tetris='/opt/homebrew/bin/tetris'
 alias snake='nsnake'
 # pyenv (if installed)
 command -v pyenv &>/dev/null && eval "$(pyenv init -)"
-export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+
+# Java (Homebrew openjdk@17 is keg-only)
+if [ -d /opt/homebrew/opt/openjdk@17 ]; then
+  export PATH="/opt/homebrew/opt/openjdk@17/bin:$PATH"
+  export CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-I/opt/homebrew/opt/openjdk@17/include"
+elif [ -d /usr/local/opt/openjdk@17 ]; then
+  export PATH="/usr/local/opt/openjdk@17/bin:$PATH"
+fi
+
+# Rust via rustup (Homebrew rustup is keg-only; toolchains live under ~/.cargo)
+if command -v brew &>/dev/null; then
+  _rig_rustup="$(brew --prefix rustup 2>/dev/null)"
+  [ -n "$_rig_rustup" ] && [ -d "$_rig_rustup/bin" ] && export PATH="$_rig_rustup/bin:$PATH"
+  unset _rig_rustup
+fi
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# LLVM/Clang from Homebrew (optional; Xcode CLT remains the macOS SDK source)
+if command -v brew &>/dev/null; then
+  _rig_llvm="$(brew --prefix llvm 2>/dev/null)"
+  if [ -n "$_rig_llvm" ] && [ -d "$_rig_llvm/bin" ]; then
+    export PATH="$_rig_llvm/bin:$PATH"
+  fi
+  unset _rig_llvm
+fi
+
+# Julia (juliaup shims + ~/.julia/bin)
 export PATH="$HOME/.julia/bin:$PATH"
+command -v juliaup &>/dev/null && command -v julia &>/dev/null || true

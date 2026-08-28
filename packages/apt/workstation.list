@@ -1,8 +1,25 @@
-# Workstation extras on linux
+# Workstation extras on linux (plus apt/common.list via role).
+#
+# Julia  → install juliaup from https://julialang.org/install/ (not always in apt)
+# Python → python3 + venv + uv
+# R      → r-base
+# C/C++  → build-essential + cmake/ninja/clang
+# Rust   → rustup from https://rustup.rs/ (prefer over apt rustc)
+# Java   → openjdk-17-jdk + maven
+
 gh
 curl
 build-essential
 cmake
+ninja-build
+pkg-config
+clang
+lldb
 python3
 python3-pip
+python3-venv
 uv
+r-base
+openjdk-17-jdk
+maven
+# rustup / juliaup: use upstream installers when not packaged

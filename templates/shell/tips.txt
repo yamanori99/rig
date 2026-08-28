@@ -55,6 +55,8 @@
 [TIP:DOT] 'ga file' - git add file
 [TIP:DOT] 'gaa' - git add all
 [TIP:DOT] 'jlup' - update Julia via juliaup
+[TIP:DOT] after brew rustup: 'rustup default stable' once
+[TIP:DOT] C/C++ on Mac also needs: xcode-select --install
 [TIP:DOT] 'jlbuild' - build Julia project
 [TIP:DOT] 'Rscript' runs with --vanilla flag
 [TIP:DOT] 'py' = python, 'pip' = uv pip
