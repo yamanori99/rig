@@ -59,8 +59,8 @@ rig ssh-config [--write]
 
 ## Status
 
-`v0.1.0` — apply core + hostname + remote-login + thunderbolt (macOS bridge0);
-clean / remaining features pending.
+`v0.1.0` — apply core + hostname + remote-login + thunderbolt + tailscale;
+clean / gui / cursor / sync pending.
 
 ## License
 

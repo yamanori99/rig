@@ -118,6 +118,10 @@ pub fn execute(
                 let report = features::apply_thunderbolt(ip, os)?;
                 finish_step(&mut st, "thunderbolt", report)?;
             }
+            "tailscale" if !step.skip => {
+                let report = features::apply_tailscale(os)?;
+                finish_step(&mut st, "tailscale", report)?;
+            }
             "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
                 if step.skip {
                     st.note_step(&step.id, "skipped");

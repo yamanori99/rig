@@ -46,6 +46,187 @@ pub fn apply_thunderbolt(ip: &str, os: OsKind) -> Result<StepReport> {
     }
 }
 
+/// Ensure Tailscale daemon is configured; enable Tailscale SSH when already logged in.
+///
+/// Does not run interactive `tailscale up` (needs browser / auth key). Soft-ok when
+/// the binary is missing or the node is not yet connected.
+pub fn apply_tailscale(os: OsKind) -> Result<StepReport> {
+    let ts = which("tailscale");
+    let Some(ts) = ts else {
+        return Ok(StepReport {
+            ok: true,
+            detail: "tailscale not installed — install via packages, then re-apply".into(),
+        });
+    };
+
+    let mut notes = Vec::new();
+    match os {
+        OsKind::Macos => {
+            if let Some(msg) = ensure_tailscaled_macos()? {
+                notes.push(msg);
+            }
+        }
+        OsKind::Linux => {
+            if let Some(msg) = ensure_tailscaled_linux()? {
+                notes.push(msg);
+            }
+        }
+    }
+
+    // Connected?
+    let status = Command::new(&ts)
+        .arg("status")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map_err(RigError::Io)?;
+    if !status.success() {
+        notes.push("not connected — run: sudo tailscale up --ssh".into());
+        return Ok(StepReport {
+            ok: true,
+            detail: notes.join("; "),
+        });
+    }
+
+    let ip = Command::new(&ts)
+        .args(["ip", "-4"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    // Enable Tailscale SSH if possible (best-effort).
+    let set = Command::new(&ts)
+        .args(["set", "--ssh=true", "--accept-risk=lose-ssh"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+    match set {
+        Ok(s) if s.success() => notes.push("tailscale ssh on".into()),
+        _ => notes.push("tailscale ssh set skipped".into()),
+    }
+
+    if let Some(ip) = ip {
+        notes.insert(0, format!("connected {ip}"));
+    } else {
+        notes.insert(0, "connected".into());
+    }
+
+    Ok(StepReport {
+        ok: true,
+        detail: notes.join("; "),
+    })
+}
+
+fn ensure_tailscaled_macos() -> Result<Option<String>> {
+    let daemon = which("tailscaled")
+        .or_else(|| {
+            for p in [
+                "/opt/homebrew/bin/tailscaled",
+                "/usr/local/bin/tailscaled",
+            ] {
+                let path = std::path::PathBuf::from(p);
+                if path.is_file() {
+                    return Some(path);
+                }
+            }
+            None
+        });
+    let Some(daemon) = daemon else {
+        return Ok(Some("tailscaled binary not found".into()));
+    };
+
+    let label = "dev.rig.tailscaled";
+    let path = format!("/Library/LaunchDaemons/{label}.plist");
+    let desired = format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
+"#,
+        daemon.display()
+    );
+
+    let existing = std::fs::read_to_string(&path).ok();
+    if existing.as_deref() != Some(desired.as_str()) {
+        let mut child = Command::new("sudo")
+            .args(["tee", &path])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(RigError::Io)?;
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            stdin.write_all(desired.as_bytes()).map_err(RigError::Io)?;
+        }
+        let status = child.wait().map_err(RigError::Io)?;
+        if !status.success() {
+            return Ok(Some(format!("launchdaemon write failed ({status})")));
+        }
+        let _ = sudo(&["chmod", "644", &path]);
+        let _ = sudo(&["launchctl", "bootout", "system", &path]);
+        let _ = sudo(&["launchctl", "bootstrap", "system", &path]);
+        let _ = sudo(&["launchctl", "unload", &path]);
+        let _ = sudo(&["launchctl", "load", &path]);
+        // Prefer system LaunchDaemon over brew user service.
+        let _ = Command::new("brew")
+            .args(["services", "stop", "tailscale"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+
+    if !pgrep("tailscaled") {
+        let _ = sudo(&["launchctl", "load", &path]);
+        let _ = sudo(&["launchctl", "kickstart", "-k", &format!("system/{label}")]);
+        std::thread::sleep(std::time::Duration::from_secs(1));
+    }
+
+    Ok(Some(if pgrep("tailscaled") {
+        "tailscaled running".into()
+    } else {
+        "tailscaled not running yet".into()
+    }))
+}
+
+fn ensure_tailscaled_linux() -> Result<Option<String>> {
+    for unit in ["tailscaled", "tailscale"] {
+        if sudo(&["systemctl", "enable", "--now", unit])? {
+            return Ok(Some(format!("systemctl enable --now {unit}")));
+        }
+    }
+    if pgrep("tailscaled") {
+        return Ok(Some("tailscaled already running".into()));
+    }
+    Ok(Some(
+        "no systemd unit — install Tailscale from https://tailscale.com/download".into(),
+    ))
+}
+
+fn pgrep(name: &str) -> bool {
+    Command::new("pgrep")
+        .args(["-x", name])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
 fn validate_ipv4(ip: &str) -> Result<()> {
     let parts: Vec<_> = ip.split('.').collect();
     if parts.len() != 4 {
