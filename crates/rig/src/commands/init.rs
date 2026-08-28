@@ -1,0 +1,81 @@
+use crate::error::RigError;
+use crate::paths;
+use crate::schema;
+use miette::Result;
+use std::fs;
+
+pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()> {
+    let roles = schema::list_roles(root)?;
+    if !roles.iter().any(|r| r == role) {
+        return Err(RigError::Msg(format!(
+            "unknown role `{role}` (have: {})",
+            roles.join(", ")
+        ))
+        .into());
+    }
+
+    let host_name = name
+        .map(|s| s.to_string())
+        .unwrap_or_else(schema::current_hostname);
+    let short = host_name
+        .split('.')
+        .next()
+        .unwrap_or(&host_name)
+        .to_string();
+
+    let dest = paths::hosts_dir(root).join(format!("{short}.toml"));
+    if dest.exists() {
+        return Err(RigError::Msg(format!(
+            "already exists: {}",
+            dest.display()
+        ))
+        .into());
+    }
+
+    let example = paths::hosts_dir(root)
+        .join("examples")
+        .join(format!("{role}.toml"));
+    let mut body = if example.exists() {
+        fs::read_to_string(&example).map_err(RigError::Io)?
+    } else {
+        default_host_toml(role)
+    };
+
+    // rewrite name = "..."
+    body = rewrite_name(&body, &short);
+
+    fs::create_dir_all(paths::hosts_dir(root)).map_err(RigError::Io)?;
+    fs::write(&dest, body).map_err(RigError::Io)?;
+    println!("wrote {}", dest.display());
+    println!("edit IPs / shell as needed, then: rig apply --dry-run");
+    Ok(())
+}
+
+fn rewrite_name(toml: &str, name: &str) -> String {
+    let mut out = Vec::new();
+    let mut done = false;
+    for line in toml.lines() {
+        if !done && line.trim_start().starts_with("name") {
+            out.push(format!("name = \"{name}\""));
+            done = true;
+        } else {
+            out.push(line.to_string());
+        }
+    }
+    if !done {
+        out.insert(0, format!("name = \"{name}\""));
+    }
+    out.join("\n") + "\n"
+}
+
+fn default_host_toml(role: &str) -> String {
+    format!(
+        r#"name = "change-me"
+role = "{role}"
+schema_version = 1
+# os = "macos"   # or "linux"
+# shell = "zsh"  # or "bash"
+# user = "you"
+"#
+    )
+}

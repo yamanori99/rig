@@ -1,0 +1,17 @@
+# Gitleaks config for rig (public-repo hygiene)
+title = "rig"
+
+[extend]
+# use default rules
+useDefault = true
+
+[allowlist]
+description = "Placeholder examples only — not real secrets"
+paths = [
+  '''hosts/examples/''',
+]
+regexes = [
+  '''100\.x\.x\.x''',
+  '''192\.168\.x\.x''',
+  '''10\.10\.10\.x''',
+]

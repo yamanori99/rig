@@ -1,0 +1,8 @@
+# Workstation extras on linux
+gh
+curl
+build-essential
+cmake
+python3
+python3-pip
+uv

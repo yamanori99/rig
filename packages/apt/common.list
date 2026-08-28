@@ -1,0 +1,18 @@
+# Shared CLI baseline (linux) — one package per line
+# Mirrors packages/brew/common.Brewfile intent (names differ on apt).
+git
+openssh-client
+tmux
+fzf
+eza
+bat
+zoxide
+rsync
+tree
+procps
+btop
+fastfetch
+tldr
+zsh
+bash
+# gitleaks / thefuck: often via pipx/cargo; add when packaged on the distro

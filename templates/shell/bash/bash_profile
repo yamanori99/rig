@@ -1,0 +1,7 @@
+# rig bash_profile
+if [ -n "${RIG_CONFIG:-}" ] && [ -f "$RIG_CONFIG/shell/common.sh" ]; then
+  # shellcheck disable=SC1091
+  . "$RIG_CONFIG/shell/common.sh"
+fi
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+[ -f "$HOME/.bashrc" ] && . "$HOME/.bashrc"

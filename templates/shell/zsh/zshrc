@@ -1,0 +1,13 @@
+# rig zshrc (base product shell — not Oh My Zsh)
+# Linked/sourced via ~/.config/rig/shell/zshrc
+
+if [ -n "${RIG_CONFIG:-}" ] && [ -f "$RIG_CONFIG/shell/common.sh" ]; then
+  # shellcheck disable=SC1091
+  . "$RIG_CONFIG/shell/common.sh"
+elif [ -n "${RIG_ROOT:-}" ] && [ -f "$RIG_ROOT/templates/shell/common/profile.sh" ]; then
+  # shellcheck disable=SC1091
+  . "$RIG_ROOT/templates/shell/common/profile.sh"
+fi
+
+autoload -Uz colors && colors
+PROMPT='%F{green}%n@%m%f %F{blue}%~%f %# '

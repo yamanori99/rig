@@ -1,0 +1,15 @@
+# Copy to ../<hostname>.toml or run: rig init --role compute
+name = "compute-01"
+role = "compute"
+schema_version = 1
+os = "macos"
+shell = "bash"
+# user = "you"
+# Fill with YOUR addresses — never commit real lab IPs to a shared product repo
+# vpn = "100.x.x.x"
+# lan = "192.168.x.x"
+# thunderbolt = "10.10.10.x"
+
+# [packages]
+# add = ["julia"]
+# remove = ["ollama"]

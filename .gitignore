@@ -1,0 +1,20 @@
+/target
+**/target
+.DS_Store
+*.swp
+
+# Real machine inventory (personal / lab) — never commit
+/hosts/*.toml
+!/hosts/examples/
+
+# Personal overlays
+/overlay/**
+!/overlay/.gitkeep
+
+# Local state
+.rig-state.json
+
+# testenv secrets / generated (defense in depth)
+testenv/**/.generated/
+testenv/**/mounted-keys/**
+!testenv/**/mounted-keys/.gitkeep

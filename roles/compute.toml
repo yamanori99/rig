@@ -1,0 +1,10 @@
+description = "Headless compute node — CLI runtimes, no GUI casks"
+packages = ["common", "compute"]
+default_shell = "bash"
+
+[features]
+gui = false
+cursor = false
+remote_login = true
+tailscale = true
+thunderbolt = true

@@ -1,0 +1,10 @@
+description = "Laptop / workstation with GUI and full dev tooling"
+packages = ["common", "workstation"]
+default_shell = "zsh"
+
+[features]
+gui = true
+cursor = true
+remote_login = false
+tailscale = false
+thunderbolt = false

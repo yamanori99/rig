@@ -1,0 +1,8 @@
+# Copy to ../<hostname>.toml or run: rig init --role workstation
+name = "my-laptop"
+role = "workstation"
+schema_version = 1
+# os = "macos"
+# shell = "zsh"
+# user = "you"
+# No VPN/LAN required for a workstation laptop

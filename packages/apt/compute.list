@@ -1,0 +1,28 @@
+# Compute extras on linux (plus apt/common.list via role).
+# common already has: git openssh tmux fzf eza bat zoxide rsync tree procps
+# (watch) btop fastfetch tldr zsh bash
+cmake
+ninja-build
+pkg-config
+build-essential
+curl
+wget
+jq
+ripgrep
+fd-find
+neovim
+parallel
+gh
+htop
+sqlite3
+python3
+python3-pip
+uv
+openjdk-17-jdk
+ffmpeg
+tesseract-ocr
+iperf3
+nmap
+socat
+telnet
+# julia / rust / quarto / ollama: install via upstream tools when needed

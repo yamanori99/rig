@@ -1,0 +1,5 @@
+# rig ssh config header — generated body follows
+Host *
+  ServerAliveInterval 30
+  ServerAliveCountMax 6
+  AddKeysToAgent yes
