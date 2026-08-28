@@ -93,6 +93,11 @@ enum KeysCmd {
 }
 
 fn main() -> Result<()> {
+    // Empty RIG_ROOT= must not be treated as --root with a missing value.
+    if std::env::var_os("RIG_ROOT").is_some_and(|v| v.is_empty()) {
+        std::env::remove_var("RIG_ROOT");
+    }
+
     let cli = Cli::parse();
     let root = paths::discover_root(cli.root)?;
 

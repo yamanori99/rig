@@ -7,11 +7,21 @@ CFG="${ROOT}/.generated/ssh_config"
 NAME="${RIG_APPLE_NAME:-rig-smoke}"
 WITH_PACKAGES="${RIG_APPLE_WITH_PACKAGES:-0}"
 FROM_GITHUB="${RIG_APPLE_FROM_GITHUB:-0}"
+FROM_RELEASE="${RIG_APPLE_FROM_RELEASE:-0}"
 GIT_URL="${RIG_GIT_URL:-https://github.com/yamanori99/rig.git}"
 
 if [[ ! -f "${CFG}" ]]; then
   echo "missing ${CFG}; run scripts/up.sh first" >&2
   exit 1
+fi
+
+if [[ "${FROM_RELEASE}" == "1" ]]; then
+  echo "Seeding release-binary smoke..."
+  chmod +x "${ROOT}/scripts/smoke-release-guest.sh"
+  ssh -F "${CFG}" "${NAME}" \
+    env PATH="/home/dev/.local/bin:/usr/local/bin:/usr/bin:/bin" \
+        bash -s <"${ROOT}/scripts/smoke-release-guest.sh"
+  exit 0
 fi
 
 # When cloning from GitHub, seed only the guest smoke script via stdin,

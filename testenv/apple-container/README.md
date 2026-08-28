@@ -32,7 +32,8 @@ export PATH="$CARGO_HOME/bin:/opt/cargo/bin:$PATH"
 | --- | --- |
 | `--smoke` | install + init + apply dry-run + apply `--skip-packages` |
 | `--with-packages` | also run apt |
-| `--from-github[=URL]` | guest clones public repo (release gate) |
+| `--from-github[=URL]` | guest clones public repo (source gate) |
+| `--from-release` | guest `curl \| sh` installs Release binary (no Rust) |
 
 Default URL: `https://github.com/yamanori99/rig.git`
 

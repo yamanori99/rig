@@ -10,6 +10,7 @@ NAME="${RIG_APPLE_NAME:-rig-smoke}"
 RUN_SMOKE=0
 WITH_PACKAGES=0
 FROM_GITHUB=0
+FROM_RELEASE=0
 GIT_URL="${RIG_GIT_URL:-https://github.com/yamanori99/rig.git}"
 
 for arg in "$@"; do
@@ -23,14 +24,18 @@ for arg in "$@"; do
       FROM_GITHUB=1
       GIT_URL="${arg#--from-github=}"
       ;;
+    --from-release)
+      FROM_RELEASE=1
+      ;;
     -h|--help)
-      echo "usage: $0 [--smoke] [--with-packages] [--from-github[=URL]]"
+      echo "usage: $0 [--smoke] [--with-packages] [--from-github[=URL]] [--from-release]"
       echo "  macOS 26+ Apple silicon + Apple container CLI"
       echo "  default: bind-mount ${RIG_ROOT} → /home/dev/rig (fast local loop)"
       echo "  --from-github     clone from GitHub inside the guest (release gate)"
       echo "                    default URL: ${GIT_URL}"
-      echo "  --smoke           cargo install + init + apply dry-run + apply --yes --skip-packages"
-      echo "  --with-packages   also run apply --yes (apt; slower)"
+      echo "  --from-release    curl install.sh | sh (prebuilt binary; no Rust)"
+      echo "  --smoke           run smoke inside guest"
+      echo "  --with-packages   also run apply --yes (apt; slower; bind-mount/github modes)"
       exit 0
       ;;
     *)
@@ -39,6 +44,11 @@ for arg in "$@"; do
       ;;
   esac
 done
+
+if [[ "${FROM_GITHUB}" -eq 1 && "${FROM_RELEASE}" -eq 1 ]]; then
+  echo "use only one of --from-github / --from-release" >&2
+  exit 1
+fi
 
 if ! command -v container >/dev/null 2>&1; then
   echo "container CLI not found. Install https://github.com/apple/container" >&2
@@ -111,9 +121,11 @@ CREATE_ARGS=(
   --mount "${MOUNT_KEYS}"
 )
 
-if [[ "${FROM_GITHUB}" -eq 0 ]]; then
+if [[ "${FROM_GITHUB}" -eq 0 && "${FROM_RELEASE}" -eq 0 ]]; then
   echo "Mode: bind-mount ${RIG_ROOT} → /home/dev/rig"
   CREATE_ARGS+=(--mount "type=bind,source=${RIG_ROOT},target=/home/dev/rig")
+elif [[ "${FROM_RELEASE}" -eq 1 ]]; then
+  echo "Mode: guest installs release binary via install.sh (no checkout mount)"
 else
   echo "Mode: guest will git clone ${GIT_URL}"
 fi
@@ -153,6 +165,7 @@ ssh -F "${CFG}" "${NAME}" "echo ok" >/dev/null
 if [[ "${RUN_SMOKE}" -eq 1 ]]; then
   export RIG_APPLE_WITH_PACKAGES="${WITH_PACKAGES}"
   export RIG_APPLE_FROM_GITHUB="${FROM_GITHUB}"
+  export RIG_APPLE_FROM_RELEASE="${FROM_RELEASE}"
   export RIG_GIT_URL="${GIT_URL}"
   "${ROOT}/scripts/smoke.sh"
 fi
