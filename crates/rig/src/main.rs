@@ -59,6 +59,9 @@ enum Commands {
         #[arg(long)]
         write: bool,
     },
+    /// Manage SSH keys for passwordless peer access
+    #[command(subcommand)]
+    Keys(KeysCmd),
     /// List roles with packages, features, and shell settings
     Roles {
         /// Role name (omit to show all)
@@ -73,6 +76,17 @@ enum Commands {
 enum HostCmd {
     List,
     Detect,
+}
+
+#[derive(Subcommand, Debug)]
+enum KeysCmd {
+    /// Copy this machine's pubkey to peers (-lan / -tb preferred, then -ts)
+    Distribute {
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -95,6 +109,9 @@ fn main() -> Result<()> {
         } => commands::clean::run(&root, dry_run, yes, packages)?,
         Commands::SshConfig { dry_run, write } => {
             commands::ssh_config::run(&root, dry_run, write)?
+        }
+        Commands::Keys(KeysCmd::Distribute { dry_run, yes }) => {
+            commands::keys::distribute(&root, yes, dry_run)?
         }
         Commands::Roles { name, os } => {
             commands::roles::run(&root, name.as_deref(), os.as_deref())?

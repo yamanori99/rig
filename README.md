@@ -53,13 +53,14 @@ rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
 rig apply [--dry-run] [-y] [--skip-packages]
+rig keys distribute [--dry-run] [-y]
 rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
 ```
 
 ## Status
 
-`v0.1.0` — apply core + hostname + remote-login + thunderbolt + tailscale + cursor + tmux;
+`v0.1.0` — apply core + hostname + remote-login + thunderbolt + tailscale + cursor + tmux + keys;
 clean / gui / sync pending.
 
 ## License

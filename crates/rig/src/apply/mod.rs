@@ -4,6 +4,7 @@ use std::path::Path;
 
 mod cursor;
 mod features;
+mod keys;
 mod link;
 mod packages;
 mod plan;
@@ -11,6 +12,7 @@ mod ssh;
 mod state;
 mod tmux;
 
+pub use keys::distribute as distribute_keys;
 pub use plan::build_plan;
 pub use ssh::{generate as generate_ssh_config, write_ssh_config};
 
