@@ -61,7 +61,8 @@ rig ssh-config [--write]
 
 ## Status
 
-`v0.1.0` — workstation OMZ/p10k shell parity; compute stays thin bash.
+`v0.1.1` — user-chosen `[[ssh]]` aliases; optional workstation Thunderbolt;
+OS hostname left to the user.
 
 ## License
 
