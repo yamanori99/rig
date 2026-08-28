@@ -143,10 +143,12 @@ pub fn execute(
                 finish_step(&mut st, "remote-login", report)?;
             }
             "thunderbolt" if !step.skip => {
-                let ip = host.thunderbolt.as_deref().ok_or_else(|| {
-                    RigError::Msg("thunderbolt step enabled but host.thunderbolt is empty".into())
+                let ip = host.thunderbolt_ip().ok_or_else(|| {
+                    RigError::Msg(
+                        "thunderbolt step enabled but no [[ssh]] with link=thunderbolt".into(),
+                    )
                 })?;
-                let report = features::apply_thunderbolt(ip, os)?;
+                let report = features::apply_thunderbolt(&ip, os)?;
                 finish_step(&mut st, "thunderbolt", report)?;
             }
             "tailscale" if !step.skip => {

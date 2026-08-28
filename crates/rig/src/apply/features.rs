@@ -17,7 +17,7 @@ pub fn apply_remote_login(os: OsKind) -> Result<StepReport> {
 
 /// Assign a Thunderbolt Bridge (`bridge0`) IPv4 on macOS and persist via LaunchDaemon.
 ///
-/// `ip` is this machine's address (from `host.thunderbolt`). Linux is a no-op.
+/// `ip` is this machine's address (from [[ssh]] with link=thunderbolt). Linux is a no-op.
 pub fn apply_thunderbolt(ip: &str, os: OsKind) -> Result<StepReport> {
     validate_ipv4(ip)?;
     match os {

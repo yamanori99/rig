@@ -7,4 +7,5 @@ gui = true
 cursor = true
 remote_login = false
 tailscale = false
-thunderbolt = false
+# Optional: [[ssh]] with link=thunderbolt puts this laptop on the TB bridge.
+thunderbolt = true

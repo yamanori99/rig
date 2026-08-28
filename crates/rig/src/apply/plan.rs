@@ -95,12 +95,13 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         "enable remote login / sshd",
     ));
     steps.push(feature_step("tailscale", f.tailscale, "configure Tailscale"));
+    let tb_ip = host.thunderbolt_ip();
     steps.push(feature_step(
         "thunderbolt",
-        f.thunderbolt && host.thunderbolt.is_some(),
-        match &host.thunderbolt {
+        f.thunderbolt && tb_ip.is_some(),
+        match &tb_ip {
             Some(ip) => format!("configure thunderbolt IP {ip}"),
-            None => "no thunderbolt IP on host".into(),
+            None => "no thunderbolt [[ssh]] link on host".into(),
         },
     ));
 

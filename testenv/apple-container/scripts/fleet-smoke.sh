@@ -99,7 +99,10 @@ for n in nodes:
                 'os = "linux"',
                 'shell = "bash"',
                 f'user = "{n.get("user", "dev")}"',
-                f'lan = "{n["ip"]}"',
+                "[[ssh]]",
+                f'alias = "{n["name"]}-lan"',
+                f'ip = "{n["ip"]}"',
+                'link = "lan"',
                 "",
             ]
         )

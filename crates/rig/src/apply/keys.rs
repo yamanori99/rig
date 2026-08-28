@@ -9,10 +9,10 @@ pub struct DistributeReport {
     pub detail: String,
 }
 
-/// Copy this machine's ed25519 pubkey to peers via Host aliases (-lan / -tb / -ts).
+/// Copy this machine's ed25519 pubkey to peers via their [[ssh]] aliases.
 ///
-/// Prefers LAN and Thunderbolt (system sshd + authorized_keys). Falls back to
-/// Tailscale alias only when no LAN/TB path answers on TCP/22.
+/// Prefers `link = lan|thunderbolt` (system sshd + authorized_keys). Falls back
+/// to `link = vpn` only when no LAN/TB path answers on TCP/22.
 pub fn distribute(
     root: &Path,
     self_name: &str,
@@ -34,12 +34,12 @@ pub fn distribute(
         .iter()
         .map(|(_, h)| h)
         .filter(|h| h.name != self_name)
-        .filter(|h| h.vpn.is_some() || h.lan.is_some() || h.thunderbolt.is_some())
+        .filter(|h| h.has_network())
         .collect();
 
     if peers.is_empty() {
         return Ok(DistributeReport {
-            detail: "no peers with vpn/lan/thunderbolt in hosts/".into(),
+            detail: "no peers with [[ssh]] (or legacy vpn/lan/thunderbolt) in hosts/".into(),
         });
     }
 
@@ -48,10 +48,10 @@ pub fn distribute(
     let mut failed = Vec::new();
 
     for peer in peers {
-        let candidates = candidate_paths(peer);
-        let reachable: Vec<(String, String)> = candidates
+        let candidates = peer.ssh_paths();
+        let reachable: Vec<_> = candidates
             .into_iter()
-            .filter(|(_, ip)| tcp_port_open(ip, 22))
+            .filter(|p| tcp_port_open(&p.ip, 22))
             .collect();
         if reachable.is_empty() {
             skipped.push(format!("{} (offline)", peer.name));
@@ -60,12 +60,15 @@ pub fn distribute(
 
         let mut copy_targets: Vec<String> = reachable
             .iter()
-            .filter(|(alias, _)| alias.ends_with("-lan") || alias.ends_with("-tb"))
-            .map(|(alias, _)| alias.clone())
+            .filter(|p| p.link.prefer_for_keys())
+            .map(|p| p.alias.clone())
             .collect();
         if copy_targets.is_empty() {
-            if let Some((alias, _)) = reachable.into_iter().find(|(a, _)| a.ends_with("-ts")) {
-                copy_targets.push(alias);
+            if let Some(p) = reachable
+                .into_iter()
+                .find(|p| p.link == crate::schema::LinkKind::Vpn)
+            {
+                copy_targets.push(p.alias);
             }
         }
 
@@ -128,20 +131,6 @@ fn default_pubkey() -> Result<PathBuf> {
         .map(PathBuf::from)
         .ok_or_else(|| RigError::Msg("HOME is not set".into()))?;
     Ok(home.join(".ssh/id_ed25519.pub"))
-}
-
-fn candidate_paths(peer: &Host) -> Vec<(String, String)> {
-    let mut v = Vec::new();
-    if let Some(ip) = &peer.lan {
-        v.push((format!("{}-lan", peer.name), ip.clone()));
-    }
-    if let Some(ip) = &peer.thunderbolt {
-        v.push((format!("{}-tb", peer.name), ip.clone()));
-    }
-    if let Some(ip) = &peer.vpn {
-        v.push((format!("{}-ts", peer.name), ip.clone()));
-    }
-    v
 }
 
 fn tcp_port_open(ip: &str, port: u16) -> bool {

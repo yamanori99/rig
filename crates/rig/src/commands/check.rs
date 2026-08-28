@@ -4,7 +4,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
-/// Probe TCP/22 and BatchMode SSH for each peer path (-lan / -tb / -ts).
+/// Probe TCP/22 and BatchMode SSH for each peer [[ssh]] path.
 pub fn run(root: &std::path::Path) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     let self_name = schema::detect_current_host(&hosts)
@@ -22,24 +22,28 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         .iter()
         .map(|(_, h)| h)
         .filter(|h| h.name != self_name)
-        .filter(|h| h.vpn.is_some() || h.lan.is_some() || h.thunderbolt.is_some())
+        .filter(|h| h.has_network())
         .collect();
 
     if peers.is_empty() {
-        println!("(no peers with vpn/lan/thunderbolt — add addresses in hosts/*.toml)");
+        println!("(no peers with [[ssh]] — add alias/ip/link in hosts/*.toml)");
         return Ok(());
     }
 
     println!(
-        "{:<18} {:<4} {:<18} {:<5} {}",
-        "PEER", "PATH", "IP", "TCP", "SSH"
+        "{:<18} {:<18} {:<4} {:<18} {:<5} {}",
+        "PEER", "ALIAS", "LINK", "IP", "TCP", "SSH"
     );
 
     let mut any_ssh = false;
     for peer in peers {
-        for (path, ip) in peer_paths(peer) {
-            let tcp = if tcp_port_open(&ip, 22) { "ok" } else { "fail" };
-            let ssh = if tcp == "ok" && ssh_batch_ok(&format!("{}-{path}", peer.name)) {
+        for path in peer.ssh_paths() {
+            let tcp = if tcp_port_open(&path.ip, 22) {
+                "ok"
+            } else {
+                "fail"
+            };
+            let ssh = if tcp == "ok" && ssh_batch_ok(&path.alias) {
                 any_ssh = true;
                 "ok"
             } else if tcp == "ok" {
@@ -48,8 +52,12 @@ pub fn run(root: &std::path::Path) -> Result<()> {
                 "-"
             };
             println!(
-                "{:<18} {:<4} {:<18} {:<5} {ssh}",
-                peer.name, path, ip, tcp
+                "{:<18} {:<18} {:<4} {:<18} {:<5} {ssh}",
+                peer.name,
+                path.alias,
+                path.link.as_str(),
+                path.ip,
+                tcp
             );
         }
     }
@@ -61,20 +69,6 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         println!("no passwordless SSH yet — try: rig keys distribute --yes");
     }
     Ok(())
-}
-
-fn peer_paths(peer: &Host) -> Vec<(&'static str, String)> {
-    let mut v = Vec::new();
-    if let Some(ip) = &peer.lan {
-        v.push(("lan", ip.clone()));
-    }
-    if let Some(ip) = &peer.thunderbolt {
-        v.push(("tb", ip.clone()));
-    }
-    if let Some(ip) = &peer.vpn {
-        v.push(("ts", ip.clone()));
-    }
-    v
 }
 
 fn tcp_port_open(ip: &str, port: u16) -> bool {

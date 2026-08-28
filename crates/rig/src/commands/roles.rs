@@ -88,7 +88,7 @@ fn print_role(
         println!("    → Tailscale");
     }
     if f.thunderbolt {
-        println!("    → Thunderbolt IP (needs host.thunderbolt)");
+        println!("    → Thunderbolt bridge0 when [[ssh]] has link=thunderbolt");
     }
 
     println!("  package sets: {}", role.packages.join(", "));

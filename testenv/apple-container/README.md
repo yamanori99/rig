@@ -56,9 +56,10 @@ ssh -F testenv/apple-container/.generated/ssh_config rig-compute
 What smoke checks:
 
 1. Each node: `rig` install + init + apply (`--skip-packages`)
-2. Each workstation: peer `hosts/<name>.toml` with `lan=<ip>`,
+2. Each workstation: peer `hosts/<name>.toml` with `[[ssh]]` (`link = lan`),
    then `rig ssh-config --write`
 3. From each workstation: `ssh <peer>-lan echo ok` to every other node
+   (alias chosen by fleet-smoke; product lets you pick any alias)
 
 Mac → guests uses the controller key. Workstation → peers uses the client key
 (`~/.ssh/id_ed25519` on workstation nodes only).

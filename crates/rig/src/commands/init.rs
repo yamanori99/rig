@@ -50,7 +50,7 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
     fs::write(&dest, body).map_err(RigError::Io)?;
     println!("wrote {}", dest.display());
     println!("os/shell auto-detect at apply (override in the toml if needed)");
-    println!("edit vpn/lan/thunderbolt by hand if needed, then: rig apply --dry-run");
+    println!("edit [[ssh]] aliases by hand if needed, then: rig apply --dry-run");
     Ok(())
 }
 
@@ -91,16 +91,18 @@ fn strip_os_assignment(toml: &str) -> String {
 
 fn default_host_toml(role: &str) -> String {
     format!(
-        r#"# Local host file (gitignored). Edit name and addresses by hand.
-# name = inventory / SSH prefix; OS hostname is not changed by rig.
+        r#"# Local host file (gitignored). Edit name and [[ssh]] by hand.
+# name = inventory id; OS hostname is not changed by rig.
+# [[ssh]] alias = SSH Host name you choose; link = vpn|lan|thunderbolt
 name = "change-me"
 role = "{role}"
 schema_version = 1
 # os / shell omitted → auto-detect at apply
 # user = "you"
-# vpn = "100.x.x.x"           # → peers: Host <name>-ts
-# lan = "192.168.x.x"         # → peers: Host <name>-lan
-# thunderbolt = "10.10.10.x"  # this machine: bridge0; peers: Host <name>-tb
+# [[ssh]]
+# alias = "change-me-lan"
+# ip = "192.168.x.x"
+# link = "lan"
 "#
     )
 }

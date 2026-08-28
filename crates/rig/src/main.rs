@@ -82,7 +82,7 @@ enum HostCmd {
 
 #[derive(Subcommand, Debug)]
 enum KeysCmd {
-    /// Copy this machine's pubkey to peers (-lan / -tb preferred, then -ts)
+    /// Copy this machine's pubkey to peers (prefer lan/tb links, then vpn)
     Distribute {
         #[arg(long)]
         dry_run: bool,

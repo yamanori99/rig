@@ -2,11 +2,9 @@
 # Copy via:  rig init --role compute
 # Or copy this file to ../<name>.toml and edit.
 #
-# `name` is yours: inventory id and SSH Host prefix. rig never changes the
-# OS hostname. Keep `name` equal to the short hostname so apply finds this host.
-#
+# `name` is yours (inventory id). Pick SSH aliases yourself in [[ssh]].
 # Real lab IPs belong only in your local hosts/*.toml (gitignored).
-# Never commit real vpn / lan / thunderbolt addresses to a shared repo.
+# Never commit real addresses to a shared repo.
 
 name = "compute-01"
 role = "compute"
@@ -18,22 +16,31 @@ schema_version = 1
 # shell = "bash"        # or "zsh"
 # user = "you"          # SSH / local account; default = current user
 
-# --- Addresses on THIS machine (fill by hand) ---
-# Edit these when you (re)number the lab. There is no auto-discovery.
+# --- Reachable paths (fill by hand) ---
+# alias = whatever you want to type: `ssh <alias>`
+# link  = vpn | lan | thunderbolt
+#        (aliases: ts→vpn, tb→thunderbolt)
+# thunderbolt link: on this machine, apply configures bridge0 + LaunchDaemon
 #
-# vpn = Tailscale IP of this host
-#   → peers generate:  Host <name>-ts
-# lan = wired Ethernet / lab LAN IP of this host
-#   → peers generate:  Host <name>-lan
-# thunderbolt = Thunderbolt Bridge IP of this host (macOS bridge0, often 10.10.10.x/24)
-#   → on this machine, `rig apply` configures bridge0 + LaunchDaemon
-#   → peers generate:  Host <name>-tb
+# [[ssh]]
+# alias = "mini-ts"
+# ip = "100.x.x.x"
+# link = "vpn"
 #
-# vpn = "100.x.x.x"
-# lan = "192.168.x.x"
-# thunderbolt = "10.10.10.x"
+# [[ssh]]
+# alias = "mini-lan"
+# ip = "192.168.x.x"
+# link = "lan"
+#
+# [[ssh]]
+# alias = "mini-tb"
+# ip = "10.10.10.x"
+# link = "thunderbolt"
+
+# Legacy (still accepted): vpn/lan/thunderbolt = "ip"
+# → auto aliases {name}-ts / {name}-lan / {name}-tb. Prefer [[ssh]].
 
 # --- Package set tweaks (optional) ---
 # [packages]
 # add = ["julia"]
-# remove = ["ollama"]
+# remove = ["unwanted-set"]

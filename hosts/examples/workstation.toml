@@ -2,15 +2,12 @@
 # Copy via:  rig init --role workstation
 # Or copy this file to ../<name>.toml and edit.
 #
-# `name` is yours: inventory id and SSH Host prefix (<name>-lan / -tb / -ts).
+# `name` is yours (inventory id). SSH Host aliases are also yours via [[ssh]].
 # rig never changes the OS hostname. For `rig apply` on this machine, keep
 # `name` equal to the short hostname (or pass --name at init).
 #
-# A workstation often has no vpn/lan/thunderbolt of its own.
-# To SSH into compute nodes, add *their* host files beside this one
-# (same directory), with each peer's vpn / lan / thunderbolt filled in.
-# Then run:  rig apply   or   rig ssh-config --write
-# → Host <peer>-ts / <peer>-lan / <peer>-tb
+# To reach compute nodes, add *their* host files beside this one with [[ssh]]
+# filled in, then:  rig apply   or   rig ssh-config --write
 
 name = "my-laptop"
 role = "workstation"
@@ -22,11 +19,15 @@ schema_version = 1
 # shell = "zsh"         # or "bash"
 # user = "you"          # default = current user
 
-# --- Addresses on THIS machine (usually unused on a laptop) ---
-# Only set if this workstation itself is reachable on that path.
-# vpn = "100.x.x.x"
-# lan = "192.168.x.x"
-# thunderbolt = "10.10.10.x"
+# --- Paths on THIS machine (optional) ---
+# alias = SSH `Host` name (fully user-chosen)
+# ip    = address on that path
+# link  = vpn | lan | thunderbolt  (tb also configures bridge0 on apply)
+#
+# [[ssh]]
+# alias = "air-tb"
+# ip = "10.10.10.10"
+# link = "thunderbolt"
 
 # --- Package set tweaks (optional) ---
 # [packages]

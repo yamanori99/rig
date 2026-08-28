@@ -12,15 +12,12 @@ pub fn list(root: &std::path::Path) -> Result<()> {
         "NAME", "ROLE", "OS", "SHELL", "NET"
     );
     for (_, h) in hosts {
-        let net = [
-            h.vpn.as_deref().map(|_| "vpn"),
-            h.lan.as_deref().map(|_| "lan"),
-            h.thunderbolt.as_deref().map(|_| "tb"),
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>()
-        .join(",");
+        let net = h
+            .ssh_paths()
+            .iter()
+            .map(|p| format!("{}:{}", p.link.as_str(), p.alias))
+            .collect::<Vec<_>>()
+            .join(",");
         println!(
             "{:<20} {:<12} {:<8} {:<6} {}",
             h.name,
