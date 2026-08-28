@@ -27,6 +27,7 @@ echo "== release-smoke: apply --yes --skip-packages =="
 rig apply --yes --skip-packages
 
 echo "== release-smoke: roles (embedded) =="
-rig roles compute | head -25
+rig roles compute >/tmp/rig-roles.out
+head -25 /tmp/rig-roles.out
 
 echo "OK — apple-container release binary smoke passed"
