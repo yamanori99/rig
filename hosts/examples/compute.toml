@@ -1,14 +1,36 @@
-# Copy to ../<hostname>.toml or run: rig init --role compute
+# Host example for role=compute.
+# Copy via:  rig init --role compute
+# Or copy this file to ../<hostname>.toml and edit.
+#
+# Real lab IPs belong only in your local hosts/*.toml (gitignored).
+# Never commit real vpn / lan / thunderbolt addresses to a shared repo.
+
 name = "compute-01"
 role = "compute"
 schema_version = 1
-# os / shell omitted → detected at apply time
-# user = "you"
-# Fill with YOUR addresses — never commit real lab IPs to a shared product repo
+
+# --- Identity (optional overrides) ---
+# Omit os / shell to auto-detect at `rig apply` (recommended).
+# os = "macos"          # or "linux"
+# shell = "bash"        # or "zsh"
+# user = "you"          # SSH / local account; default = current user
+
+# --- Addresses on THIS machine (fill by hand) ---
+# Edit these when you (re)number the lab. There is no auto-discovery.
+#
+# vpn = Tailscale IP of this host
+#   → peers generate:  Host <name>-ts
+# lan = wired Ethernet / lab LAN IP of this host
+#   → peers generate:  Host <name>-lan
+# thunderbolt = Thunderbolt Bridge IP of this host (macOS bridge0, often 10.10.10.x/24)
+#   → on this machine, `rig apply` configures bridge0 + LaunchDaemon
+#   → peers generate:  Host <name>-tb
+#
 # vpn = "100.x.x.x"
 # lan = "192.168.x.x"
 # thunderbolt = "10.10.10.x"
 
+# --- Package set tweaks (optional) ---
 # [packages]
 # add = ["julia"]
 # remove = ["ollama"]

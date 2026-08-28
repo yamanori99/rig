@@ -1,0 +1,25 @@
+# Apple-container fleet inventory (testenv only — not product hosts/).
+#
+# Each [[node]] becomes one Linux VM:
+#   name  → container name and hostname (must be unique)
+#   role  → "workstation" | "compute"  (passed to `rig init --role`)
+#
+# IPs are discovered after boot and written into the workstation's
+# hosts/<peer>.toml as `lan = "…"` by fleet-smoke (not stored here).
+# User inside guests is always `dev`; SSH keys come from mounted-keys/.
+#
+# Grow the fleet by adding blocks, then:
+#   ./scripts/fleet-down.sh && ./scripts/fleet-up.sh --smoke
+
+[[node]]
+name = "rig-ws"
+role = "workstation"
+
+[[node]]
+name = "rig-compute"
+role = "compute"
+
+# Example third node:
+# [[node]]
+# name = "rig-compute-02"
+# role = "compute"

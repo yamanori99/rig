@@ -1,7 +1,30 @@
-# Copy to ../<hostname>.toml or run: rig init --role workstation
+# Host example for role=workstation (laptop / desktop).
+# Copy via:  rig init --role workstation
+# Or copy this file to ../<hostname>.toml and edit.
+#
+# A workstation often has no vpn/lan/thunderbolt of its own.
+# To SSH into compute nodes, add *their* host files beside this one
+# (same directory), with each peer's vpn / lan / thunderbolt filled in.
+# Then run:  rig apply   or   rig ssh-config --write
+# → Host <peer>-ts / <peer>-lan / <peer>-tb
+
 name = "my-laptop"
 role = "workstation"
 schema_version = 1
-# os / shell omitted → detected at apply time
-# user = "you"
-# No VPN/LAN required for a workstation laptop
+
+# --- Identity (optional overrides) ---
+# Omit os / shell to auto-detect at `rig apply` (recommended).
+# os = "macos"          # or "linux"
+# shell = "zsh"         # or "bash"
+# user = "you"          # default = current user
+
+# --- Addresses on THIS machine (usually unused on a laptop) ---
+# Only set if this workstation itself is reachable on that path.
+# vpn = "100.x.x.x"
+# lan = "192.168.x.x"
+# thunderbolt = "10.10.10.x"
+
+# --- Package set tweaks (optional) ---
+# [packages]
+# add = ["extra-set"]
+# remove = ["unwanted-set"]

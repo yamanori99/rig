@@ -3,6 +3,8 @@
 Linux VM via Apple [`container`](https://github.com/apple/container)
 (macOS 26+, Apple silicon). Does not mutate the Mac host.
 
+## Single node
+
 ```bash
 # local working tree
 ./testenv/apple-container/scripts/up.sh --smoke
@@ -33,3 +35,29 @@ export PATH="$CARGO_HOME/bin:/opt/cargo/bin:$PATH"
 | `--from-github[=URL]` | guest clones public repo (release gate) |
 
 Default URL: `https://github.com/yamanori99/rig.git`
+
+## Fleet (N nodes)
+
+Inventory: [`inventory.toml`](inventory.toml). Default is one `workstation` + one
+`compute`. Add `[[node]]` rows to grow the fleet.
+
+```bash
+./testenv/apple-container/scripts/fleet-down.sh
+./testenv/apple-container/scripts/fleet-up.sh --smoke
+# release gate:
+./testenv/apple-container/scripts/fleet-up.sh --smoke --from-github
+```
+
+```bash
+ssh -F testenv/apple-container/.generated/ssh_config rig-ws
+ssh -F testenv/apple-container/.generated/ssh_config rig-compute
+```
+
+What smoke checks:
+
+1. Each node: `rig` install + init + apply (`--skip-packages`)
+2. Each workstation: peer `hosts/<name>.toml` with `lan=<ip>`, then `rig ssh-config --write`
+3. From each workstation: `ssh <peer>-lan echo ok` to every other node
+
+Mac → guests uses the controller key. Workstation → peers uses the client key
+(`~/.ssh/id_ed25519` on workstation nodes only).

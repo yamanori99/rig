@@ -32,6 +32,154 @@ pub fn apply_remote_login(os: OsKind) -> Result<StepReport> {
     }
 }
 
+/// Assign a Thunderbolt Bridge (`bridge0`) IPv4 on macOS and persist via LaunchDaemon.
+///
+/// `ip` is this machine's address (from `host.thunderbolt`). Linux is a no-op.
+pub fn apply_thunderbolt(ip: &str, os: OsKind) -> Result<StepReport> {
+    validate_ipv4(ip)?;
+    match os {
+        OsKind::Macos => set_thunderbolt_macos(ip),
+        OsKind::Linux => Ok(StepReport {
+            ok: true,
+            detail: "skipped on linux (macOS bridge0 only)".into(),
+        }),
+    }
+}
+
+fn validate_ipv4(ip: &str) -> Result<()> {
+    let parts: Vec<_> = ip.split('.').collect();
+    if parts.len() != 4 {
+        return Err(RigError::Msg(format!("thunderbolt IP must be IPv4: {ip}")));
+    }
+    for p in parts {
+        if p.parse::<u8>().is_err() {
+            return Err(RigError::Msg(format!("thunderbolt IP must be IPv4: {ip}")));
+        }
+    }
+    Ok(())
+}
+
+fn set_thunderbolt_macos(ip: &str) -> Result<StepReport> {
+    let bridge_out = Command::new("ifconfig")
+        .arg("bridge0")
+        .output()
+        .map_err(RigError::Io)?;
+    if !bridge_out.status.success() {
+        return Ok(StepReport {
+            ok: true,
+            detail: "no bridge0 — connect Thunderbolt and re-apply".into(),
+        });
+    }
+    let text = String::from_utf8_lossy(&bridge_out.stdout);
+    let current = text
+        .lines()
+        .find_map(|l| {
+            let t = l.trim();
+            if t.starts_with("inet ") {
+                t.split_whitespace().nth(1).map(str::to_string)
+            } else {
+                None
+            }
+        });
+
+    let mut notes = Vec::new();
+    if current.as_deref() == Some(ip) {
+        notes.push(format!("bridge0 already {ip}"));
+    } else {
+        if !sudo(&[
+            "ifconfig",
+            "bridge0",
+            "inet",
+            ip,
+            "netmask",
+            "255.255.255.0",
+            "up",
+        ])? {
+            return Ok(StepReport {
+                ok: false,
+                detail: format!("ifconfig bridge0 inet {ip} failed"),
+            });
+        }
+        notes.push(format!("bridge0 → {ip}/24"));
+    }
+
+    match ensure_thunderbolt_launchdaemon(ip)? {
+        Some(msg) => notes.push(msg),
+        None => notes.push("launchdaemon ok".into()),
+    }
+
+    Ok(StepReport {
+        ok: true,
+        detail: notes.join("; "),
+    })
+}
+
+const TB_PLIST_LABEL: &str = "dev.rig.thunderbolt-bridge";
+
+fn ensure_thunderbolt_launchdaemon(ip: &str) -> Result<Option<String>> {
+    let path = format!("/Library/LaunchDaemons/{TB_PLIST_LABEL}.plist");
+    let desired = thunderbolt_plist(ip);
+    let existing = std::fs::read_to_string(&path).ok();
+    if existing.as_deref() == Some(desired.as_str()) {
+        return Ok(None);
+    }
+
+    // Write via sudo tee
+    let mut child = Command::new("sudo")
+        .args(["tee", &path])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RigError::Io)?;
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        stdin.write_all(desired.as_bytes()).map_err(RigError::Io)?;
+    }
+    let status = child.wait().map_err(RigError::Io)?;
+    if !status.success() {
+        return Ok(Some(format!("launchdaemon write failed ({status})")));
+    }
+    let _ = sudo(&["chmod", "644", &path]);
+    // Reload best-effort (macOS variants differ on bootout/bootstrap).
+    let _ = sudo(&["launchctl", "bootout", "system", &path]);
+    let _ = sudo(&["launchctl", "bootstrap", "system", &path]);
+    let _ = sudo(&["launchctl", "enable", &format!("system/{TB_PLIST_LABEL}")]);
+    let _ = sudo(&["launchctl", "kickstart", "-k", &format!("system/{TB_PLIST_LABEL}")]);
+    // Older fallback
+    let _ = sudo(&["launchctl", "unload", &path]);
+    let _ = sudo(&["launchctl", "load", &path]);
+    Ok(Some("launchdaemon installed".into()))
+}
+
+fn thunderbolt_plist(ip: &str) -> String {
+    format!(
+        r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{TB_PLIST_LABEL}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/sbin/ifconfig</string>
+        <string>bridge0</string>
+        <string>inet</string>
+        <string>{ip}</string>
+        <string>netmask</string>
+        <string>255.255.255.0</string>
+        <string>up</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>60</integer>
+</dict>
+</plist>
+"#
+    )
+}
+
 fn validate_hostname(name: &str) -> Result<()> {
     if name.is_empty() || name.len() > 63 {
         return Err(RigError::Msg(format!(

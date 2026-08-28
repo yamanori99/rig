@@ -111,6 +111,13 @@ pub fn execute(
                 let report = features::apply_remote_login(os)?;
                 finish_step(&mut st, "remote-login", report)?;
             }
+            "thunderbolt" if !step.skip => {
+                let ip = host.thunderbolt.as_deref().ok_or_else(|| {
+                    RigError::Msg("thunderbolt step enabled but host.thunderbolt is empty".into())
+                })?;
+                let report = features::apply_thunderbolt(ip, os)?;
+                finish_step(&mut st, "thunderbolt", report)?;
+            }
             "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
                 if step.skip {
                     st.note_step(&step.id, "skipped");
