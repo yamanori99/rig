@@ -43,11 +43,14 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
 
     // rewrite name = "..."
     body = rewrite_name(&body, &short);
+    // Never pin OS from examples — detect at apply unless the user sets it later.
+    body = strip_os_assignment(&body);
 
     fs::create_dir_all(paths::hosts_dir(root)).map_err(RigError::Io)?;
     fs::write(&dest, body).map_err(RigError::Io)?;
     println!("wrote {}", dest.display());
-    println!("edit IPs / shell as needed, then: rig apply --dry-run");
+    println!("os/shell auto-detect at apply (override in the toml if needed)");
+    println!("edit IPs as needed, then: rig apply --dry-run");
     Ok(())
 }
 
@@ -68,13 +71,31 @@ fn rewrite_name(toml: &str, name: &str) -> String {
     out.join("\n") + "\n"
 }
 
+/// Drop active `os = "..."` so apply uses runtime detection.
+fn strip_os_assignment(toml: &str) -> String {
+    let mut out = Vec::new();
+    let mut inserted_hint = false;
+    for line in toml.lines() {
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("os") && trimmed.contains('=') && !trimmed.starts_with('#') {
+            if !inserted_hint {
+                out.push("# os omitted → auto-detect at apply".to_string());
+                inserted_hint = true;
+            }
+            continue;
+        }
+        out.push(line.to_string());
+    }
+    out.join("\n") + "\n"
+}
+
 fn default_host_toml(role: &str) -> String {
     format!(
         r#"name = "change-me"
 role = "{role}"
 schema_version = 1
-# os = "macos"   # or "linux"
-# shell = "zsh"  # or "bash"
+# os omitted → auto-detect at apply
+# shell omitted → role default, else $SHELL
 # user = "you"
 "#
     )

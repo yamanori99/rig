@@ -21,8 +21,13 @@ pub fn run(
 
     println!("rig apply{}", if dry_run { " (dry-run)" } else { "" });
     println!(
-        "  host={}  role={}  os={}  shell={}  user={}",
-        plan.host, plan.role, plan.os, plan.shell, plan.user
+        "  host={}  role={}  os={}{}  shell={}  user={}",
+        plan.host,
+        plan.role,
+        plan.os,
+        if host.os.is_none() { " (detected)" } else { "" },
+        plan.shell,
+        plan.user
     );
     println!(
         "  packages: {}{}",
