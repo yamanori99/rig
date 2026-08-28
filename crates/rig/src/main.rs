@@ -59,6 +59,8 @@ enum Commands {
         #[arg(long)]
         write: bool,
     },
+    /// Probe peer connectivity (TCP/22 + BatchMode SSH per path)
+    Check,
     /// Manage SSH keys for passwordless peer access
     #[command(subcommand)]
     Keys(KeysCmd),
@@ -110,6 +112,7 @@ fn main() -> Result<()> {
         Commands::SshConfig { dry_run, write } => {
             commands::ssh_config::run(&root, dry_run, write)?
         }
+        Commands::Check => commands::check::run(&root)?,
         Commands::Keys(KeysCmd::Distribute { dry_run, yes }) => {
             commands::keys::distribute(&root, yes, dry_run)?
         }

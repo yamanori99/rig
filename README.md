@@ -53,6 +53,7 @@ rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
 rig apply [--dry-run] [-y] [--skip-packages]
+rig check
 rig keys distribute [--dry-run] [-y]
 rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
@@ -60,7 +61,7 @@ rig ssh-config [--write]
 
 ## Status
 
-`v0.1.0` — apply + clean + keys; sync still pending.
+`v0.1.0` — apply + clean + keys + check. No multi-host sync (use SSH + apply per machine).
 
 ## License
 
