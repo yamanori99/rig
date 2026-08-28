@@ -10,7 +10,16 @@ entries — without putting personal IPs in the product repo.
 Needs [Rust](https://rustup.rs/) (`cargo`).
 
 ```bash
+# from a clone
+./install.sh
+# or:
 cargo install --path crates/rig --force
+```
+
+From scratch (clones to `~/rig` unless `RIG_CLONE_DIR` is set):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
 Re-run after editing sources (or use `cargo run -p rig -- …`).

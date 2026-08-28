@@ -167,15 +167,10 @@ pub fn execute(
                 finish_step(&mut st, "gui", report)?;
             }
             "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
+                // Enabled steps are handled above; remaining matches are skips.
                 if step.skip {
                     st.note_step(&step.id, "skipped");
                     println!("  [skip] {:<14} {}", step.id, step.detail);
-                } else {
-                    st.note_step(&step.id, format!("not implemented yet: {}", step.detail));
-                    println!(
-                        "  [todo] {:<14} {} (not implemented yet)",
-                        step.id, step.detail
-                    );
                 }
             }
             _ => {}

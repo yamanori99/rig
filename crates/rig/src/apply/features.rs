@@ -9,10 +9,21 @@ pub struct StepReport {
 
 /// Enable SSH remote login / ensure sshd is available.
 pub fn apply_remote_login(os: OsKind) -> Result<StepReport> {
-    match os {
-        OsKind::Macos => enable_remote_login_macos(),
-        OsKind::Linux => enable_remote_login_linux(),
+    let report = match os {
+        OsKind::Macos => enable_remote_login_macos()?,
+        OsKind::Linux => enable_remote_login_linux()?,
+    };
+    if !report.ok {
+        return Ok(report);
     }
+    let keepalive = ensure_sshd_client_alive()?;
+    Ok(StepReport {
+        ok: true,
+        detail: match keepalive {
+            Some(msg) => format!("{}; {}", report.detail, msg),
+            None => report.detail,
+        },
+    })
 }
 
 /// Assign a Thunderbolt Bridge (`bridge0`) IPv4 on macOS and persist via LaunchDaemon.
@@ -367,6 +378,47 @@ fn enable_remote_login_macos() -> Result<StepReport> {
             detail: "systemsetup -setremotelogin on failed".into(),
         })
     }
+}
+
+/// Drop-in so idle SSH sessions survive NAT / flaky paths (pairs with client ServerAlive*).
+fn ensure_sshd_client_alive() -> Result<Option<String>> {
+    let dir = std::path::Path::new("/etc/ssh/sshd_config.d");
+    if !dir.is_dir() {
+        return Ok(None);
+    }
+    let path = dir.join("99-rig-keepalive.conf");
+    let desired = "\
+# managed by rig — client keepalive companion
+ClientAliveInterval 30
+ClientAliveCountMax 6
+";
+    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    if existing == desired {
+        return Ok(None);
+    }
+
+    let mut child = Command::new("sudo")
+        .args(["tee", path.to_str().unwrap_or("/etc/ssh/sshd_config.d/99-rig-keepalive.conf")])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RigError::Io)?;
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        stdin.write_all(desired.as_bytes()).map_err(RigError::Io)?;
+    }
+    let status = child.wait().map_err(RigError::Io)?;
+    if !status.success() {
+        return Ok(Some(format!("sshd keepalive write failed ({status})")));
+    }
+
+    // Best-effort reload (macOS / linux / containers differ).
+    let _ = sudo(&["launchctl", "kickstart", "-k", "system/com.openssh.sshd"]);
+    let _ = sudo(&["systemctl", "reload", "ssh"]);
+    let _ = sudo(&["systemctl", "reload", "sshd"]);
+    let _ = sudo(&["service", "ssh", "reload"]);
+    Ok(Some("sshd ClientAliveInterval=30".into()))
 }
 
 fn enable_remote_login_linux() -> Result<StepReport> {
