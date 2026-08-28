@@ -1,0 +1,5 @@
+# Personal overrides (gitignored). Examples:
+#   overlay/cursor/User/settings.json
+#   overlay/cursor/User/keybindings.json
+#   overlay/tmux.conf
+# When present, `rig apply` prefers these over templates/.

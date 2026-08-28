@@ -1,0 +1,9 @@
+{
+  "window.commandCenter": true,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "window.autoDetectColorScheme": true,
+  "editor.formatOnSave": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}

@@ -2,12 +2,14 @@ use crate::error::{Result, RigError};
 use crate::schema::{Host, Role};
 use std::path::Path;
 
+mod cursor;
 mod features;
 mod link;
 mod packages;
 mod plan;
 mod ssh;
 mod state;
+mod tmux;
 
 pub use plan::build_plan;
 pub use ssh::{generate as generate_ssh_config, write_ssh_config};
@@ -69,6 +71,13 @@ pub fn execute(
         link.config_dir.display()
     );
 
+    let tmux = tmux::link_tmux(root)?;
+    if let Some(p) = &tmux.linked {
+        st.note_file(p);
+    }
+    st.note_step("link-tmux", &tmux.detail);
+    println!("  [ok  ] link-tmux  {}", tmux.detail);
+
     if skip_packages || plan.package_sets.is_empty() {
         let reason = if skip_packages {
             "skipped (--skip-packages)"
@@ -121,6 +130,13 @@ pub fn execute(
             "tailscale" if !step.skip => {
                 let report = features::apply_tailscale(os)?;
                 finish_step(&mut st, "tailscale", report)?;
+            }
+            "cursor" if !step.skip => {
+                let (report, files) = cursor::apply_cursor(root, os)?;
+                for p in &files {
+                    st.note_file(p);
+                }
+                finish_step(&mut st, "cursor", report)?;
             }
             "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
                 if step.skip {

@@ -51,6 +51,11 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         skip: false,
     });
     steps.push(ApplyStep {
+        id: "link-tmux".into(),
+        detail: "templates/tmux/tmux.conf -> ~/.tmux.conf (overlay preferred)".into(),
+        skip: false,
+    });
+    steps.push(ApplyStep {
         id: "packages".into(),
         detail: format!(
             "{} sets via {}: {}",
