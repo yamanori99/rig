@@ -43,9 +43,15 @@ install_bin_to_path() {
   install -m 755 "$bin" "$dir/rig"
   echo "installed: $dir/rig"
   case ":$PATH:" in
-    *":$dir:"*) ;;
-    *) echo "note: add to PATH → export PATH=\"$dir:\$PATH\"" ;;
+    *":$dir:"*) echo "this shell already has $dir on PATH" ;;
+    *) echo "this shell: export PATH=\"$dir:\$PATH\"" ;;
   esac
+  echo
+  echo "new shells (paste once; skips if already present):"
+  echo "  grep -Fqs '$dir' ~/.zshrc 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.zshrc"
+  echo "  grep -Fqs '$dir' ~/.zprofile 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.zprofile"
+  echo "  grep -Fqs '$dir' ~/.bashrc 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.bashrc"
+  echo "  grep -Fqs '$dir' ~/.bash_profile 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.bash_profile"
 }
 
 install_from_release() {

@@ -15,7 +15,9 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
 Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). That is the
-**latest** GitHub Release. Add that dir to `PATH` if the installer says so.
+**latest** GitHub Release. After install it prints one-shot lines to
+append that dir to `~/.zshrc` / `~/.zprofile` / `~/.bashrc` /
+`~/.bash_profile` so new shells keep `rig` on `PATH`.
 
 Optional: `RIG_BIN_DIR=...` or pin `RIG_VERSION=vX.Y.Z` on the **pipe
 side** (env must apply to `sh`, not only `curl`):
