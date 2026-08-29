@@ -17,16 +17,34 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). Add that dir to
 `PATH` if the installer says so.
 
-Pin a release: `RIG_VERSION=v0.2.1` on the **pipe side** (env must apply to `sh`, not only `curl`):
+Pin a release: `RIG_VERSION=v0.2.3` on the **pipe side** (env must apply to `sh`, not only `curl`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_VERSION=v0.2.1 sh
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_VERSION=v0.2.3 sh
 # optional install dir:
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_BIN_DIR=/tmp/rig-bin sh
 ```
 
-
 Releases: https://github.com/yamanori99/rig/releases
+
+## Update
+
+Already installed:
+
+```bash
+rig update                 # latest → ~/.local/bin/rig
+rig update --dry-run       # current vs latest, no write
+rig update --tag v0.2.3    # pin
+```
+
+`hosts/` and `overlay/` are kept. Product templates refresh on the next
+run when the binary version changes.
+
+Same as a fresh install if you prefer curl:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
+```
 
 ## Uninstall
 
@@ -51,7 +69,7 @@ rig init --role workstation   # or: --role compute
 # init prints the paths to edit — then:
 rig apply --dry-run
 rig apply --yes
-rig update                 # latest GitHub Release → ~/.local/bin/rig
+rig status
 ```
 
 Then:
@@ -60,7 +78,6 @@ Then:
 rig ssh-config --write
 rig keys distribute --yes
 rig check
-rig status
 ```
 
 ### What to edit
