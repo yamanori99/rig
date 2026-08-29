@@ -14,14 +14,13 @@ entries — without putting personal IPs in the product repo.
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
-Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). Add that dir to
-`PATH` if the installer says so.
+Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). That is the
+**latest** GitHub Release. Add that dir to `PATH` if the installer says so.
 
-Pin a release: `RIG_VERSION=v0.2.3` on the **pipe side** (env must apply to `sh`, not only `curl`):
+Optional: `RIG_BIN_DIR=...` or pin `RIG_VERSION=vX.Y.Z` on the **pipe
+side** (env must apply to `sh`, not only `curl`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_VERSION=v0.2.3 sh
-# optional install dir:
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_BIN_DIR=/tmp/rig-bin sh
 ```
 
@@ -29,22 +28,12 @@ Releases: https://github.com/yamanori99/rig/releases
 
 ## Update
 
-Already installed:
-
 ```bash
-rig update                 # latest → ~/.local/bin/rig
-rig update --dry-run       # current vs latest, no write
-rig update --tag v0.2.3    # pin
+rig update
 ```
 
-`hosts/` and `overlay/` are kept. Product templates refresh on the next
-run when the binary version changes.
-
-Same as a fresh install if you prefer curl:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
-```
+Installs the latest Release into `~/.local/bin/rig`. `hosts/` and
+`overlay/` stay. Templates refresh on the next run if the version changed.
 
 ## Uninstall
 
@@ -121,7 +110,7 @@ rig check
 rig keys distribute [--dry-run] [-y]
 rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
-rig update [--tag vX.Y.Z] [--dry-run] [--force]
+rig update                       # latest GitHub Release → ~/.local/bin/rig
 ```
 
 Most commands also print the data root on stderr so the path stays visible.
