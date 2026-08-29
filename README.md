@@ -162,8 +162,8 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.8` — remote-login uses `systemsetup -f` so sudo password is
-not eaten by the yes/no prompt.
+`v0.2.9` — remote-login bootstraps sshd when systemsetup needs Full
+Disk Access.
 
 ## License
 

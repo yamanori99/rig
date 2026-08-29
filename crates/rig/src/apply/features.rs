@@ -541,6 +541,9 @@ fn thunderbolt_plist(ip: &str) -> String {
     )
 }
 
+const SSH_PLIST: &str = "/System/Library/LaunchDaemons/ssh.plist";
+const SSH_SERVICE: &str = "system/com.openssh.sshd";
+
 fn enable_remote_login_macos() -> Result<StepReport> {
     if remote_login_is_on()? {
         return Ok(StepReport {
@@ -551,6 +554,7 @@ fn enable_remote_login_macos() -> Result<StepReport> {
 
     // Without -f, systemsetup asks yes/no on a hidden stdout; the password
     // the user just typed is consumed as that answer and the step fails.
+    // On current macOS it also needs Full Disk Access; then we bootstrap sshd.
     let (ok, out) = sudo_output(&["/usr/sbin/systemsetup", "-f", "-setremotelogin", "on"])?;
     if ok && remote_login_is_on()? {
         return Ok(StepReport {
@@ -559,12 +563,13 @@ fn enable_remote_login_macos() -> Result<StepReport> {
         });
     }
 
-    let _ = sudo(&["launchctl", "enable", "system/com.openssh.sshd"]);
-    let kicked = sudo(&["launchctl", "kickstart", "-k", "system/com.openssh.sshd"])?;
+    let launch = bootstrap_sshd()?;
+    std::thread::sleep(std::time::Duration::from_millis(500));
     if remote_login_is_on()? {
         return Ok(StepReport {
             ok: true,
-            detail: "launchctl kickstart com.openssh.sshd".into(),
+            detail: "launchctl bootstrap com.openssh.sshd (systemsetup needs Full Disk Access)"
+                .into(),
         });
     }
 
@@ -574,10 +579,38 @@ fn enable_remote_login_macos() -> Result<StepReport> {
         detail.push_str(": ");
         detail.push_str(extra);
     }
-    if !kicked {
-        detail.push_str("; launchctl kickstart failed");
+    let launch = launch.trim();
+    if !launch.is_empty() {
+        detail.push_str("; ");
+        detail.push_str(launch);
     }
+    detail.push_str(
+        ". System Settings > General > Sharing > Remote Login, or grant Terminal Full Disk Access",
+    );
     Ok(StepReport { ok: false, detail })
+}
+
+/// Enable Apple sshd without systemsetup (no Full Disk Access).
+fn bootstrap_sshd() -> Result<String> {
+    let mut notes = Vec::new();
+    let (en_ok, en_out) = sudo_output(&["launchctl", "enable", SSH_SERVICE])?;
+    if !en_ok {
+        notes.push(format!("enable: {}", en_out.trim()));
+    }
+    let (boot_ok, boot_out) = sudo_output(&["launchctl", "bootstrap", "system", SSH_PLIST])?;
+    let boot = boot_out.to_ascii_lowercase();
+    if !boot_ok && !boot.contains("already") && !boot.contains("in progress") {
+        notes.push(format!("bootstrap: {}", boot_out.trim()));
+        let (load_ok, load_out) = sudo_output(&["launchctl", "load", "-w", SSH_PLIST])?;
+        if !load_ok {
+            notes.push(format!("load -w: {}", load_out.trim()));
+        }
+    }
+    let (kick_ok, kick_out) = sudo_output(&["launchctl", "kickstart", "-k", SSH_SERVICE])?;
+    if !kick_ok {
+        notes.push(format!("kickstart: {}", kick_out.trim()));
+    }
+    Ok(notes.join("; "))
 }
 
 fn remote_login_is_on() -> Result<bool> {
@@ -585,7 +618,9 @@ fn remote_login_is_on() -> Result<bool> {
         return Ok(true);
     }
     let (ok, text) = sudo_output(&["/usr/sbin/systemsetup", "-getremotelogin"])?;
-    Ok(ok && text.to_ascii_lowercase().contains("on"))
+    let lower = text.to_ascii_lowercase();
+    // Do not match the word "on" inside "on or off requires Full Disk Access".
+    Ok(ok && lower.contains("remote login: on"))
 }
 
 fn ssh_port_open() -> bool {
