@@ -1,6 +1,7 @@
 use crate::error::RigError;
 use crate::paths;
 use crate::schema;
+use crate::ui;
 use miette::Result;
 use std::fs;
 
@@ -45,17 +46,18 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
     fs::create_dir_all(paths::hosts_dir(root)).map_err(RigError::Io)?;
     fs::write(&dest, body).map_err(RigError::Io)?;
     let overlay = root.join("overlay");
-    println!("wrote {}", dest.display());
-    println!();
-    println!("edit (this machine):");
-    println!("  host     {}", dest.display());
-    println!("           role / [[ssh]] / [packages] / [features]");
-    println!("  overlay  {}/", overlay.display());
-    println!("           personal shell / tmux / cursor overrides");
-    println!("  leave templates/ alone — use overlay/ instead");
-    println!();
-    println!("os/shell auto-detect at apply (override in the toml if needed)");
-    println!("next: rig apply");
+    ui::title("init", false);
+    ui::kv("wrote", dest.display());
+    ui::blank();
+    ui::section("edit");
+    ui::kv("host", dest.display());
+    ui::kvc("role / [[ssh]] / [packages] / [features]");
+    ui::kv("overlay", format!("{}/", overlay.display()));
+    ui::kvc("personal shell / tmux / cursor overrides");
+    ui::item("leave templates/ alone — use overlay/");
+    ui::blank();
+    ui::kv("detect", "os/shell at apply (override in the toml if needed)");
+    ui::next("rig apply");
     Ok(())
 }
 

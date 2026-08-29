@@ -1,26 +1,34 @@
 use crate::apply;
+use crate::ui;
 use miette::Result;
 
 pub fn run(root: &std::path::Path, yes: bool, packages: bool) -> Result<()> {
     let state = crate::paths::state_path();
-    println!("rig clean{}", if yes { "" } else { "  (preview)" });
-    println!("  root: {}", root.display());
-    println!("  state file: {}", state.display());
-    println!(
-        "  packages: {}",
+    ui::title("clean", !yes);
+    ui::kv("root", root.display());
+    ui::kv("state", state.display());
+    ui::kv(
+        "packages",
         if packages {
             "uninstall recorded sets (destructive)"
         } else {
             "keep (pass --packages to uninstall)"
-        }
+        },
     );
-    println!();
+    ui::blank();
 
     let report = apply::clean(root, yes, packages)?;
-    println!("{}", report.detail);
+    if report.lines.is_empty() && report.errors.is_empty() {
+        ui::empty("nothing to do");
+    }
+    for line in &report.lines {
+        ui::item(line);
+    }
+    for err in &report.errors {
+        ui::fail("clean", err);
+    }
     if !yes {
-        println!();
-        println!("preview — pass --yes (-y) to clean");
+        ui::preview("clean");
     }
     Ok(())
 }

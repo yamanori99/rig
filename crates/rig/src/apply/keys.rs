@@ -6,7 +6,9 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 pub struct DistributeReport {
-    pub detail: String,
+    pub ok: Vec<String>,
+    pub skip: Vec<String>,
+    pub fail: Vec<String>,
 }
 
 /// Copy this machine's ed25519 pubkey to peers via their [[ssh]] aliases.
@@ -17,10 +19,12 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
     let pubkey = default_pubkey()?;
     if !pubkey.is_file() {
         return Ok(DistributeReport {
-            detail: format!(
+            ok: Vec::new(),
+            skip: Vec::new(),
+            fail: vec![format!(
                 "no public key at {} — run: ssh-keygen -t ed25519",
                 pubkey.display()
-            ),
+            )],
         });
     }
 
@@ -34,7 +38,9 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
 
     if peers.is_empty() {
         return Ok(DistributeReport {
-            detail: "no peers with [[ssh]] (or legacy vpn/lan/thunderbolt) in hosts/".into(),
+            ok: Vec::new(),
+            skip: vec!["no peers with [[ssh]] in hosts/".into()],
+            fail: Vec::new(),
         });
     }
 
@@ -93,22 +99,10 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
         }
     }
 
-    let mut parts = Vec::new();
-    if !successes.is_empty() {
-        parts.push(format!("ok: {}", successes.join("; ")));
-    }
-    if !skipped.is_empty() {
-        parts.push(format!("skip: {}", skipped.join("; ")));
-    }
-    if !failed.is_empty() {
-        parts.push(format!("fail: {}", failed.join("; ")));
-    }
-    if parts.is_empty() {
-        parts.push("nothing to do".into());
-    }
-
     Ok(DistributeReport {
-        detail: parts.join(" | "),
+        ok: successes,
+        skip: skipped,
+        fail: failed,
     })
 }
 

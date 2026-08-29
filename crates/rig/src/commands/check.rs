@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::schema::{self, Host};
+use crate::ui;
 use std::net::{SocketAddr, TcpStream};
 use std::process::{Command, Stdio};
 use std::time::Duration;
@@ -14,10 +15,10 @@ pub fn run(root: &std::path::Path) -> Result<()> {
             hn.split('.').next().unwrap_or(&hn).to_string()
         });
 
-    println!("rig check");
-    println!("  self={self_name}");
-    println!("  hosts={}/", root.join("hosts").display());
-    println!();
+    ui::title("check", false);
+    ui::kv("self", &self_name);
+    ui::kv("hosts", format!("{}/", root.join("hosts").display()));
+    ui::blank();
 
     let peers: Vec<&Host> = hosts
         .iter()
@@ -27,13 +28,13 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         .collect();
 
     if peers.is_empty() {
-        println!("(no peers with [[ssh]] — add alias/ip/link in hosts/*.toml)");
+        ui::empty("no peers with [[ssh]] — add alias/ip/link in hosts/*.toml");
         return Ok(());
     }
 
     println!(
-        "{:<18} {:<18} {:<4} {:<18} {:<5} {}",
-        "PEER", "ALIAS", "LINK", "IP", "TCP", "SSH"
+        "  {:<18} {:<18} {:<4} {:<18} {:<5} {}",
+        "peer", "alias", "link", "ip", "tcp", "ssh"
     );
 
     let mut any_ssh = false;
@@ -53,7 +54,7 @@ pub fn run(root: &std::path::Path) -> Result<()> {
                 "-"
             };
             println!(
-                "{:<18} {:<18} {:<4} {:<18} {:<5} {ssh}",
+                "  {:<18} {:<18} {:<4} {:<18} {:<5} {ssh}",
                 peer.name,
                 path.alias,
                 path.link.as_str(),
@@ -63,11 +64,11 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         }
     }
 
-    println!();
+    ui::blank();
     if any_ssh {
-        println!("at least one passwordless SSH path works");
+        ui::empty("at least one passwordless SSH path works");
     } else {
-        println!("no passwordless SSH yet — try: rig keys distribute --yes");
+        ui::empty("no passwordless SSH yet — try: rig keys distribute --yes");
     }
     Ok(())
 }

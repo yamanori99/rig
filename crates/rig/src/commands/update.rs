@@ -1,4 +1,5 @@
 use crate::error::{Result, RigError};
+use crate::ui;
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,35 +16,35 @@ pub fn run(tag: Option<&str>, yes: bool, force: bool) -> Result<()> {
     let (tag_name, url) = resolve_asset(&repo, tag, &target)?;
     let remote_ver = tag_name.trim_start_matches('v');
 
-    println!("rig update{}", if yes { "" } else { "  (preview)" });
+    ui::title("update", !yes);
     let running = std::env::current_exe()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "?".into());
-    println!("  current  {current}  ({running})");
-    println!("  target   {tag_name}  ({target})");
-    println!("  dest     {}", dest.display());
+    ui::kv("current", format!("{current}  ({running})"));
+    ui::kv("target", format!("{tag_name}  ({target})"));
+    ui::kv("dest", dest.display());
 
     if !force && remote_ver == current {
-        println!("already up to date");
+        ui::empty("already up to date");
         return Ok(());
     }
 
     if !yes {
-        println!("would download {url}");
-        println!("preview — pass --yes (-y) to install");
+        ui::kv("download", url);
+        ui::preview("install");
         return Ok(());
     }
 
     download_and_install(&url, &dest)?;
-    println!("installed {}", dest.display());
+    ui::kv("installed", dest.display());
     if running != dest.display().to_string() {
-        println!("note: this process is still {running}");
-        println!(
-            "  new binary is {} — open a new shell if PATH differs",
+        ui::kv("running", &running);
+        ui::item(format!(
+            "new binary is {} — open a new shell if PATH differs",
             dest.display()
-        );
+        ));
     }
-    println!("next: rig --version");
+    ui::next("rig --version");
     Ok(())
 }
 

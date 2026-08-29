@@ -21,7 +21,7 @@ mapfile -t FLEET_LINES < <(python3 "${INV}" tsv)
 seed_or_run_guest() {
   local name="$1" role="$2"
   if [[ "${FROM_GITHUB}" == "1" ]]; then
-    echo "== ${name}: clone ${GIT_URL} + fleet-guest =="
+    echo "  step    clone ${GIT_URL} + fleet-guest"
     ssh -F "${CFG}" "${name}" \
       env RUSTUP_HOME=/opt/rustup \
           CARGO_HOME=/home/dev/.cargo \
@@ -42,7 +42,7 @@ chmod +x /home/dev/rig/testenv/apple-container/scripts/fleet-guest.sh
 exec bash /home/dev/rig/testenv/apple-container/scripts/fleet-guest.sh
 EOS
   else
-    echo "== ${name}: fleet-guest (bind-mount) =="
+    echo "  step    fleet-guest bind-mount"
     chmod +x "${ROOT}/scripts/fleet-guest.sh"
     ssh -n -F "${CFG}" "${name}" \
       env RUSTUP_HOME=/opt/rustup \
@@ -55,14 +55,15 @@ EOS
   fi
 }
 
-echo "== fleet-smoke: apply on every node =="
+echo "smoke  fleet"
+echo "  step    apply on every node"
 for line in "${FLEET_LINES[@]}"; do
   [[ -n "${line}" ]] || continue
   IFS=$'\t' read -r name role <<<"${line}"
   seed_or_run_guest "${name}" "${role}"
 done
 
-echo "== fleet-smoke: install peer hosts on workstations =="
+echo "  step    peer hosts on workstations"
 PEERS_B64="$(base64 < "${NODES}" | tr -d '\n')"
 for line in "${FLEET_LINES[@]}"; do
   [[ -n "${line}" ]] || continue
@@ -110,12 +111,12 @@ for n in nodes:
     print("wrote", path)
 PY
 rig ssh-config --yes
-echo "--- ssh-config ---"
+echo "  step    ssh-config"
 rig ssh-config | head -40
 EOS
 done
 
-echo "== fleet-smoke: verify workstation → peers =="
+echo "  step    verify workstation to peers"
 for line in "${FLEET_LINES[@]}"; do
   [[ -n "${line}" ]] || continue
   IFS=$'\t' read -r name role <<<"${line}"
@@ -132,4 +133,4 @@ for line in "${FLEET_LINES[@]}"; do
   done
 done
 
-echo "OK — apple-container fleet smoke passed"
+echo "done"

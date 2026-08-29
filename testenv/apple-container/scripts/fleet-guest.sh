@@ -12,14 +12,15 @@ NAME="${RIG_FLEET_NAME:?RIG_FLEET_NAME required}"
 ROLE="${RIG_FLEET_ROLE:?RIG_FLEET_ROLE required}"
 WITH_PACKAGES="${RIG_APPLE_WITH_PACKAGES:-0}"
 
-echo "== ${NAME}: toolchain =="
+echo "smoke  ${NAME}"
+echo "  step    toolchain"
 rustc --version
 cargo --version
 
-echo "== ${NAME}: cargo install rig =="
+echo "  step    cargo install rig"
 cargo install --path crates/rig --force
 
-echo "== ${NAME}: write hosts/${NAME}.toml (role=${ROLE}) =="
+echo "  step    write hosts/${NAME}.toml"
 mkdir -p hosts
 cat > "hosts/${NAME}.toml" <<EOF
 name = "${NAME}"
@@ -31,15 +32,15 @@ user = "dev"
 EOF
 rig host detect
 
-echo "== ${NAME}: apply (preview) =="
+echo "  step    apply preview"
 rig apply
 
-echo "== ${NAME}: apply --yes --skip-packages =="
+echo "  step    apply --yes --skip-packages"
 rig apply --yes --skip-packages
 
 if [[ "${WITH_PACKAGES}" == "1" ]]; then
-  echo "== ${NAME}: apply --yes (apt) =="
+  echo "  step    apply --yes apt"
   rig apply --yes
 fi
 
-echo "== ${NAME}: guest apply done =="
+echo "done"

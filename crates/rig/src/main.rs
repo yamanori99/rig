@@ -5,41 +5,43 @@ mod error;
 mod packages;
 mod paths;
 mod schema;
+mod ui;
 
 use clap::{Parser, Subcommand};
-use miette::Result;
+use miette::{Report, Result};
 
 // Per-target help: each release binary only mentions its own default data dir.
 #[cfg(target_os = "macos")]
 const AFTER_HELP: &str = "\
-Data (run `rig root` anytime):
-  hosts/      edit this host + peers  ([[ssh]], packages add/remove)
-  overlay/    personal shell / tmux / Cursor overrides
-  templates/  product defaults — do not edit; override via overlay/
+data
+  hosts      this host + peers  ([[ssh]], packages add/remove)
+  overlay    personal shell / tmux / Cursor overrides
+  templates  product defaults — do not edit; use overlay/
 
-Default data dir (this OS): ~/Library/Application Support/dev.rig.rig/product/
-Absolute path: `rig root`. Most commands also print it on stderr.
+  default    ~/Library/Application Support/dev.rig.rig/product/
+  path       rig root
 ";
 
 #[cfg(target_os = "linux")]
 const AFTER_HELP: &str = "\
-Data (run `rig root` anytime):
-  hosts/      edit this host + peers  ([[ssh]], packages add/remove)
-  overlay/    personal shell / tmux / Cursor overrides
-  templates/  product defaults — do not edit; override via overlay/
+data
+  hosts      this host + peers  ([[ssh]], packages add/remove)
+  overlay    personal shell / tmux / Cursor overrides
+  templates  product defaults — do not edit; use overlay/
 
-Default data dir (this OS): ~/.local/share/rig/product/
-Absolute path: `rig root`. Most commands also print it on stderr.
+  default    ~/.local/share/rig/product/
+  path       rig root
 ";
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 const AFTER_HELP: &str = "\
-Data (run `rig root` anytime):
-  hosts/      edit this host + peers  ([[ssh]], packages add/remove)
-  overlay/    personal shell / tmux / Cursor overrides
-  templates/  product defaults — do not edit; override via overlay/
+data
+  hosts      this host + peers  ([[ssh]], packages add/remove)
+  overlay    personal shell / tmux / Cursor overrides
+  templates  product defaults — do not edit; use overlay/
 
-Unsupported OS — pass --root / RIG_ROOT. Absolute path: `rig root`.
+  default    pass --root / RIG_ROOT
+  path       rig root
 ";
 
 #[derive(Parser, Debug)]
@@ -140,7 +142,26 @@ enum KeysCmd {
     },
 }
 
-fn main() -> Result<()> {
+fn main() {
+    if let Err(report) = try_main() {
+        print_error(&report);
+        std::process::exit(1);
+    }
+}
+
+fn print_error(report: &Report) {
+    crate::ui::error(format!("{report}"));
+    let mut causes = report.chain();
+    let _ = causes.next();
+    for c in causes {
+        crate::ui::error_cause(c.to_string());
+    }
+    if let Some(help) = report.help() {
+        crate::ui::error_help(help);
+    }
+}
+
+fn try_main() -> Result<()> {
     // Empty RIG_ROOT= must not be treated as --root with a missing value.
     if std::env::var_os("RIG_ROOT").is_some_and(|v| v.is_empty()) {
         std::env::remove_var("RIG_ROOT");
@@ -173,15 +194,16 @@ fn main() -> Result<()> {
         Commands::Root => {
             // First line = path only (scripts: `$(rig root | head -1)`).
             println!("{}", root.display());
-            println!(
-                "  os={}  (auto-detect; override in hosts/*.toml)",
-                schema::detect_os().as_str()
-            );
-            println!("  hosts/     {}/", root.join("hosts").display());
-            println!("  overlay/   {}/", root.join("overlay").display());
-            println!(
-                "  templates/ {}/  (product — prefer overlay/)",
-                root.join("templates").display()
+            crate::ui::kv("os", schema::detect_os().as_str());
+            crate::ui::kvc("(auto-detect; override in hosts/*.toml)");
+            crate::ui::kv("hosts", format!("{}/", root.join("hosts").display()));
+            crate::ui::kv("overlay", format!("{}/", root.join("overlay").display()));
+            crate::ui::kv(
+                "templates",
+                format!(
+                    "{}/  (product — prefer overlay/)",
+                    root.join("templates").display()
+                ),
             );
         }
         Commands::Update { tag, yes, force } => commands::update::run(tag.as_deref(), yes, force)?,

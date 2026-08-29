@@ -1,6 +1,7 @@
 use crate::apply::{self, build_plan};
 use crate::error::RigError;
 use crate::schema;
+use crate::ui;
 use miette::Result;
 
 pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()> {
@@ -14,35 +15,36 @@ pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()>
     let role = schema::load_role(root, &host.role)?;
     let plan = build_plan(host, &role);
 
-    println!("rig apply{}", if yes { "" } else { "  (preview)" });
-    println!("  root={}", root.display());
-    println!(
-        "  host={}  role={}  os={}{}  shell={}  user={}",
-        plan.host,
-        plan.role,
-        plan.os,
-        if host.os.is_none() { " (detected)" } else { "" },
-        plan.shell,
-        plan.user
+    ui::title("apply", !yes);
+    ui::kv("root", root.display());
+    ui::kv("host", &plan.host);
+    ui::kv("role", &plan.role);
+    ui::kv(
+        "os",
+        format!(
+            "{}{}",
+            plan.os,
+            if host.os.is_none() { "  detected" } else { "" }
+        ),
     );
-    println!(
-        "  packages: {}{}",
-        plan.package_sets.join(" + "),
-        if skip_packages { " (will skip)" } else { "" }
+    ui::kv("shell", &plan.shell);
+    ui::kv("user", &plan.user);
+    ui::kv(
+        "packages",
+        format!(
+            "{}{}",
+            plan.package_sets.join(" + "),
+            if skip_packages { "  skip" } else { "" }
+        ),
     );
-    println!();
+    ui::blank();
     for step in &plan.steps {
-        let mark = if step.skip || (skip_packages && step.id == "packages") {
-            "skip"
-        } else {
-            "do  "
-        };
-        println!("  [{mark}] {:<14} {}", step.id, step.detail);
+        let do_it = !(step.skip || (skip_packages && step.id == "packages"));
+        ui::plan(do_it, &step.id, &step.detail);
     }
 
     if !yes {
-        println!();
-        println!("preview — pass --yes (-y) to apply");
+        ui::preview("apply");
         return Ok(());
     }
 

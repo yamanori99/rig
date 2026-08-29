@@ -162,8 +162,8 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.9` — remote-login bootstraps sshd when systemsetup needs Full
-Disk Access.
+`v0.2.10` — compact CLI output; brew/apt live lines; SSH without Full
+Disk Access via launchctl bootstrap.
 
 ## License
 

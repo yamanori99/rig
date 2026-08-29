@@ -5,10 +5,9 @@ zshrc="${RIG_CONFIG:-}/shell/zshrc"
 if [[ ! -f "$zshrc" && -n "${RIG_ROOT:-}" ]]; then
   zshrc="$RIG_ROOT/templates/shell/zsh/zshrc"
 fi
-[[ -f "$zshrc" ]] || { echo "zshrc not found"; exit 1; }
+[[ -f "$zshrc" ]] || { echo "error" >&2; echo "  zshrc not found" >&2; exit 1; }
 
 G=$'\033[32m'
-Y=$'\033[33m'
 N=$'\033[0m'
 
 if [[ $# -gt 0 ]]; then
@@ -18,7 +17,7 @@ if [[ $# -gt 0 ]]; then
   exit 0
 fi
 
-echo "${Y}Aliases (product zshrc)${N}"
+echo "aliases"
 grep '^alias ' "$zshrc" | sed 's/^alias //' | sort -u | while IFS='=' read -r name cmd; do
   cmd="${cmd#\'}"; cmd="${cmd%\'}"; cmd="${cmd#\"}"; cmd="${cmd%\"}"
   printf "  ${G}%-14s${N} %s\n" "$name" "$cmd"

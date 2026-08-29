@@ -8,7 +8,8 @@ REPO_URL="${RIG_REPO_URL:-https://github.com/${REPO}.git}"
 DEST="${RIG_CLONE_DIR:-$HOME/rig}"
 
 die() {
-  echo "error: $*" >&2
+  echo "error" >&2
+  echo "  $*" >&2
   exit 1
 }
 
@@ -41,11 +42,11 @@ install_bin_to_path() {
   dir="${RIG_BIN_DIR:-$HOME/.local/bin}"
   mkdir -p "$dir"
   install -m 755 "$bin" "$dir/rig"
-  echo "installed: $dir/rig"
+  echo "installed  $dir/rig"
   persist_path "$dir"
   echo
-  echo "close this terminal and open a new one, then:"
-  echo "  rig --version"
+  echo "  next     close this terminal, open a new one, then"
+  echo "           rig --version"
 }
 
 # Login + interactive rc, so Terminal.app and Cursor both see PATH.
@@ -64,12 +65,12 @@ persist_path() {
   path_rc_files | while IFS= read -r rc; do
     [ -n "$rc" ] || continue
     if grep -Fqs "$dir" "$rc" 2>/dev/null; then
-      echo "PATH already in $rc"
+      echo "  path     already in $rc"
       continue
     fi
     touch "$rc"
     printf '\n%s\n' "$line" >> "$rc"
-    echo "wrote PATH into $rc"
+    echo "  path     wrote $rc"
   done
 }
 
@@ -85,7 +86,7 @@ install_from_release() {
     url="https://github.com/${REPO}/releases/download/${tag}/rig-${target}.tar.gz"
   fi
   [ -n "${url:-}" ] || return 1
-  echo "downloading $url"
+  echo "  fetch    $url"
   tmp=$(mktemp -d)
   trap 'rm -rf "$tmp"' EXIT
   curl -fsSL "$url" -o "$tmp/rig.tar.gz" || return 1
@@ -100,43 +101,41 @@ install_from_release() {
     install_bin_to_path "$found"
   fi
   echo
-  echo "done. Rust is not required."
-  echo "packages: macOS needs Homebrew (brew); Linux needs apt."
-  echo "  skip packages: rig apply --yes --skip-packages"
-  echo "next:"
-  echo "  rig init --role workstation   # or compute"
-  echo "  rig apply            # preview"
-  echo "  rig apply --yes"
+  echo "done"
+  echo "  packages  macOS brew / Linux apt"
+  echo "  skip      rig apply --yes --skip-packages"
+  echo "  next      rig init --role workstation   # or compute"
+  echo "            rig apply            # preview"
+  echo "            rig apply --yes"
   return 0
 }
 
 install_from_source() {
   root=$1
   have cargo || die "cargo not found — install Rust from https://rustup.rs/"
-  echo "rig install (maintainer / source)"
-  echo "  root=$root"
+  echo "install  source"
+  echo "  root     $root"
   cargo install --path "$root/crates/rig" --force
   echo
-  echo "next:"
-  echo "  cd $root && rig apply"
+  echo "  next     cd $root && rig apply"
 }
 
 clone_repo() {
   have git || die "git not found"
   if is_rig_root "$DEST"; then
-    echo "using existing clone: $DEST"
+    echo "  clone    existing $DEST"
   else
     if [ -e "$DEST" ]; then
       die "refusing to overwrite: $DEST (set RIG_CLONE_DIR)"
     fi
-    echo "cloning $REPO_URL → $DEST"
+    echo "  clone    $REPO_URL → $DEST"
     git clone --depth 1 "$REPO_URL" "$DEST"
   fi
 }
 
-echo "rig install"
+echo "install"
 if [ "${RIG_FORCE_SOURCE:-}" = "1" ]; then
-  echo "RIG_FORCE_SOURCE=1 — building from source"
+  echo "  source   RIG_FORCE_SOURCE=1"
   if [ -n "${RIG_ROOT:-}" ] && is_rig_root "$RIG_ROOT"; then
     install_from_source "$RIG_ROOT"
     exit 0
@@ -159,7 +158,8 @@ if install_from_release; then
   exit 0
 fi
 
-echo "error: no release binary for this platform (or no release published yet)." >&2
-echo "  Users: check https://github.com/${REPO}/releases" >&2
-echo "  Maintainers: RIG_FORCE_SOURCE=1 $0" >&2
+echo "error" >&2
+echo "  no release binary for this platform" >&2
+echo "  check     https://github.com/${REPO}/releases" >&2
+echo "  source    RIG_FORCE_SOURCE=1 $0" >&2
 exit 1

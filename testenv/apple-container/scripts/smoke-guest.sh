@@ -11,14 +11,15 @@ cd "${RIG_ROOT}"
 
 WITH_PACKAGES="${RIG_APPLE_WITH_PACKAGES:-0}"
 
-echo "== smoke: toolchain =="
+echo "smoke"
+echo "  step    toolchain"
 rustc --version
 cargo --version
 
-echo "== smoke: cargo install rig =="
+echo "  step    cargo install rig"
 cargo install --path crates/rig --force
 
-echo "== smoke: init compute host =="
+echo "  step    init compute host"
 hn="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 rm -f "hosts/${hn}.toml"
 rig init --role compute --name "${hn}"
@@ -48,18 +49,18 @@ print("updated", path)
 PY
 rig host detect
 
-echo "== smoke: apply (preview) =="
+echo "  step    apply preview"
 rig apply
 
-echo "== smoke: apply --yes --skip-packages =="
+echo "  step    apply --yes --skip-packages"
 rig apply --yes --skip-packages
 
 if [[ "${WITH_PACKAGES}" == "1" ]]; then
-  echo "== smoke: apply --yes (apt packages) =="
+  echo "  step    apply --yes apt"
   rig apply --yes
 fi
 
-echo "== smoke: ssh-config =="
+echo "  step    ssh-config"
 rig ssh-config | head -20
 
-echo "OK — apple-container smoke passed"
+echo "done"

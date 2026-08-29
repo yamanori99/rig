@@ -7,7 +7,8 @@ set -eu
 REPO="${RIG_REPO:-yamanori99/rig}"
 
 die() {
-  echo "error: $*" >&2
+  echo "error" >&2
+  echo "  $*" >&2
   exit 1
 }
 
@@ -28,43 +29,42 @@ data_dir() {
   esac
 }
 
-echo "rig uninstall"
+echo "uninstall"
 
 removed=0
 if [ -e "$bin" ] || [ -L "$bin" ]; then
   rm -f "$bin"
-  echo "removed: $bin"
+  echo "  removed  $bin"
   removed=1
 else
-  echo "not found: $bin"
+  echo "  missing  $bin"
 fi
 
 if [ "${RIG_PURGE:-}" = "1" ]; then
   data=$(data_dir)
   if [ -e "$data" ]; then
     rm -rf "$data"
-    echo "removed: $data"
+    echo "  removed  $data"
     removed=1
   else
-    echo "not found: $data"
+    echo "  missing  $data"
   fi
 else
-  echo "note: product data kept (hosts / overlay / state)."
-  echo "  purge: curl -fsSL https://raw.githubusercontent.com/${REPO}/main/uninstall.sh | RIG_PURGE=1 sh"
+  echo "  data     kept (hosts / overlay / state)"
+  echo "  purge    curl -fsSL https://raw.githubusercontent.com/${REPO}/main/uninstall.sh | RIG_PURGE=1 sh"
 fi
 
 # cargo install path (maintainer / RIG_FORCE_SOURCE) — tip only
 cargo_bin="${CARGO_HOME:-$HOME/.cargo}/bin/rig"
 if [ -e "$cargo_bin" ] || [ -L "$cargo_bin" ]; then
-  echo "note: also found $cargo_bin (cargo). remove with: cargo uninstall rig"
+  echo "  cargo    $cargo_bin  — cargo uninstall rig"
 fi
 
 if [ "$removed" -eq 0 ] && [ "${RIG_PURGE:-}" != "1" ]; then
-  echo "nothing removed."
+  echo "  nothing  removed"
   exit 1
 fi
 
-echo
-echo "done."
-echo "note: shell snippets / packages from \`rig apply\` are not undone."
-echo "  use \`rig clean\` before uninstall if you still have the binary."
+echo "done"
+echo "  note     shell snippets / packages from apply are not undone"
+echo "  next     rig clean --yes before uninstall if the binary is still there"

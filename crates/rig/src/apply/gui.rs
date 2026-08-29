@@ -1,9 +1,8 @@
-use crate::error::{Result, RigError};
+use crate::error::Result;
 use crate::packages;
 use crate::paths;
 use crate::schema::OsKind;
 use std::path::Path;
-use std::process::Command;
 
 use super::features::StepReport;
 
@@ -56,32 +55,22 @@ fn install_casks(root: &Path, package_sets: &[String]) -> Result<StepReport> {
         if !file.is_file() {
             continue;
         }
-        super::packages::note_brew_may_look_stuck(&format!("brew bundle --casks {set}"));
-        let status = Command::new("brew")
-            .args([
-                "bundle",
-                "--file",
-                &file.display().to_string(),
-                "--casks",
-                "--no-upgrade",
-                "--verbose",
-            ])
-            .env("HOMEBREW_NO_ENV_HINTS", "1")
-            .status()
-            .map_err(RigError::Io)?;
-        if status.success() {
+        super::packages::brew_banner(&format!("casks  {set}"));
+        let success = super::packages::run_brew(&[
+            "bundle",
+            "--file",
+            &file.display().to_string(),
+            "--casks",
+            "--no-upgrade",
+        ])?;
+        if success {
             notes.push(format!("{set}: casks ok"));
         } else {
             // Fallback: install each cask individually (partial Brewfiles / old brew).
             let mut set_ok = true;
             for cask in &casks {
-                super::packages::note_brew_may_look_stuck(&format!("brew install --cask {cask}"));
-                let st = Command::new("brew")
-                    .args(["install", "--cask", "--verbose", cask])
-                    .env("HOMEBREW_NO_ENV_HINTS", "1")
-                    .status()
-                    .map_err(RigError::Io)?;
-                if !st.success() {
+                super::packages::brew_banner(&format!("cask  {cask}"));
+                if !super::packages::run_brew(&["install", "--cask", cask])? {
                     set_ok = false;
                 }
             }

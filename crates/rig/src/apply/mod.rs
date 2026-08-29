@@ -1,5 +1,6 @@
 use crate::error::{Result, RigError};
 use crate::schema::{Host, Role};
+use crate::ui;
 use std::path::Path;
 
 mod clean;
@@ -47,20 +48,20 @@ pub fn execute(
     let mut st = state::RigState::new(&plan.host, &plan.role);
     st.package_sets = plan.package_sets.clone();
 
-    println!();
-    println!("applying…");
+    ui::blank();
+    ui::section("run");
 
     st.note_step("validate", format!("role={} ok", host.role));
-    println!("  [ok  ] validate");
+    ui::ok("validate", "");
 
     let thick_zsh = matches!(shell, crate::schema::ShellKind::Zsh);
     if thick_zsh {
         let omz = omz::ensure_omz_stack()?;
         st.note_step("omz", &omz.detail);
         if omz.ok {
-            println!("  [ok  ] omz           {}", omz.detail);
+            ui::ok("omz", &omz.detail);
         } else {
-            println!("  [fail] omz           {}", omz.detail);
+            ui::fail("omz", &omz.detail);
             let _ = state::save(&st);
             return Err(RigError::Msg(format!("omz failed: {}", omz.detail)));
         }
@@ -83,17 +84,17 @@ pub fn execute(
             thick_zsh
         ),
     );
-    println!("  [ok  ] link-shell  → {}", link.config_dir.display());
+    ui::ok("link-shell", &format!("→ {}", link.config_dir.display()));
     if !link.sources.is_empty() {
-        println!("           sources: {}", link.sources.join(", "));
+        ui::item(format!("sources  {}", link.sources.join(", ")));
     }
     for p in &link.touched_rcs {
-        println!("           snippet → {}", p.display());
+        ui::item(format!("snippet  {}", p.display()));
     }
     if thick_zsh {
-        println!("           product rc enabled (OMZ + p10k)");
+        ui::item("product rc  OMZ + p10k");
     } else {
-        println!("           thin shell (common.sh); product rc optional");
+        ui::item("thin shell  common.sh; product rc optional");
     }
 
     let tmux = tmux::link_tmux(root)?;
@@ -104,7 +105,7 @@ pub fn execute(
         st.note_file(p);
     }
     st.note_step("link-tmux", &tmux.detail);
-    println!("  [ok  ] link-tmux  {}", tmux.detail);
+    ui::ok("link-tmux", &tmux.detail);
 
     if skip_packages || plan.package_sets.is_empty() {
         let reason = if skip_packages {
@@ -113,14 +114,14 @@ pub fn execute(
             "skipped (empty)"
         };
         st.note_step("packages", reason);
-        println!("  [skip] packages  ({reason})");
+        ui::skip("packages", reason);
     } else {
         let report = packages::apply_packages(root, &plan.package_sets, os)?;
         st.note_step("packages", format!("{}: {}", report.backend, report.detail));
         if report.ok {
-            println!("  [ok  ] packages  ({}) {}", report.backend, report.detail);
+            ui::ok("packages", &format!("{}  {}", report.backend, report.detail));
         } else {
-            println!("  [fail] packages  ({}) {}", report.backend, report.detail);
+            ui::fail("packages", &format!("{}  {}", report.backend, report.detail));
             let _ = state::save(&st);
             return Err(RigError::Msg(format!(
                 "package step failed: {}",
@@ -133,7 +134,7 @@ pub fn execute(
     let ssh_path = write_ssh_config(root, &hosts)?;
     st.note_file(&ssh_path);
     st.note_step("ssh-config", ssh_path.display().to_string());
-    println!("  [ok  ] ssh-config → {}", ssh_path.display());
+    ui::ok("ssh-config", &format!("→ {}", ssh_path.display()));
 
     for step in &plan.steps {
         match step.id.as_str() {
@@ -173,7 +174,7 @@ pub fn execute(
                 // Enabled steps are handled above; remaining matches are skips.
                 if step.skip {
                     st.note_step(&step.id, "skipped");
-                    println!("  [skip] {:<14} {}", step.id, step.detail);
+                    ui::skip(&step.id, &step.detail);
                 }
             }
             _ => {}
@@ -181,25 +182,25 @@ pub fn execute(
     }
 
     let state_path = state::save(&st)?;
-    println!();
-    println!("state → {}", state_path.display());
-    println!("apply complete.");
-    println!();
-    println!("customize later:");
-    println!("  host     {}/hosts/{}.toml", root.display(), host.name);
-    println!("  overlay  {}/overlay/", root.display());
-    println!("  (do not edit templates/ — put personal files in overlay/)");
-    println!("peers: add hosts/<peer>.toml with [[ssh]], then rig ssh-config --yes");
+    ui::blank();
+    ui::kv("state", state_path.display());
+    ui::title("done", false);
+    ui::blank();
+    ui::section("customize");
+    ui::kv("host", format!("{}/hosts/{}.toml", root.display(), host.name));
+    ui::kv("overlay", format!("{}/overlay/", root.display()));
+    ui::item("leave templates/ alone — use overlay/");
+    ui::kv("peers", "add hosts/<peer>.toml with [[ssh]], then rig ssh-config --yes");
     Ok(())
 }
 
 fn finish_step(st: &mut state::RigState, id: &str, report: features::StepReport) -> Result<()> {
     st.note_step(id, &report.detail);
     if report.ok {
-        println!("  [ok  ] {id:<14} {}", report.detail);
+        ui::ok(id, &report.detail);
         Ok(())
     } else {
-        println!("  [fail] {id:<14} {}", report.detail);
+        ui::fail(id, &report.detail);
         let _ = state::save(st);
         Err(RigError::Msg(format!("{id} failed: {}", report.detail)))
     }

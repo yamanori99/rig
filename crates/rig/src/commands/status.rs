@@ -3,6 +3,7 @@ use crate::embed;
 use crate::error::Result;
 use crate::paths;
 use crate::schema;
+use crate::ui;
 use std::path::Path;
 
 pub fn run(root: &Path) -> Result<()> {
@@ -11,30 +12,33 @@ pub fn run(root: &Path) -> Result<()> {
     let short = hn.split('.').next().unwrap_or(&hn);
     let detected = schema::detect_current_host(&hosts);
 
-    println!("rig status");
-    println!(
-        "  version  {}  ({})",
-        env!("CARGO_PKG_VERSION"),
-        running_exe()
+    ui::title("status", false);
+    ui::kv(
+        "version",
+        format!("{}  ({})", env!("CARGO_PKG_VERSION"), running_exe()),
     );
-    println!("  os       {}", schema::detect_os().as_str());
-    println!("  root     {}", root.display());
-    println!("           {}", root_kind(root));
+    ui::kv("os", schema::detect_os().as_str());
+    ui::kv("root", root.display());
+    ui::kvc(root_kind(root));
 
     let mut live = apply::LiveWanted::default();
     match detected {
         Some(h) => {
-            println!("  host     {}  role={}  (matched {})", h.name, h.role, hn);
+            ui::kv("host", format!("{}  matched {}", h.name, hn));
+            ui::kv("role", &h.role);
             if let Ok(role) = schema::load_role(root, &h.role) {
                 let f = role.features.with_host(&h.features);
-                println!(
-                    "  features gui={} cursor={} remote_login={} tailscale={} thunderbolt={} stay_awake={}",
-                    yn(f.gui),
-                    yn(f.cursor),
-                    yn(f.remote_login),
-                    yn(f.tailscale),
-                    yn(f.thunderbolt),
-                    yn(f.stay_awake)
+                ui::kv(
+                    "features",
+                    format!(
+                        "gui={}  cursor={}  remote_login={}  tailscale={}  thunderbolt={}  stay_awake={}",
+                        yn(f.gui),
+                        yn(f.cursor),
+                        yn(f.remote_login),
+                        yn(f.tailscale),
+                        yn(f.thunderbolt),
+                        yn(f.stay_awake)
+                    ),
                 );
                 live = apply::LiveWanted {
                     stay_awake: f.stay_awake,
@@ -46,7 +50,7 @@ pub fn run(root: &Path) -> Result<()> {
             }
         }
         None => {
-            println!("  host     {short}  (no hosts/{short}.toml — rig init)");
+            ui::kv("host", format!("{short}  no hosts/{short}.toml — rig init"));
         }
     }
 
@@ -55,49 +59,55 @@ pub fn run(root: &Path) -> Result<()> {
         .filter(|(_, h)| detected.map(|d| h.name != d.name).unwrap_or(true))
         .map(|(_, h)| h.ssh_paths().len())
         .sum();
-    println!(
-        "  hosts    {} file(s), {peer_paths} peer path(s)  (rig check)",
-        hosts.len()
+    ui::kv(
+        "hosts",
+        format!(
+            "{} file(s), {peer_paths} peer path(s)  (rig check)",
+            hosts.len()
+        ),
     );
 
     match apply::load_state()? {
         Some(st) => {
-            println!(
-                "  apply    {} / {}  ({} files, {} sets)",
-                st.host,
-                st.role,
-                st.managed_files.len(),
-                st.package_sets.len()
+            ui::kv(
+                "apply",
+                format!(
+                    "{} / {}  {} files, {} sets",
+                    st.host,
+                    st.role,
+                    st.managed_files.len(),
+                    st.package_sets.len()
+                ),
             );
-            println!("           {}", paths::state_path().display());
+            ui::kvc(paths::state_path().display());
             if !st.steps.is_empty() {
-                println!("  apply steps");
+                ui::section("steps");
                 for (id, detail) in &st.steps {
-                    println!("    {id:<14} {detail}");
+                    ui::item(format!("{id:<14} {detail}"));
                 }
             }
             if !st.managed_files.is_empty() {
-                println!("  managed files");
+                ui::section("files");
                 for p in &st.managed_files {
-                    println!("    {p}");
+                    ui::item(p);
                 }
             }
         }
-        None => println!("  apply    never  (rig apply --yes)"),
+        None => ui::kv("apply", "never  (rig apply --yes)"),
     }
 
     apply::print_live(schema::detect_os(), live);
 
     let ssh = dirs_home().join(".ssh/config.d/rig.conf");
     if ssh.is_file() {
-        println!("  ssh      {}", ssh.display());
+        ui::kv("ssh", ssh.display());
         if let Ok(s) = std::fs::read_to_string(&ssh) {
             for line in s.lines() {
-                println!("    {line}");
+                ui::item(line);
             }
         }
     } else {
-        println!("  ssh      not generated  (rig ssh-config --yes)");
+        ui::kv("ssh", "not generated  (rig ssh-config --yes)");
     }
 
     let overlay = root.join("overlay");
@@ -106,7 +116,7 @@ pub fn run(root: &Path) -> Result<()> {
     } else {
         "empty"
     };
-    println!("  overlay  {overlay_note}  {}", overlay.display());
+    ui::kv("overlay", format!("{overlay_note}  {}", overlay.display()));
     Ok(())
 }
 

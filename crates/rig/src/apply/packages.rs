@@ -2,16 +2,13 @@ use crate::error::{Result, RigError};
 use crate::packages;
 use crate::paths;
 use crate::schema::OsKind;
-use std::io::{self, Write};
+use std::io::{self, BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
-
-/// Homebrew often prints nothing until a formula finishes.
-pub(crate) fn note_brew_may_look_stuck(doing: &str) {
-    println!("  … {doing}");
-    println!("    brew can sit with no output for minutes — still running");
-    let _ = io::stdout().flush();
-}
+use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
 
 pub struct PackageReport {
     pub backend: &'static str,
@@ -49,23 +46,17 @@ fn brew_bundle(root: &Path, sets: &[String]) -> Result<PackageReport> {
             ok = false;
             continue;
         }
-        note_brew_may_look_stuck(&format!("brew bundle {set}"));
-        let status = Command::new("brew")
-            .args([
-                "bundle",
-                "--file",
-                &file.display().to_string(),
-                "--no-upgrade",
-                "--verbose",
-            ])
-            .env("HOMEBREW_NO_ENV_HINTS", "1")
-            .env("HOMEBREW_NO_INSTALL_CLEANUP", "1")
-            .status()
-            .map_err(RigError::Io)?;
-        if status.success() {
+        let path = file.display().to_string();
+        brew_banner(&format!("bundle  {set}"));
+        let started = Instant::now();
+        let success = run_brew(&["bundle", "--file", &path, "--no-upgrade"])?;
+        let took = fmt_dur(started.elapsed().as_secs());
+        if success {
+            crate::ui::item(format!("done    {set}  {took}"));
             notes.push(format!("{set}: ok"));
         } else {
-            notes.push(format!("{set}: brew bundle failed ({status})"));
+            crate::ui::item(format!("fail    {set}  {took}"));
+            notes.push(format!("{set}: brew bundle failed"));
             ok = false;
         }
     }
@@ -76,6 +67,181 @@ fn brew_bundle(root: &Path, sets: &[String]) -> Result<PackageReport> {
         ok,
         detail: notes.join("; "),
     })
+}
+
+pub(crate) fn brew_banner(title: &str) {
+    crate::ui::item(title);
+    let _ = io::stdout().flush();
+}
+
+/// Run brew with compact, color-forced output (no --verbose dump).
+pub(crate) fn run_brew(args: &[&str]) -> Result<bool> {
+    let mut child = Command::new("brew")
+        .args(args)
+        .env("HOMEBREW_COLOR", "1")
+        .env("HOMEBREW_NO_ENV_HINTS", "1")
+        .env("HOMEBREW_NO_INSTALL_CLEANUP", "1")
+        .env("HOMEBREW_NO_AUTO_UPDATE", "1")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RigError::Io)?;
+
+    let stdout = child.stdout.take().expect("piped stdout");
+    let stderr = child.stderr.take().expect("piped stderr");
+    let last = Arc::new(Mutex::new(Instant::now()));
+    let stop = Arc::new(AtomicBool::new(false));
+    let start = Instant::now();
+
+    let last_out = last.clone();
+    let t_out = thread::spawn(move || pump_brew(stdout, last_out));
+    let last_err = last.clone();
+    let t_err = thread::spawn(move || pump_brew(stderr, last_err));
+
+    let stop_beat = stop.clone();
+    let last_beat = last.clone();
+    let t_beat = thread::spawn(move || {
+        while !stop_beat.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(200));
+            let quiet = last_beat
+                .lock()
+                .map(|t| t.elapsed() >= Duration::from_secs(8))
+                .unwrap_or(false);
+            if quiet {
+                eprint!(
+                    "\r    …  {}          ",
+                    fmt_dur(start.elapsed().as_secs())
+                );
+                let _ = io::stderr().flush();
+            }
+        }
+        clear_spinner();
+    });
+
+    let status = child.wait().map_err(RigError::Io)?;
+    stop.store(true, Ordering::Relaxed);
+    let _ = t_out.join();
+    let _ = t_err.join();
+    let _ = t_beat.join();
+    Ok(status.success())
+}
+
+fn run_prefixed(mut cmd: Command) -> Result<bool> {
+    let mut child = cmd
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RigError::Io)?;
+    let stdout = child.stdout.take().expect("piped stdout");
+    let stderr = child.stderr.take().expect("piped stderr");
+    let last = Arc::new(Mutex::new(Instant::now()));
+    let t_out = {
+        let last = last.clone();
+        thread::spawn(move || pump_all(stdout, last))
+    };
+    let t_err = {
+        let last = last.clone();
+        thread::spawn(move || pump_all(stderr, last))
+    };
+    let status = child.wait().map_err(RigError::Io)?;
+    let _ = t_out.join();
+    let _ = t_err.join();
+    Ok(status.success())
+}
+
+fn pump_all(stream: impl io::Read + Send, last: Arc<Mutex<Instant>>) {
+    let reader = BufReader::new(stream);
+    for line in reader.lines() {
+        let Ok(line) = line else {
+            break;
+        };
+        if let Ok(mut t) = last.lock() {
+            *t = Instant::now();
+        }
+        let t = strip_ansi(&line);
+        let t = t.trim();
+        if t.is_empty() {
+            continue;
+        }
+        crate::ui::item(t);
+    }
+}
+
+fn pump_brew(stream: impl io::Read + Send, last: Arc<Mutex<Instant>>) {
+    let reader = BufReader::new(stream);
+    for line in reader.lines() {
+        let Ok(line) = line else {
+            break;
+        };
+        if let Ok(mut t) = last.lock() {
+            *t = Instant::now();
+        }
+        if let Some(shown) = restyle_brew_line(&line) {
+            clear_spinner();
+            crate::ui::item(shown);
+        }
+    }
+}
+
+fn restyle_brew_line(raw: &str) -> Option<String> {
+    let line = strip_ansi(raw);
+    let line = line.trim();
+    if line.is_empty() {
+        return None;
+    }
+    let lower = line.to_ascii_lowercase();
+    if lower.contains("brewfile dependencies") || lower.contains("`brew bundle` complete") {
+        return None;
+    }
+    if let Some(name) = line.strip_prefix("Using ") {
+        return Some(format!("already  {}", name.trim()));
+    }
+    if let Some(name) = line.strip_prefix("Installing ") {
+        return Some(format!("install  {}", name.trim()));
+    }
+    if let Some(rest) = line.strip_prefix("==> ") {
+        if rest.to_ascii_lowercase().starts_with("pouring") {
+            return None;
+        }
+        return Some(rest.to_string());
+    }
+    if lower.starts_with("error") || lower.starts_with("warning") || lower.starts_with("fatal") {
+        return Some(line.to_string());
+    }
+    None
+}
+
+fn clear_spinner() {
+    eprint!("\r                    \r");
+    let _ = io::stderr().flush();
+}
+
+fn fmt_dur(secs: u64) -> String {
+    if secs >= 60 {
+        format!("{}m{:02}s", secs / 60, secs % 60)
+    } else {
+        format!("{secs}s")
+    }
+}
+
+fn strip_ansi(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\u{1b}' {
+            if chars.peek() == Some(&'[') {
+                chars.next();
+                for x in chars.by_ref() {
+                    if x.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            }
+            continue;
+        }
+        out.push(c);
+    }
+    out
 }
 
 fn apt_install(root: &Path, sets: &[String]) -> Result<PackageReport> {
@@ -104,18 +270,26 @@ fn apt_install(root: &Path, sets: &[String]) -> Result<PackageReport> {
         });
     }
 
+    brew_banner("apt-get install");
+    let started = Instant::now();
     let mut cmd = Command::new("sudo");
     cmd.args(["apt-get", "install", "-y"]);
     cmd.args(&pkgs);
-    let status = cmd.status().map_err(RigError::Io)?;
+    let success = run_prefixed(cmd)?;
+    let took = fmt_dur(started.elapsed().as_secs());
+    if success {
+        crate::ui::item(format!("done    apt  {took}"));
+    } else {
+        crate::ui::item(format!("fail    apt  {took}"));
+    }
     Ok(PackageReport {
         backend: "apt",
         sets: sets.to_vec(),
-        ok: status.success(),
-        detail: if status.success() {
+        ok: success,
+        detail: if success {
             format!("installed {}", pkgs.join(" "))
         } else {
-            format!("apt-get failed ({status})")
+            "apt-get failed".into()
         },
     })
 }
@@ -130,4 +304,27 @@ fn which(bin: &str) -> Option<PathBuf> {
         }
         None
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::restyle_brew_line;
+
+    #[test]
+    fn restyle_using_and_install() {
+        assert_eq!(
+            restyle_brew_line("Using cmake"),
+            Some("already  cmake".into())
+        );
+        assert_eq!(
+            restyle_brew_line("Installing llvm"),
+            Some("install  llvm".into())
+        );
+        assert_eq!(restyle_brew_line("==> Pouring llvm.bottle.tar.gz"), None);
+        assert_eq!(
+            restyle_brew_line("==> Fetching llvm"),
+            Some("Fetching llvm".into())
+        );
+        assert_eq!(restyle_brew_line("`brew bundle` complete! 38 Brewfile dependencies now installed."), None);
+    }
 }

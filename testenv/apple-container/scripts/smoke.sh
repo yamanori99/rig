@@ -41,7 +41,7 @@ export CARGO_HOME="${HOME}/.cargo"
 export PATH="/opt/cargo/bin:${CARGO_HOME}/bin:${PATH}"
 URL="${RIG_GIT_URL:?}"
 rm -rf /home/dev/rig
-echo "== smoke: git clone ${URL} =="
+echo "  step    git clone ${URL}"
 git clone --depth 1 "${URL}" /home/dev/rig
 chmod +x /home/dev/rig/testenv/apple-container/scripts/smoke-guest.sh
 exec bash /home/dev/rig/testenv/apple-container/scripts/smoke-guest.sh

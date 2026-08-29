@@ -1,6 +1,7 @@
 use crate::apply;
 use crate::error::RigError;
 use crate::schema;
+use crate::ui;
 use miette::Result;
 
 pub fn distribute(root: &std::path::Path, yes: bool) -> Result<()> {
@@ -12,20 +13,28 @@ pub fn distribute(root: &std::path::Path, yes: bool) -> Result<()> {
         ))
     })?;
 
-    println!(
-        "rig keys distribute{}",
-        if yes { "" } else { "  (preview)" }
-    );
-    println!("  self={}  pubkey=~/.ssh/id_ed25519.pub", self_host.name);
-    println!("  hosts={}/", root.join("hosts").display());
-    println!("  order per peer: lan/tb links first, then vpn");
-    println!();
+    ui::title("keys distribute", !yes);
+    ui::kv("self", &self_host.name);
+    ui::kv("pubkey", "~/.ssh/id_ed25519.pub");
+    ui::kv("hosts", format!("{}/", root.join("hosts").display()));
+    ui::kv("order", "lan/tb first, then vpn");
+    ui::blank();
 
     let report = apply::distribute_keys(root, &self_host.name, yes)?;
-    println!("{}", report.detail);
+    if report.ok.is_empty() && report.skip.is_empty() && report.fail.is_empty() {
+        ui::empty("nothing to do");
+    }
+    for line in &report.ok {
+        ui::ok("copy", line);
+    }
+    for line in &report.skip {
+        ui::skip("copy", line);
+    }
+    for line in &report.fail {
+        ui::fail("copy", line);
+    }
     if !yes {
-        println!();
-        println!("preview — pass --yes (-y) to copy keys");
+        ui::preview("copy keys");
     }
     Ok(())
 }

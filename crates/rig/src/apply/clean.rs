@@ -11,7 +11,8 @@ const BEGIN: &str = "# >>> begin rig >>>";
 const END: &str = "# <<< end rig <<<";
 
 pub struct CleanReport {
-    pub detail: String,
+    pub lines: Vec<String>,
+    pub errors: Vec<String>,
 }
 
 /// Reverse apply using the local state manifest.
@@ -19,7 +20,8 @@ pub fn execute(root: &Path, yes: bool, packages: bool) -> Result<CleanReport> {
     let preview = !yes;
     let Some(st) = state::load()? else {
         return Ok(CleanReport {
-            detail: "no state — nothing to clean".into(),
+            lines: vec!["no state — nothing to clean".into()],
+            errors: Vec::new(),
         });
     };
 
@@ -90,19 +92,9 @@ pub fn execute(root: &Path, yes: bool, packages: bool) -> Result<CleanReport> {
         }
     }
 
-    let _ = &st.host;
-    let mut parts = Vec::new();
-    if !actions.is_empty() {
-        parts.push(actions.join("; "));
-    }
-    if !errors.is_empty() {
-        parts.push(format!("errors: {}", errors.join("; ")));
-    }
-    if parts.is_empty() {
-        parts.push("nothing to do".into());
-    }
     Ok(CleanReport {
-        detail: parts.join(" | "),
+        lines: actions,
+        errors,
     })
 }
 
