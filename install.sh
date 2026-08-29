@@ -44,9 +44,7 @@ install_bin_to_path() {
   echo "installed: $dir/rig"
   persist_path "$dir"
   echo
-  echo "this terminal does not pick that up. run:"
-  echo "  export PATH=\"$dir:\$PATH\""
-  echo "  hash -r"
+  echo "close this terminal and open a new one, then:"
   echo "  rig --version"
 }
 

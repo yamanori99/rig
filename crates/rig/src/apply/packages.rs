@@ -2,8 +2,16 @@ use crate::error::{Result, RigError};
 use crate::packages;
 use crate::paths;
 use crate::schema::OsKind;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+/// Homebrew often prints nothing until a formula finishes.
+pub(crate) fn note_brew_may_look_stuck(doing: &str) {
+    println!("  … {doing}");
+    println!("    brew can sit with no output for minutes — still running");
+    let _ = io::stdout().flush();
+}
 
 pub struct PackageReport {
     pub backend: &'static str,
@@ -41,12 +49,14 @@ fn brew_bundle(root: &Path, sets: &[String]) -> Result<PackageReport> {
             ok = false;
             continue;
         }
+        note_brew_may_look_stuck(&format!("brew bundle {set}"));
         let status = Command::new("brew")
             .args([
                 "bundle",
                 "--file",
                 &file.display().to_string(),
                 "--no-upgrade",
+                "--verbose",
             ])
             .env("HOMEBREW_NO_ENV_HINTS", "1")
             .env("HOMEBREW_NO_INSTALL_CLEANUP", "1")

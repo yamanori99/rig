@@ -24,8 +24,7 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 
 Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). That is the
 **latest** GitHub Release. Install appends that dir to zsh/bash startup
-files. The `curl | sh` process is not your prompt — run the printed
-`export PATH=...` in that terminal, or open a new one.
+files, then tells you to close the terminal and open a new one.
 
 Optional: `RIG_BIN_DIR=...` or pin `RIG_VERSION=vX.Y.Z` on the **pipe
 side** (env must apply to `sh`, not only `curl`):
@@ -163,7 +162,8 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.6` — compute stay-awake uses `pmset -a`; macOS + Linux.
+`v0.2.7` — close the terminal after install; brew verbose; no
+compute quarto.
 
 ## License
 

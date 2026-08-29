@@ -25,7 +25,7 @@ iperf3
 nmap
 socat
 telnet
-# juliaup / rustup / quarto / ollama / tailscale: prefer upstream installers
+# juliaup / rustup / ollama / tailscale: prefer upstream installers
 # (rustup: https://rustup.rs/  juliaup: https://julialang.org/install/)
 # (Tailscale: https://tailscale.com/download/linux)
 clang

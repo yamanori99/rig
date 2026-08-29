@@ -46,7 +46,6 @@ brew "parallel"
 brew "ffmpeg"
 brew "ollama"
 brew "tesseract"
-brew "quarto"
 
 # Ops / diagnostics on lab nodes
 brew "htop"
