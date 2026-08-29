@@ -19,6 +19,7 @@ pub use clean::execute as clean;
 pub use keys::distribute as distribute_keys;
 pub use plan::build_plan;
 pub use ssh::{generate as generate_ssh_config, write_ssh_config};
+pub use state::load as load_state;
 
 /// Run a real apply (caller already printed the plan). Requires `yes` for safety.
 pub fn execute(
@@ -30,8 +31,7 @@ pub fn execute(
 ) -> Result<()> {
     if !yes {
         return Err(RigError::Msg(
-            "refusing to modify the system without --yes (-y); try: rig apply --dry-run"
-                .into(),
+            "refusing to modify the system without --yes (-y); try: rig apply --dry-run".into(),
         ));
     }
 
@@ -114,10 +114,7 @@ pub fn execute(
         println!("  [skip] packages  ({reason})");
     } else {
         let report = packages::apply_packages(root, &plan.package_sets, os)?;
-        st.note_step(
-            "packages",
-            format!("{}: {}", report.backend, report.detail),
-        );
+        st.note_step("packages", format!("{}: {}", report.backend, report.detail));
         if report.ok {
             println!("  [ok  ] packages  ({}) {}", report.backend, report.detail);
         } else {
@@ -183,22 +180,14 @@ pub fn execute(
     println!("apply complete.");
     println!();
     println!("customize later:");
-    println!(
-        "  host     {}/hosts/{}.toml",
-        root.display(),
-        host.name
-    );
+    println!("  host     {}/hosts/{}.toml", root.display(), host.name);
     println!("  overlay  {}/overlay/", root.display());
     println!("  (do not edit templates/ — put personal files in overlay/)");
     println!("peers: add hosts/<peer>.toml with [[ssh]], then rig ssh-config --write");
     Ok(())
 }
 
-fn finish_step(
-    st: &mut state::RigState,
-    id: &str,
-    report: features::StepReport,
-) -> Result<()> {
+fn finish_step(st: &mut state::RigState, id: &str, report: features::StepReport) -> Result<()> {
     st.note_step(id, &report.detail);
     if report.ok {
         println!("  [ok  ] {id:<14} {}", report.detail);

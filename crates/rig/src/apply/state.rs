@@ -38,16 +38,14 @@ impl RigState {
     }
 }
 
-#[allow(dead_code)] // used by clean / status later
 pub fn load() -> Result<Option<RigState>> {
     let path = crate::paths::state_path();
     if !path.is_file() {
         return Ok(None);
     }
     let raw = fs::read_to_string(&path).map_err(RigError::Io)?;
-    let state: RigState = serde_json::from_str(&raw).map_err(|e| {
-        RigError::Msg(format!("failed to parse {}: {e}", path.display()))
-    })?;
+    let state: RigState = serde_json::from_str(&raw)
+        .map_err(|e| RigError::Msg(format!("failed to parse {}: {e}", path.display())))?;
     Ok(Some(state))
 }
 

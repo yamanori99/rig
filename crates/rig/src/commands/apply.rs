@@ -3,12 +3,7 @@ use crate::error::RigError;
 use crate::schema;
 use miette::Result;
 
-pub fn run(
-    root: &std::path::Path,
-    dry_run: bool,
-    yes: bool,
-    skip_packages: bool,
-) -> Result<()> {
+pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, skip_packages: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     let host = schema::detect_current_host(&hosts).ok_or_else(|| {
         RigError::Msg(format!(
@@ -33,11 +28,7 @@ pub fn run(
     println!(
         "  packages: {}{}",
         plan.package_sets.join(" + "),
-        if skip_packages {
-            " (will skip)"
-        } else {
-            ""
-        }
+        if skip_packages { " (will skip)" } else { "" }
     );
     println!();
     for step in &plan.steps {

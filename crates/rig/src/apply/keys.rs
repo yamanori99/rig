@@ -182,9 +182,7 @@ fn ssh_copy_id(pubkey: &Path, alias: &str) -> std::result::Result<(), String> {
     let check = Command::new("ssh")
         .args(ssh_opts())
         .arg(alias)
-        .arg(format!(
-            "grep -qxF {q} ~/.ssh/authorized_keys 2>/dev/null"
-        ))
+        .arg(format!("grep -qxF {q} ~/.ssh/authorized_keys 2>/dev/null"))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

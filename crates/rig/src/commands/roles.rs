@@ -49,11 +49,7 @@ pub fn run(root: &std::path::Path, name: Option<&str>, os_filter: Option<&str>) 
     Ok(())
 }
 
-fn print_role(
-    root: &std::path::Path,
-    name: &str,
-    os_filter: Option<OsKind>,
-) -> Result<()> {
+fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> Result<()> {
     let role = schema::load_role(root, name)?;
     println!("role: {name}");
     println!("  {}", role.description);
@@ -111,11 +107,7 @@ fn print_role(
     Ok(())
 }
 
-fn print_packages(
-    root: &std::path::Path,
-    sets: &[String],
-    os: OsKind,
-) -> Result<()> {
+fn print_packages(root: &std::path::Path, sets: &[String], os: OsKind) -> Result<()> {
     if sets.is_empty() {
         println!("    (none)");
         return Ok(());

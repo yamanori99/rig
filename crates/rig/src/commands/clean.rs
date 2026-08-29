@@ -1,12 +1,7 @@
 use crate::apply;
 use miette::Result;
 
-pub fn run(
-    root: &std::path::Path,
-    dry_run: bool,
-    yes: bool,
-    packages: bool,
-) -> Result<()> {
+pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, packages: bool) -> Result<()> {
     let state = crate::paths::state_path();
     println!("rig clean{}", if dry_run { " (dry-run)" } else { "" });
     println!("  root: {}", root.display());

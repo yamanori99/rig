@@ -25,11 +25,7 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
 
     let dest = paths::hosts_dir(root).join(format!("{short}.toml"));
     if dest.exists() {
-        return Err(RigError::Msg(format!(
-            "already exists: {}",
-            dest.display()
-        ))
-        .into());
+        return Err(RigError::Msg(format!("already exists: {}", dest.display())).into());
     }
 
     let example = paths::hosts_dir(root)

@@ -6,3 +6,5 @@ pub mod init;
 pub mod keys;
 pub mod roles;
 pub mod ssh_config;
+pub mod status;
+pub mod update;

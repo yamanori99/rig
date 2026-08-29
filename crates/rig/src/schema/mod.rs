@@ -35,9 +35,8 @@ pub fn load_hosts(root: &Path) -> Result<Vec<(std::path::PathBuf, Host)>> {
 
 pub fn load_role(root: &Path, name: &str) -> Result<Role> {
     let path = paths::roles_dir(root).join(format!("{name}.toml"));
-    let raw = std::fs::read_to_string(&path).map_err(|_| {
-        RigError::Msg(format!("role not found: {} ({})", name, path.display()))
-    })?;
+    let raw = std::fs::read_to_string(&path)
+        .map_err(|_| RigError::Msg(format!("role not found: {} ({})", name, path.display())))?;
     let role: Role = toml::from_str(&raw).map_err(|source| RigError::Toml {
         path: path.display().to_string(),
         source,
@@ -64,9 +63,7 @@ pub fn list_roles(root: &Path) -> Result<Vec<String>> {
     Ok(names)
 }
 
-pub fn detect_current_host<'a>(
-    hosts: &'a [(std::path::PathBuf, Host)],
-) -> Option<&'a Host> {
+pub fn detect_current_host<'a>(hosts: &'a [(std::path::PathBuf, Host)]) -> Option<&'a Host> {
     let hostname = current_hostname();
     let short = hostname.split('.').next().unwrap_or(&hostname);
     hosts.iter().find_map(|(_, h)| {

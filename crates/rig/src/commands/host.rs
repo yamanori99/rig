@@ -40,18 +40,11 @@ pub fn detect(root: &std::path::Path) -> Result<()> {
     match schema::detect_current_host(&hosts) {
         Some(h) => {
             println!("matched:  {} (role={})", h.name, h.role);
-            println!(
-                "edit:     {}/hosts/{}.toml",
-                root.display(),
-                h.name
-            );
+            println!("edit:     {}/hosts/{}.toml", root.display(), h.name);
         }
         None => {
             println!("matched:  (none — run `rig init` or add hosts/{short}.toml)");
-            println!(
-                "expected: {}/hosts/{short}.toml",
-                root.display()
-            );
+            println!("expected: {}/hosts/{short}.toml", root.display());
         }
     }
     Ok(())

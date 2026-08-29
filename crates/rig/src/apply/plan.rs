@@ -88,13 +88,21 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
 
     let f = &role.features;
     steps.push(feature_step("gui", f.gui, "install / enable GUI apps"));
-    steps.push(feature_step("cursor", f.cursor, "link Cursor user settings"));
+    steps.push(feature_step(
+        "cursor",
+        f.cursor,
+        "link Cursor user settings",
+    ));
     steps.push(feature_step(
         "remote-login",
         f.remote_login,
         "enable remote login / sshd",
     ));
-    steps.push(feature_step("tailscale", f.tailscale, "configure Tailscale"));
+    steps.push(feature_step(
+        "tailscale",
+        f.tailscale,
+        "configure Tailscale",
+    ));
     let tb_ip = host.thunderbolt_ip();
     steps.push(feature_step(
         "thunderbolt",

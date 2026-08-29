@@ -113,9 +113,23 @@ enum Commands {
         #[arg(long)]
         os: Option<String>,
     },
+    /// Snapshot of this machine (host, apply, ssh, overlay)
+    Status,
     /// Print product data root (hosts / overlay live here)
     #[command(after_help = AFTER_HELP)]
     Root,
+    /// Replace ~/.local/bin/rig with a GitHub Release binary
+    Update {
+        /// Release tag (default: latest)
+        #[arg(long)]
+        tag: Option<String>,
+        /// Show current vs target without installing
+        #[arg(long)]
+        dry_run: bool,
+        /// Reinstall even if versions match
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -145,7 +159,10 @@ fn main() -> Result<()> {
     let root = paths::discover_root(cli.root)?;
 
     // Always remind — paths are easy to forget. stderr keeps stdout pipe-safe.
-    if !matches!(cli.command, Commands::Root) {
+    if !matches!(
+        cli.command,
+        Commands::Root | Commands::Status | Commands::Update { .. }
+    ) {
         paths::eprint_data_hint(&root);
     }
 
@@ -163,9 +180,7 @@ fn main() -> Result<()> {
             yes,
             packages,
         } => commands::clean::run(&root, dry_run, yes, packages)?,
-        Commands::SshConfig { dry_run, write } => {
-            commands::ssh_config::run(&root, dry_run, write)?
-        }
+        Commands::SshConfig { dry_run, write } => commands::ssh_config::run(&root, dry_run, write)?,
         Commands::Check => commands::check::run(&root)?,
         Commands::Keys(KeysCmd::Distribute { dry_run, yes }) => {
             commands::keys::distribute(&root, yes, dry_run)?
@@ -173,10 +188,14 @@ fn main() -> Result<()> {
         Commands::Roles { name, os } => {
             commands::roles::run(&root, name.as_deref(), os.as_deref())?
         }
+        Commands::Status => commands::status::run(&root)?,
         Commands::Root => {
             // First line = path only (scripts: `$(rig root | head -1)`).
             println!("{}", root.display());
-            println!("  os={}  (auto-detect; override in hosts/*.toml)", schema::detect_os().as_str());
+            println!(
+                "  os={}  (auto-detect; override in hosts/*.toml)",
+                schema::detect_os().as_str()
+            );
             println!("  hosts/     {}/", root.join("hosts").display());
             println!("  overlay/   {}/", root.join("overlay").display());
             println!(
@@ -184,6 +203,11 @@ fn main() -> Result<()> {
                 root.join("templates").display()
             );
         }
+        Commands::Update {
+            tag,
+            dry_run,
+            force,
+        } => commands::update::run(tag.as_deref(), dry_run, force)?,
     }
     Ok(())
 }

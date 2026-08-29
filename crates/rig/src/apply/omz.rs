@@ -1,5 +1,5 @@
-use crate::error::{Result, RigError};
 use super::features::StepReport;
+use crate::error::{Result, RigError};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -59,12 +59,7 @@ pub fn ensure_omz_stack() -> Result<StepReport> {
     })
 }
 
-fn ensure_git_clone(
-    url: &str,
-    dest: &Path,
-    notes: &mut Vec<String>,
-    label: &str,
-) -> Result<()> {
+fn ensure_git_clone(url: &str, dest: &Path, notes: &mut Vec<String>, label: &str) -> Result<()> {
     if dest.is_dir() {
         notes.push(format!("{label} present"));
         return Ok(());

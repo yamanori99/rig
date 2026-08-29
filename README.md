@@ -51,6 +51,7 @@ rig init --role workstation   # or: --role compute
 # init prints the paths to edit — then:
 rig apply --dry-run
 rig apply --yes
+rig update                 # latest GitHub Release → ~/.local/bin/rig
 ```
 
 Then:
@@ -59,6 +60,7 @@ Then:
 rig ssh-config --write
 rig keys distribute --yes
 rig check
+rig status
 ```
 
 ### What to edit
@@ -93,6 +95,7 @@ Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 
 ```text
 rig root                         # product data path (hosts / overlay)
+rig status                       # this machine: version, host, apply, ssh
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
@@ -101,6 +104,7 @@ rig check
 rig keys distribute [--dry-run] [-y]
 rig clean [--dry-run] [-y] [--packages]
 rig ssh-config [--write]
+rig update [--tag vX.Y.Z] [--dry-run] [--force]
 ```
 
 Most commands also print the data root on stderr so the path stays visible.
@@ -135,7 +139,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.2` — last-command duration on the right of the next prompt; macOS + Linux.
+`v0.2.3` — `rig update` and `rig status`; macOS + Linux.
 
 ## License
 

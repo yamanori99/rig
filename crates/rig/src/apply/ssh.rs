@@ -19,13 +19,7 @@ pub fn generate(root: &Path, hosts: &[(PathBuf, Host)]) -> String {
     for (_, h) in hosts {
         let user = h.resolved_user();
         for path in h.ssh_paths() {
-            push_host(
-                &mut out,
-                &path.alias,
-                &path.ip,
-                &user,
-                path.link.comment(),
-            );
+            push_host(&mut out, &path.alias, &path.ip, &user, path.link.comment());
         }
     }
     out

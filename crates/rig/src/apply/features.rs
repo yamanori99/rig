@@ -114,19 +114,15 @@ pub fn apply_tailscale(os: OsKind) -> Result<StepReport> {
 }
 
 fn ensure_tailscaled_macos() -> Result<Option<String>> {
-    let daemon = which("tailscaled")
-        .or_else(|| {
-            for p in [
-                "/opt/homebrew/bin/tailscaled",
-                "/usr/local/bin/tailscaled",
-            ] {
-                let path = std::path::PathBuf::from(p);
-                if path.is_file() {
-                    return Some(path);
-                }
+    let daemon = which("tailscaled").or_else(|| {
+        for p in ["/opt/homebrew/bin/tailscaled", "/usr/local/bin/tailscaled"] {
+            let path = std::path::PathBuf::from(p);
+            if path.is_file() {
+                return Some(path);
             }
-            None
-        });
+        }
+        None
+    });
     let Some(daemon) = daemon else {
         return Ok(Some("tailscaled binary not found".into()));
     };
@@ -246,16 +242,14 @@ fn set_thunderbolt_macos(ip: &str) -> Result<StepReport> {
         });
     }
     let text = String::from_utf8_lossy(&bridge_out.stdout);
-    let current = text
-        .lines()
-        .find_map(|l| {
-            let t = l.trim();
-            if t.starts_with("inet ") {
-                t.split_whitespace().nth(1).map(str::to_string)
-            } else {
-                None
-            }
-        });
+    let current = text.lines().find_map(|l| {
+        let t = l.trim();
+        if t.starts_with("inet ") {
+            t.split_whitespace().nth(1).map(str::to_string)
+        } else {
+            None
+        }
+    });
 
     let mut notes = Vec::new();
     if current.as_deref() == Some(ip) {
@@ -320,7 +314,12 @@ fn ensure_thunderbolt_launchdaemon(ip: &str) -> Result<Option<String>> {
     let _ = sudo(&["launchctl", "bootout", "system", &path]);
     let _ = sudo(&["launchctl", "bootstrap", "system", &path]);
     let _ = sudo(&["launchctl", "enable", &format!("system/{TB_PLIST_LABEL}")]);
-    let _ = sudo(&["launchctl", "kickstart", "-k", &format!("system/{TB_PLIST_LABEL}")]);
+    let _ = sudo(&[
+        "launchctl",
+        "kickstart",
+        "-k",
+        &format!("system/{TB_PLIST_LABEL}"),
+    ]);
     // Older fallback
     let _ = sudo(&["launchctl", "unload", &path]);
     let _ = sudo(&["launchctl", "load", &path]);
@@ -398,7 +397,11 @@ ClientAliveCountMax 6
     }
 
     let mut child = Command::new("sudo")
-        .args(["tee", path.to_str().unwrap_or("/etc/ssh/sshd_config.d/99-rig-keepalive.conf")])
+        .args([
+            "tee",
+            path.to_str()
+                .unwrap_or("/etc/ssh/sshd_config.d/99-rig-keepalive.conf"),
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())

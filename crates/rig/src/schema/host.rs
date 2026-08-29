@@ -193,9 +193,7 @@ impl Host {
     }
 
     pub fn resolved_user(&self) -> String {
-        self.user
-            .clone()
-            .unwrap_or_else(|| whoami::username())
+        self.user.clone().unwrap_or_else(|| whoami::username())
     }
 }
 

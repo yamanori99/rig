@@ -39,25 +39,24 @@ pub fn link_shell(root: &Path, shell: ShellKind, enable_product_rc: bool) -> Res
     written.push(common_dst);
     sources.push(format!("common←{common_kind}"));
 
-    let (rc_name, profile_name, tpl_rc, tpl_profile, rc_dst_name, profile_dst_name) =
-        match shell {
-            ShellKind::Zsh => (
-                ".zshrc",
-                ".zprofile",
-                "shell/zsh/zshrc",
-                "shell/zsh/zprofile",
-                "zshrc",
-                "zprofile",
-            ),
-            ShellKind::Bash => (
-                ".bashrc",
-                ".bash_profile",
-                "shell/bash/bashrc",
-                "shell/bash/bash_profile",
-                "bashrc",
-                "bash_profile",
-            ),
-        };
+    let (rc_name, profile_name, tpl_rc, tpl_profile, rc_dst_name, profile_dst_name) = match shell {
+        ShellKind::Zsh => (
+            ".zshrc",
+            ".zprofile",
+            "shell/zsh/zshrc",
+            "shell/zsh/zprofile",
+            "zshrc",
+            "zprofile",
+        ),
+        ShellKind::Bash => (
+            ".bashrc",
+            ".bash_profile",
+            "shell/bash/bashrc",
+            "shell/bash/bash_profile",
+            "bashrc",
+            "bash_profile",
+        ),
+    };
 
     let (rc_src, rc_kind) = resolve_shell_file(root, tpl_rc)?;
     let (profile_src, profile_kind) = resolve_shell_file(root, tpl_profile)?;
@@ -253,9 +252,7 @@ fn ensure_snippet(path: &Path, snippet: &str) -> Result<()> {
         String::new()
     };
 
-    let new_body = if let (Some(start), Some(end)) =
-        (existing.find(BEGIN), existing.find(END))
-    {
+    let new_body = if let (Some(start), Some(end)) = (existing.find(BEGIN), existing.find(END)) {
         let end_at = end + END.len();
         let mut out = String::new();
         out.push_str(&existing[..start]);
@@ -292,7 +289,10 @@ fn ensure_snippet(path: &Path, snippet: &str) -> Result<()> {
 
 fn copy_file(src: &Path, dst: &Path) -> Result<()> {
     if !src.is_file() {
-        return Err(RigError::Msg(format!("missing template: {}", src.display())));
+        return Err(RigError::Msg(format!(
+            "missing template: {}",
+            src.display()
+        )));
     }
     if let Some(parent) = dst.parent() {
         fs::create_dir_all(parent).map_err(RigError::Io)?;
