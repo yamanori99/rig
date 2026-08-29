@@ -46,12 +46,42 @@ install_bin_to_path() {
     *":$dir:"*) echo "this shell already has $dir on PATH" ;;
     *) echo "this shell: export PATH=\"$dir:\$PATH\"" ;;
   esac
+  rc=$(path_rc_file)
   echo
-  echo "new shells (paste once; skips if already present):"
-  echo "  grep -Fqs '$dir' ~/.zshrc 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.zshrc"
-  echo "  grep -Fqs '$dir' ~/.zprofile 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.zprofile"
-  echo "  grep -Fqs '$dir' ~/.bashrc 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.bashrc"
-  echo "  grep -Fqs '$dir' ~/.bash_profile 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> ~/.bash_profile"
+  echo "PATH to add: $dir"
+  echo "file to edit: $rc"
+  echo "paste once:"
+  echo "  grep -Fqs '$dir' $rc 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> $rc"
+  echo "then open a new terminal, or: exec \"\$SHELL\""
+}
+
+# Login profile on macOS, interactive rc on Linux — one file per shell.
+path_rc_file() {
+  name=$(basename "${SHELL:-}")
+  os=$(uname -s)
+  case "$name" in
+    zsh)
+      if [ "$os" = Darwin ]; then
+        echo "$HOME/.zprofile"
+      else
+        echo "$HOME/.zshrc"
+      fi
+      ;;
+    bash)
+      if [ "$os" = Darwin ]; then
+        echo "$HOME/.bash_profile"
+      else
+        echo "$HOME/.bashrc"
+      fi
+      ;;
+    *)
+      if [ "$os" = Darwin ]; then
+        echo "$HOME/.zprofile"
+      else
+        echo "$HOME/.bashrc"
+      fi
+      ;;
+  esac
 }
 
 install_from_release() {
