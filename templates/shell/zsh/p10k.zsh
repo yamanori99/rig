@@ -34,7 +34,6 @@
     context                 # user on hostname (SSH時は経路も: Tailscale/TB)
     my_battery              # バッテリー (BAT:XX%)
     time                    # 現在時刻
-    command_execution_time  # duration of the last command (3秒以上のみ)
     background_jobs         # バックグラウンドジョブ数
     # =========================[ Line #2: 作業場所 ]=========================
     newline                 # \n
@@ -52,9 +51,9 @@
   # Right prompt on the last prompt line (where you are typing your commands) gets
   # automatically hidden when the input line reaches it. Right prompt above the
   # last prompt line gets hidden if it would overlap with left prompt.
-  # *** 右側は空に設定 (ターミナルリサイズ時の崩れを防止) ***
+  # 1行目右端 (TIME の向かい)。実行時間は「次の」プロンプトに出る。
   typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
-    # 右側は空 (全て左側に配置してリサイズ時の崩れを防止)
+    command_execution_time
   )
 
   # Defines character set used by powerlevel10k. It's best to let `p10k configure` set it for you.
@@ -492,7 +491,7 @@
   # Show this many fractional digits. Zero means round to seconds.
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_PRECISION=0
   # Execution time color.
-  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=214  # オレンジ
+  typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FOREGROUND=245  # TIME と同じ灰色
   # Duration format: 1d 2h 3m 4s.
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_FORMAT='d h m s'
   # Custom icon.
@@ -1903,9 +1902,8 @@
   # typeset -g POWERLEVEL9K_EXAMPLE_FOREGROUND=208
   # typeset -g POWERLEVEL9K_EXAMPLE_VISUAL_IDENTIFIER_EXPANSION='⭐'
 
-  # Transient prompt: same-dir (同一ディレクトリ内は ❯ のみ、cd 時は RUN/dir を残す)
-  # always = 常に簡略化 (RUN/dir が消える), off = 常にフル表示 (うるさい)
-  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=same-dir
+  # Enter 後は ❯ だけ残す。RUN は次のプロンプト1行目右 (TIME の向かい)。
+  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=always
 
   # Instant prompt mode.
   #

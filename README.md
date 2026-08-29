@@ -135,7 +135,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.1` — clearer data-path guidance (`rig root`, help, stderr hints); macOS + Linux.
+`v0.2.2` — last-command duration on the right of the next prompt; macOS + Linux.
 
 ## License
 
