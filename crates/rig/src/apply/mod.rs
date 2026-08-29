@@ -17,7 +17,7 @@ mod state;
 mod tmux;
 
 pub use clean::execute as clean;
-pub use inspect::print_live;
+pub use inspect::{print_live, LiveWanted};
 pub use keys::distribute as distribute_keys;
 pub use plan::build_plan;
 pub use ssh::{generate as generate_ssh_config, write_ssh_config};

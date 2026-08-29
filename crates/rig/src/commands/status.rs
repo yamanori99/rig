@@ -21,6 +21,7 @@ pub fn run(root: &Path) -> Result<()> {
     println!("  root     {}", root.display());
     println!("           {}", root_kind(root));
 
+    let mut live = apply::LiveWanted::default();
     match detected {
         Some(h) => {
             println!("  host     {}  role={}  (matched {})", h.name, h.role, hn);
@@ -35,6 +36,13 @@ pub fn run(root: &Path) -> Result<()> {
                     yn(f.thunderbolt),
                     yn(f.stay_awake)
                 );
+                live = apply::LiveWanted {
+                    stay_awake: f.stay_awake,
+                    remote_login: f.remote_login,
+                    thunderbolt: f.thunderbolt && h.thunderbolt_ip().is_some(),
+                    tailscale: f.tailscale,
+                    cursor: f.cursor,
+                };
             }
         }
         None => {
@@ -71,14 +79,14 @@ pub fn run(root: &Path) -> Result<()> {
             if !st.managed_files.is_empty() {
                 println!("  managed files");
                 for p in &st.managed_files {
-                    dump_managed(p);
+                    println!("    {p}");
                 }
             }
         }
         None => println!("  apply    never  (rig apply --yes)"),
     }
 
-    apply::print_live(schema::detect_os());
+    apply::print_live(schema::detect_os(), live);
 
     let ssh = dirs_home().join(".ssh/config.d/rig.conf");
     if ssh.is_file() {
@@ -130,33 +138,6 @@ fn overlay_has_files(dir: &Path) -> bool {
         let name = e.file_name();
         name != ".gitkeep" && name != ".DS_Store"
     })
-}
-
-const MANAGED_DUMP_MAX: u64 = 8 * 1024;
-
-fn dump_managed(path_s: &str) {
-    let path = Path::new(path_s);
-    println!("    {path_s}");
-    let meta = match std::fs::metadata(path) {
-        Ok(m) => m,
-        Err(_) => {
-            println!("      (missing)");
-            return;
-        }
-    };
-    if meta.len() > MANAGED_DUMP_MAX {
-        println!("      (skipped, {} bytes)", meta.len());
-        return;
-    }
-    match std::fs::read_to_string(path) {
-        Ok(s) if !s.trim().is_empty() => {
-            for line in s.lines() {
-                println!("      {line}");
-            }
-        }
-        Ok(_) => println!("      (empty)"),
-        Err(_) => println!("      (unreadable)"),
-    }
 }
 
 fn yn(v: bool) -> &'static str {

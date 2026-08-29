@@ -102,7 +102,7 @@ Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 
 ```text
 rig root                         # product data path (hosts / overlay)
-rig status                       # this machine: apply steps + live settings
+rig status                       # this machine: apply steps; live for enabled features
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
@@ -146,7 +146,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.4` — stay-awake; status dumps live settings; preview vs `--yes`; macOS + Linux.
+`v0.2.5` — compact `rig status` (enabled features only); macOS + Linux.
 
 ## License
 
