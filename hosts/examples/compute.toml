@@ -44,3 +44,7 @@ schema_version = 1
 # [packages]
 # add = ["julia"]
 # remove = ["unwanted-set"]
+
+# --- Feature overrides (optional; unset keys keep the role) ---
+# [features]
+# stay_awake = false

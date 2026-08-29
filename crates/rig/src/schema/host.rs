@@ -27,6 +27,9 @@ pub struct Host {
     pub thunderbolt: Option<String>,
     #[serde(default)]
     pub packages: HostPackages,
+    /// Optional per-host feature overrides (unset keys keep the role).
+    #[serde(default)]
+    pub features: HostFeatures,
     #[serde(default = "default_schema_version")]
     pub schema_version: u32,
 }
@@ -76,6 +79,16 @@ impl LinkKind {
 
 fn default_schema_version() -> u32 {
     1
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct HostFeatures {
+    pub gui: Option<bool>,
+    pub cursor: Option<bool>,
+    pub remote_login: Option<bool>,
+    pub tailscale: Option<bool>,
+    pub thunderbolt: Option<bool>,
+    pub stay_awake: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

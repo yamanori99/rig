@@ -6,7 +6,7 @@ use std::process::Command;
 
 const DEFAULT_REPO: &str = "yamanori99/rig";
 
-pub fn run(tag: Option<&str>, dry_run: bool, force: bool) -> Result<()> {
+pub fn run(tag: Option<&str>, yes: bool, force: bool) -> Result<()> {
     let repo = std::env::var("RIG_REPO").unwrap_or_else(|_| DEFAULT_REPO.into());
     let current = env!("CARGO_PKG_VERSION");
     let target = detect_target()?;
@@ -15,7 +15,7 @@ pub fn run(tag: Option<&str>, dry_run: bool, force: bool) -> Result<()> {
     let (tag_name, url) = resolve_asset(&repo, tag, &target)?;
     let remote_ver = tag_name.trim_start_matches('v');
 
-    println!("rig update");
+    println!("rig update{}", if yes { "" } else { "  (preview)" });
     let running = std::env::current_exe()
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "?".into());
@@ -28,9 +28,9 @@ pub fn run(tag: Option<&str>, dry_run: bool, force: bool) -> Result<()> {
         return Ok(());
     }
 
-    if dry_run {
+    if !yes {
         println!("would download {url}");
-        println!("tip: drop --dry-run to install");
+        println!("preview — pass --yes (-y) to install");
         return Ok(());
     }
 

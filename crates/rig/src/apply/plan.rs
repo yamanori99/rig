@@ -86,7 +86,8 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         skip: false,
     });
 
-    let f = &role.features;
+    let features = role.features.with_host(&host.features);
+    let f = &features;
     steps.push(feature_step("gui", f.gui, "install / enable GUI apps"));
     steps.push(feature_step(
         "cursor",
@@ -110,6 +111,14 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         match &tb_ip {
             Some(ip) => format!("configure thunderbolt IP {ip}"),
             None => "no thunderbolt [[ssh]] link on host".into(),
+        },
+    ));
+    steps.push(feature_step(
+        "stay-awake",
+        f.stay_awake,
+        match os {
+            crate::schema::OsKind::Macos => "pmset: AC sleep/display/disk/powernap off",
+            crate::schema::OsKind::Linux => "logind: ignore idle and lid (systemd)",
         },
     ));
 

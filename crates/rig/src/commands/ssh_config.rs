@@ -2,14 +2,12 @@ use crate::apply;
 use crate::schema;
 use miette::Result;
 
-pub fn run(root: &std::path::Path, dry_run: bool, write: bool) -> Result<()> {
+pub fn run(root: &std::path::Path, yes: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     let text = apply::generate_ssh_config(root, &hosts);
-    if dry_run || !write {
+    if !yes {
         print!("{text}");
-        if !write {
-            println!("# tip: pass --write to install → ~/.ssh/config.d/rig.conf");
-        }
+        println!("# preview — pass --yes / --write to install → ~/.ssh/config.d/rig.conf");
         return Ok(());
     }
     let path = apply::write_ssh_config(root, &hosts)?;

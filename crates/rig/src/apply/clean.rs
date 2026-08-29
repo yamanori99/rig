@@ -15,7 +15,8 @@ pub struct CleanReport {
 }
 
 /// Reverse apply using the local state manifest.
-pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<CleanReport> {
+pub fn execute(root: &Path, yes: bool, packages: bool) -> Result<CleanReport> {
+    let preview = !yes;
     let Some(st) = state::load()? else {
         return Ok(CleanReport {
             detail: "no state — nothing to clean".into(),
@@ -27,7 +28,7 @@ pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<
 
     for path_s in &st.managed_files {
         let path = PathBuf::from(path_s);
-        match clean_managed_path(&path, dry_run) {
+        match clean_managed_path(&path, preview) {
             Ok(Some(msg)) => actions.push(msg),
             Ok(None) => {}
             Err(e) => errors.push(format!("{}: {e}", path.display())),
@@ -39,7 +40,7 @@ pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<
         if let Some(home) = std::env::var_os("HOME") {
             let path = PathBuf::from(home).join(name);
             if path.is_file() {
-                match strip_rig_block(&path, dry_run) {
+                match strip_rig_block(&path, preview) {
                     Ok(true) => actions.push(format!("stripped block in {}", path.display())),
                     Ok(false) => {}
                     Err(e) => errors.push(format!("{}: {e}", path.display())),
@@ -52,9 +53,9 @@ pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<
     if let Some(cfg) = dirs_config() {
         let shell_dir = cfg.join("shell");
         if shell_dir.is_dir() {
-            if dry_run {
+            if preview {
                 actions.push(format!("would remove {}", shell_dir.display()));
-            } else if yes {
+            } else {
                 match fs::remove_dir_all(&shell_dir) {
                     Ok(()) => actions.push(format!("removed {}", shell_dir.display())),
                     Err(e) => errors.push(format!("{}: {e}", shell_dir.display())),
@@ -65,7 +66,7 @@ pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<
 
     if packages && !st.package_sets.is_empty() {
         let os = detect_os_for_clean();
-        match uninstall_packages(root, &st.package_sets, os, dry_run, yes) {
+        match uninstall_packages(root, &st.package_sets, os, preview) {
             Ok(msgs) => actions.extend(msgs),
             Err(e) => errors.push(e.to_string()),
         }
@@ -73,20 +74,20 @@ pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<
         actions.push("no package sets recorded".into());
     }
 
+    match clean_stay_awake(&st, preview) {
+        Ok(Some(msg)) => actions.push(msg),
+        Ok(None) => {}
+        Err(e) => errors.push(format!("stay-awake: {e}")),
+    }
+
     let state_path = paths::state_path();
-    if dry_run {
+    if preview {
         actions.push(format!("would remove state {}", state_path.display()));
-    } else if yes {
-        if state_path.is_file() {
-            match fs::remove_file(&state_path) {
-                Ok(()) => actions.push(format!("removed state {}", state_path.display())),
-                Err(e) => errors.push(format!("state: {e}")),
-            }
+    } else if state_path.is_file() {
+        match fs::remove_file(&state_path) {
+            Ok(()) => actions.push(format!("removed state {}", state_path.display())),
+            Err(e) => errors.push(format!("state: {e}")),
         }
-    } else if !dry_run {
-        return Ok(CleanReport {
-            detail: "refusing without --yes (destructive); try --dry-run".into(),
-        });
     }
 
     let _ = &st.host;
@@ -105,21 +106,59 @@ pub fn execute(root: &Path, yes: bool, dry_run: bool, packages: bool) -> Result<
     })
 }
 
-fn clean_managed_path(path: &Path, dry_run: bool) -> Result<Option<String>> {
+fn stay_awake_was_applied(st: &state::RigState) -> bool {
+    match st.steps.get("stay-awake") {
+        Some(d) if d != "skipped" => true,
+        _ => false,
+    }
+}
+
+fn clean_stay_awake(st: &state::RigState, preview: bool) -> Result<Option<String>> {
+    if !stay_awake_was_applied(st) {
+        return Ok(None);
+    }
+    match detect_os_for_clean() {
+        OsKind::Macos => Ok(Some("pmset left as-is (no recorded prior values)".into())),
+        OsKind::Linux => {
+            let path = super::features::LOGIND_DROPIN_PATH;
+            if !std::path::Path::new(path).is_file() {
+                return Ok(None);
+            }
+            if preview {
+                return Ok(Some(format!("would remove {path}")));
+            }
+            let status = Command::new("sudo")
+                .args(["rm", "-f", path])
+                .status()
+                .map_err(RigError::Io)?;
+            if !status.success() {
+                return Err(RigError::Msg(format!("rm {path} failed ({status})")));
+            }
+            let _ = Command::new("sudo")
+                .args(["systemctl", "restart", "systemd-logind"])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+            Ok(Some(format!("removed {path}")))
+        }
+    }
+}
+
+fn clean_managed_path(path: &Path, preview: bool) -> Result<Option<String>> {
     if !path.exists() && !path.is_symlink() {
         return Ok(None);
     }
 
     // Shell rc: strip block instead of deleting the whole file.
     if is_shell_rc(path) {
-        return match strip_rig_block(path, dry_run)? {
+        return match strip_rig_block(path, preview)? {
             true => Ok(Some(format!("stripped block in {}", path.display()))),
             false => Ok(None),
         };
     }
 
     if path.is_symlink() || path.is_file() {
-        if dry_run {
+        if preview {
             return Ok(Some(format!("would remove {}", path.display())));
         }
         fs::remove_file(path).map_err(RigError::Io)?;
@@ -136,7 +175,7 @@ fn is_shell_rc(path: &Path) -> bool {
     )
 }
 
-fn strip_rig_block(path: &Path, dry_run: bool) -> Result<bool> {
+fn strip_rig_block(path: &Path, preview: bool) -> Result<bool> {
     let existing = fs::read_to_string(path).map_err(RigError::Io)?;
     let Some(start) = existing.find(BEGIN) else {
         return Ok(false);
@@ -161,7 +200,7 @@ fn strip_rig_block(path: &Path, dry_run: bool) -> Result<bool> {
     while out.contains("\n\n\n") {
         out = out.replace("\n\n\n", "\n\n");
     }
-    if dry_run {
+    if preview {
         return Ok(true);
     }
     fs::write(path, out).map_err(RigError::Io)?;
@@ -172,8 +211,7 @@ fn uninstall_packages(
     root: &Path,
     sets: &[String],
     os: OsKind,
-    dry_run: bool,
-    yes: bool,
+    preview: bool,
 ) -> Result<Vec<String>> {
     let mut msgs = Vec::new();
     match os {
@@ -188,16 +226,13 @@ fn uninstall_packages(
                 msgs.push("brew: no formulas in recorded sets".into());
                 return Ok(msgs);
             }
-            if dry_run {
+            if preview {
                 if !names.is_empty() {
                     msgs.push(format!("would brew uninstall {}", names.join(" ")));
                 }
                 if !casks.is_empty() {
                     msgs.push(format!("would brew uninstall --cask {}", casks.join(" ")));
                 }
-                return Ok(msgs);
-            }
-            if !yes {
                 return Ok(msgs);
             }
             if !names.is_empty() {
@@ -242,11 +277,8 @@ fn uninstall_packages(
                 msgs.push("apt: no packages in recorded sets".into());
                 return Ok(msgs);
             }
-            if dry_run {
+            if preview {
                 msgs.push(format!("would apt-get remove {}", pkgs.join(" ")));
-                return Ok(msgs);
-            }
-            if !yes {
                 return Ok(msgs);
             }
             let status = Command::new("sudo")

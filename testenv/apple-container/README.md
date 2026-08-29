@@ -30,7 +30,7 @@ export PATH="$CARGO_HOME/bin:/opt/cargo/bin:$PATH"
 
 | Flag | Meaning |
 | --- | --- |
-| `--smoke` | install + init + apply dry-run + apply `--skip-packages` |
+| `--smoke` | install + init + apply preview + apply `--skip-packages` |
 | `--with-packages` | also run apt |
 | `--from-github[=URL]` | guest clones public repo (source gate) |
 | `--from-release` | guest `curl \| sh` installs Release binary (no Rust) |
@@ -58,7 +58,7 @@ What smoke checks:
 
 1. Each node: `rig` install + init + apply (`--skip-packages`)
 2. Each workstation: peer `hosts/<name>.toml` with `[[ssh]]` (`link = lan`),
-   then `rig ssh-config --write`
+   then `rig ssh-config --yes`
 3. From each workstation: `ssh <peer>-lan echo ok` to every other node
    (alias chosen by fleet-smoke; product lets you pick any alias)
 

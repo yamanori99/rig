@@ -67,12 +67,13 @@ fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> 
     let f = &role.features;
     println!("  features:");
     println!(
-        "    gui={}  cursor={}  remote_login={}  tailscale={}  thunderbolt={}",
+        "    gui={}  cursor={}  remote_login={}  tailscale={}  thunderbolt={}  stay_awake={}",
         yn(f.gui),
         yn(f.cursor),
         yn(f.remote_login),
         yn(f.tailscale),
-        yn(f.thunderbolt)
+        yn(f.thunderbolt),
+        yn(f.stay_awake)
     );
     if f.gui {
         println!("    → GUI apps / workstation extras");
@@ -88,6 +89,9 @@ fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> 
     }
     if f.thunderbolt {
         println!("    → Thunderbolt bridge0 when [[ssh]] has link=thunderbolt");
+    }
+    if f.stay_awake {
+        println!("    → stay awake (macOS pmset / Linux logind)");
     }
 
     println!("  package sets: {}", role.packages.join(", "));

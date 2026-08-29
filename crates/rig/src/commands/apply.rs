@@ -3,7 +3,7 @@ use crate::error::RigError;
 use crate::schema;
 use miette::Result;
 
-pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, skip_packages: bool) -> Result<()> {
+pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     let host = schema::detect_current_host(&hosts).ok_or_else(|| {
         RigError::Msg(format!(
@@ -14,7 +14,7 @@ pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, skip_packages: bool
     let role = schema::load_role(root, &host.role)?;
     let plan = build_plan(host, &role);
 
-    println!("rig apply{}", if dry_run { " (dry-run)" } else { "" });
+    println!("rig apply{}", if yes { "" } else { "  (preview)" });
     println!("  root={}", root.display());
     println!(
         "  host={}  role={}  os={}{}  shell={}  user={}",
@@ -40,10 +40,9 @@ pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, skip_packages: bool
         println!("  [{mark}] {:<14} {}", step.id, step.detail);
     }
 
-    if dry_run {
+    if !yes {
         println!();
-        println!("dry-run only — no changes made");
-        println!("apply for real: rig apply --yes");
+        println!("preview — pass --yes (-y) to apply");
         return Ok(());
     }
 

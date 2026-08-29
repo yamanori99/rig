@@ -13,12 +13,7 @@ pub struct DistributeReport {
 ///
 /// Prefers `link = lan|thunderbolt` (system sshd + authorized_keys). Falls back
 /// to `link = vpn` only when no LAN/TB path answers on TCP/22.
-pub fn distribute(
-    root: &Path,
-    self_name: &str,
-    yes: bool,
-    dry_run: bool,
-) -> Result<DistributeReport> {
+pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeReport> {
     let pubkey = default_pubkey()?;
     if !pubkey.is_file() {
         return Ok(DistributeReport {
@@ -72,18 +67,9 @@ pub fn distribute(
             }
         }
 
-        if dry_run {
+        if !yes {
             successes.push(format!(
                 "{} → would copy via {}",
-                peer.name,
-                copy_targets.join(",")
-            ));
-            continue;
-        }
-
-        if !yes {
-            skipped.push(format!(
-                "{} (pass --yes to copy via {})",
                 peer.name,
                 copy_targets.join(",")
             ));

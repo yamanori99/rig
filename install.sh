@@ -78,7 +78,7 @@ install_from_release() {
   echo "done. Rust is not required."
   echo "next:"
   echo "  rig init --role workstation   # or compute"
-  echo "  rig apply --dry-run"
+  echo "  rig apply            # preview"
   echo "  rig apply --yes"
   return 0
 }
@@ -91,7 +91,7 @@ install_from_source() {
   cargo install --path "$root/crates/rig" --force
   echo
   echo "next:"
-  echo "  cd $root && rig apply --dry-run"
+  echo "  cd $root && rig apply"
 }
 
 clone_repo() {

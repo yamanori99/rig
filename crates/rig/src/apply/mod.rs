@@ -6,6 +6,7 @@ mod clean;
 mod cursor;
 mod features;
 mod gui;
+mod inspect;
 mod keys;
 mod link;
 mod omz;
@@ -16,6 +17,7 @@ mod state;
 mod tmux;
 
 pub use clean::execute as clean;
+pub use inspect::print_live;
 pub use keys::distribute as distribute_keys;
 pub use plan::build_plan;
 pub use ssh::{generate as generate_ssh_config, write_ssh_config};
@@ -31,7 +33,7 @@ pub fn execute(
 ) -> Result<()> {
     if !yes {
         return Err(RigError::Msg(
-            "refusing to modify the system without --yes (-y); try: rig apply --dry-run".into(),
+            "refusing to modify the system without --yes (-y)".into(),
         ));
     }
 
@@ -152,6 +154,10 @@ pub fn execute(
                 let report = features::apply_tailscale(os)?;
                 finish_step(&mut st, "tailscale", report)?;
             }
+            "stay-awake" if !step.skip => {
+                let report = features::apply_stay_awake(os)?;
+                finish_step(&mut st, "stay-awake", report)?;
+            }
             "cursor" if !step.skip => {
                 let (report, files) = cursor::apply_cursor(root, os)?;
                 for p in &files {
@@ -163,7 +169,7 @@ pub fn execute(
                 let report = gui::apply_gui(root, &plan.package_sets, os)?;
                 finish_step(&mut st, "gui", report)?;
             }
-            "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" => {
+            "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" | "stay-awake" => {
                 // Enabled steps are handled above; remaining matches are skips.
                 if step.skip {
                     st.note_step(&step.id, "skipped");
@@ -183,7 +189,7 @@ pub fn execute(
     println!("  host     {}/hosts/{}.toml", root.display(), host.name);
     println!("  overlay  {}/overlay/", root.display());
     println!("  (do not edit templates/ — put personal files in overlay/)");
-    println!("peers: add hosts/<peer>.toml with [[ssh]], then rig ssh-config --write");
+    println!("peers: add hosts/<peer>.toml with [[ssh]], then rig ssh-config --yes");
     Ok(())
 }
 

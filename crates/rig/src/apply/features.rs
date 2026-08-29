@@ -113,6 +113,146 @@ pub fn apply_tailscale(os: OsKind) -> Result<StepReport> {
     })
 }
 
+pub(crate) const SSHD_KEEPALIVE_PATH: &str = "/etc/ssh/sshd_config.d/99-rig-keepalive.conf";
+pub(crate) const LOGIND_DROPIN_PATH: &str = "/etc/systemd/logind.conf.d/99-rig-stay-awake.conf";
+pub(crate) const LOGIND_DESIRED: &str = "\
+# managed by rig — compute stay-awake
+[Login]
+IdleAction=ignore
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+";
+
+/// Prevent idle sleep so a headless node stays reachable.
+pub fn apply_stay_awake(os: OsKind) -> Result<StepReport> {
+    match os {
+        OsKind::Macos => apply_stay_awake_macos(),
+        OsKind::Linux => apply_stay_awake_linux(),
+    }
+}
+
+pub(crate) fn has_systemd() -> bool {
+    std::path::Path::new("/run/systemd/system").is_dir()
+}
+
+fn apply_stay_awake_macos() -> Result<StepReport> {
+    if pmset_ac_awake() {
+        return Ok(StepReport {
+            ok: true,
+            detail: "pmset -c already sleep=0 displaysleep=0 disksleep=0 powernap=0".into(),
+        });
+    }
+    if sudo(&[
+        "pmset",
+        "-c",
+        "sleep",
+        "0",
+        "displaysleep",
+        "0",
+        "disksleep",
+        "0",
+        "powernap",
+        "0",
+    ])? {
+        Ok(StepReport {
+            ok: true,
+            detail: "pmset -c sleep=0 displaysleep=0 disksleep=0 powernap=0".into(),
+        })
+    } else {
+        Ok(StepReport {
+            ok: false,
+            detail: "pmset -c failed".into(),
+        })
+    }
+}
+
+/// True when the *currently in use* profile already has sleep/display/disk off.
+fn pmset_ac_awake() -> bool {
+    let Ok(out) = Command::new("pmset").args(["-g"]).output() else {
+        return false;
+    };
+    if !out.status.success() {
+        return false;
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut sleep = false;
+    let mut display = false;
+    let mut disk = false;
+    let mut nap = false;
+    for line in text.lines() {
+        let t = line.trim();
+        let mut parts = t.split_whitespace();
+        let key = parts.next().unwrap_or("");
+        let val = parts.next().unwrap_or("");
+        match key {
+            "sleep" => sleep = val == "0",
+            "displaysleep" => display = val == "0",
+            "disksleep" => disk = val == "0",
+            "powernap" => nap = val == "0",
+            _ => {}
+        }
+    }
+    sleep && display && disk && nap
+}
+
+fn apply_stay_awake_linux() -> Result<StepReport> {
+    if !has_systemd() {
+        return Ok(StepReport {
+            ok: true,
+            detail: "no systemd — skip stay-awake".into(),
+        });
+    }
+
+    let existing = std::fs::read_to_string(LOGIND_DROPIN_PATH).unwrap_or_default();
+    if existing == LOGIND_DESIRED {
+        return Ok(StepReport {
+            ok: true,
+            detail: format!("{LOGIND_DROPIN_PATH} already"),
+        });
+    }
+
+    let dir = "/etc/systemd/logind.conf.d";
+    if !sudo(&["mkdir", "-p", dir])? {
+        return Ok(StepReport {
+            ok: false,
+            detail: format!("mkdir {dir} failed"),
+        });
+    }
+    if !sudo_write(LOGIND_DROPIN_PATH, LOGIND_DESIRED)? {
+        return Ok(StepReport {
+            ok: false,
+            detail: format!("write {LOGIND_DROPIN_PATH} failed"),
+        });
+    }
+    let _ = sudo(&["chmod", "644", LOGIND_DROPIN_PATH]);
+    let restarted = sudo(&["systemctl", "restart", "systemd-logind"])?;
+    Ok(StepReport {
+        ok: true,
+        detail: if restarted {
+            format!("{LOGIND_DROPIN_PATH} (logind restarted)")
+        } else {
+            format!("{LOGIND_DROPIN_PATH} (wrote; restart logind skipped)")
+        },
+    })
+}
+
+fn sudo_write(path: &str, contents: &str) -> Result<bool> {
+    let mut child = Command::new("sudo")
+        .args(["tee", path])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(RigError::Io)?;
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        stdin.write_all(contents.as_bytes()).map_err(RigError::Io)?;
+    }
+    let status = child.wait().map_err(RigError::Io)?;
+    Ok(status.success())
+}
+
 fn ensure_tailscaled_macos() -> Result<Option<String>> {
     let daemon = which("tailscaled").or_else(|| {
         for p in ["/opt/homebrew/bin/tailscaled", "/usr/local/bin/tailscaled"] {
@@ -385,23 +525,19 @@ fn ensure_sshd_client_alive() -> Result<Option<String>> {
     if !dir.is_dir() {
         return Ok(None);
     }
-    let path = dir.join("99-rig-keepalive.conf");
+    let path = std::path::Path::new(SSHD_KEEPALIVE_PATH);
     let desired = "\
 # managed by rig — client keepalive companion
 ClientAliveInterval 30
 ClientAliveCountMax 6
 ";
-    let existing = std::fs::read_to_string(&path).unwrap_or_default();
+    let existing = std::fs::read_to_string(path).unwrap_or_default();
     if existing == desired {
         return Ok(None);
     }
 
     let mut child = Command::new("sudo")
-        .args([
-            "tee",
-            path.to_str()
-                .unwrap_or("/etc/ssh/sshd_config.d/99-rig-keepalive.conf"),
-        ])
+        .args(["tee", SSHD_KEEPALIVE_PATH])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::piped())

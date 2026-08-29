@@ -29,7 +29,8 @@ Releases: https://github.com/yamanori99/rig/releases
 ## Update
 
 ```bash
-rig update
+rig update           # preview
+rig update --yes
 ```
 
 Installs the latest Release into `~/.local/bin/rig`. `hosts/` and
@@ -49,14 +50,14 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | 
 ```
 
 This does not undo shell snippets or packages from `rig apply` — run
-`rig clean` first while the binary is still installed if you want that.
+`rig clean --yes` first while the binary is still installed if you want that.
 
 ## Use
 
 ```bash
 rig init --role workstation   # or: --role compute
 # init prints the paths to edit — then:
-rig apply --dry-run
+rig apply            # preview
 rig apply --yes
 rig status
 ```
@@ -64,7 +65,7 @@ rig status
 Then:
 
 ```bash
-rig ssh-config --write
+rig ssh-config --yes
 rig keys distribute --yes
 rig check
 ```
@@ -91,7 +92,7 @@ embedded). Use `--root` / `RIG_ROOT` only if you point at a checkout.
 | Role | Intent |
 | --- | --- |
 | `workstation` | GUI laptop/desktop, zsh default |
-| `compute` | Headless, bash default, remote/tailscale |
+| `compute` | Headless, bash default, remote/tailscale, stay-awake |
 
 ## Privacy
 
@@ -101,16 +102,16 @@ Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 
 ```text
 rig root                         # product data path (hosts / overlay)
-rig status                       # this machine: version, host, apply, ssh
+rig status                       # this machine: apply steps + live settings
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
-rig apply [--dry-run] [-y] [--skip-packages]
+rig apply [-y] [--skip-packages] # preview; -y writes
 rig check
-rig keys distribute [--dry-run] [-y]
-rig clean [--dry-run] [-y] [--packages]
-rig ssh-config [--write]
-rig update                       # latest GitHub Release → ~/.local/bin/rig
+rig keys distribute [-y]         # preview; -y copies
+rig clean [-y] [--packages]      # preview; -y deletes
+rig ssh-config [-y|--write]      # preview; -y writes
+rig update [-y] [--force]        # preview; -y installs
 ```
 
 Most commands also print the data root on stderr so the path stays visible.
@@ -145,7 +146,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.3` — `rig update` and `rig status`; macOS + Linux.
+`v0.2.4` — stay-awake; status dumps live settings; preview vs `--yes`; macOS + Linux.
 
 ## License
 

@@ -90,7 +90,7 @@ fn resolve_src(root: &Path, name: &str) -> Option<(PathBuf, bool)> {
     None
 }
 
-fn cursor_user_dir(os: OsKind) -> Result<PathBuf> {
+pub(crate) fn cursor_user_dir(os: OsKind) -> Result<PathBuf> {
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| RigError::Msg("HOME is not set".into()))?;

@@ -73,32 +73,26 @@ enum Commands {
     /// Show registered hosts
     #[command(subcommand)]
     Host(HostCmd),
-    /// Apply configuration for this machine
+    /// Apply configuration for this machine (preview; `--yes` writes)
     #[command(after_help = AFTER_HELP)]
     Apply {
-        #[arg(long)]
-        dry_run: bool,
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         /// Skip brew/apt (shell + ssh-config + state only; useful in testenv)
         #[arg(long)]
         skip_packages: bool,
     },
-    /// Show what clean would remove (and remove with --yes)
+    /// Remove apply artifacts (preview; `--yes` deletes)
     Clean {
-        #[arg(long)]
-        dry_run: bool,
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         #[arg(long)]
         packages: bool,
     },
-    /// Generate SSH config from hosts
+    /// Generate SSH config from hosts (preview; `--yes` writes)
     SshConfig {
-        #[arg(long)]
-        dry_run: bool,
-        #[arg(long)]
-        write: bool,
+        #[arg(short = 'y', long = "yes", visible_alias = "write")]
+        yes: bool,
     },
     /// Probe peer connectivity (TCP/22 + BatchMode SSH per path)
     Check,
@@ -113,19 +107,18 @@ enum Commands {
         #[arg(long)]
         os: Option<String>,
     },
-    /// Snapshot of this machine (host, apply, ssh, overlay)
+    /// Snapshot of this machine (host, apply steps, live settings, ssh, overlay)
     Status,
     /// Print product data root (hosts / overlay live here)
     #[command(after_help = AFTER_HELP)]
     Root,
-    /// Replace ~/.local/bin/rig with a GitHub Release binary
+    /// Replace ~/.local/bin/rig with a GitHub Release binary (preview; `--yes` installs)
     Update {
         /// Release tag (default: latest)
         #[arg(long)]
         tag: Option<String>,
-        /// Show current vs target without installing
-        #[arg(long)]
-        dry_run: bool,
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
         /// Reinstall even if versions match
         #[arg(long)]
         force: bool,
@@ -142,8 +135,6 @@ enum HostCmd {
 enum KeysCmd {
     /// Copy this machine's pubkey to peers (prefer lan/tb links, then vpn)
     Distribute {
-        #[arg(long)]
-        dry_run: bool,
         #[arg(short = 'y', long = "yes")]
         yes: bool,
     },
@@ -170,21 +161,11 @@ fn main() -> Result<()> {
         Commands::Init { role, name } => commands::init::run(&root, &role, name.as_deref())?,
         Commands::Host(HostCmd::List) => commands::host::list(&root)?,
         Commands::Host(HostCmd::Detect) => commands::host::detect(&root)?,
-        Commands::Apply {
-            dry_run,
-            yes,
-            skip_packages,
-        } => commands::apply::run(&root, dry_run, yes, skip_packages)?,
-        Commands::Clean {
-            dry_run,
-            yes,
-            packages,
-        } => commands::clean::run(&root, dry_run, yes, packages)?,
-        Commands::SshConfig { dry_run, write } => commands::ssh_config::run(&root, dry_run, write)?,
+        Commands::Apply { yes, skip_packages } => commands::apply::run(&root, yes, skip_packages)?,
+        Commands::Clean { yes, packages } => commands::clean::run(&root, yes, packages)?,
+        Commands::SshConfig { yes } => commands::ssh_config::run(&root, yes)?,
         Commands::Check => commands::check::run(&root)?,
-        Commands::Keys(KeysCmd::Distribute { dry_run, yes }) => {
-            commands::keys::distribute(&root, yes, dry_run)?
-        }
+        Commands::Keys(KeysCmd::Distribute { yes }) => commands::keys::distribute(&root, yes)?,
         Commands::Roles { name, os } => {
             commands::roles::run(&root, name.as_deref(), os.as_deref())?
         }
@@ -203,11 +184,7 @@ fn main() -> Result<()> {
                 root.join("templates").display()
             );
         }
-        Commands::Update {
-            tag,
-            dry_run,
-            force,
-        } => commands::update::run(tag.as_deref(), dry_run, force)?,
+        Commands::Update { tag, yes, force } => commands::update::run(tag.as_deref(), yes, force)?,
     }
     Ok(())
 }

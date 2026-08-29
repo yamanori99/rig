@@ -9,3 +9,4 @@ remote_login = false
 tailscale = false
 # Optional: [[ssh]] with link=thunderbolt puts this laptop on the TB bridge.
 thunderbolt = true
+stay_awake = false

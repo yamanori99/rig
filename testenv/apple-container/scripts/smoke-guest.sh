@@ -48,8 +48,8 @@ print("updated", path)
 PY
 rig host detect
 
-echo "== smoke: apply --dry-run =="
-rig apply --dry-run
+echo "== smoke: apply (preview) =="
+rig apply
 
 echo "== smoke: apply --yes --skip-packages =="
 rig apply --yes --skip-packages

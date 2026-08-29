@@ -49,13 +49,13 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
     println!();
     println!("edit (this machine):");
     println!("  host     {}", dest.display());
-    println!("           role / [[ssh]] / [packages] add·remove");
+    println!("           role / [[ssh]] / [packages] / [features]");
     println!("  overlay  {}/", overlay.display());
     println!("           personal shell / tmux / cursor overrides");
     println!("  leave templates/ alone — use overlay/ instead");
     println!();
     println!("os/shell auto-detect at apply (override in the toml if needed)");
-    println!("next: rig apply --dry-run");
+    println!("next: rig apply");
     Ok(())
 }
 

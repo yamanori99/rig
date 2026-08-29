@@ -20,8 +20,8 @@ rig init --role compute --name "${hn}" || true
 # If init said already exists, continue
 rig host detect
 
-echo "== release-smoke: apply --dry-run =="
-rig apply --dry-run
+echo "== release-smoke: apply (preview) =="
+rig apply
 
 echo "== release-smoke: apply --yes --skip-packages =="
 rig apply --yes --skip-packages

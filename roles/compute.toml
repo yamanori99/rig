@@ -8,3 +8,4 @@ cursor = false
 remote_login = true
 tailscale = true
 thunderbolt = true
+stay_awake = true

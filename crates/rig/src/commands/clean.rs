@@ -1,9 +1,9 @@
 use crate::apply;
 use miette::Result;
 
-pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, packages: bool) -> Result<()> {
+pub fn run(root: &std::path::Path, yes: bool, packages: bool) -> Result<()> {
     let state = crate::paths::state_path();
-    println!("rig clean{}", if dry_run { " (dry-run)" } else { "" });
+    println!("rig clean{}", if yes { "" } else { "  (preview)" });
     println!("  root: {}", root.display());
     println!("  state file: {}", state.display());
     println!(
@@ -16,19 +16,11 @@ pub fn run(root: &std::path::Path, dry_run: bool, yes: bool, packages: bool) -> 
     );
     println!();
 
-    if !dry_run && !yes {
-        println!("refusing to clean without --yes (destructive)");
-        println!("preview: rig clean --dry-run");
-        println!("apply:   rig clean --yes");
-        return Ok(());
-    }
-
-    let report = apply::clean(root, yes, dry_run, packages)?;
+    let report = apply::clean(root, yes, packages)?;
     println!("{}", report.detail);
-    if dry_run {
+    if !yes {
         println!();
-        println!("dry-run only — no changes made");
-        println!("clean for real: rig clean --yes");
+        println!("preview — pass --yes (-y) to clean");
     }
     Ok(())
 }

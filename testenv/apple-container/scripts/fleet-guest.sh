@@ -31,8 +31,8 @@ user = "dev"
 EOF
 rig host detect
 
-echo "== ${NAME}: apply --dry-run =="
-rig apply --dry-run
+echo "== ${NAME}: apply (preview) =="
+rig apply
 
 echo "== ${NAME}: apply --yes --skip-packages =="
 rig apply --yes --skip-packages

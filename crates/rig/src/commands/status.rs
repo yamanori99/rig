@@ -24,6 +24,18 @@ pub fn run(root: &Path) -> Result<()> {
     match detected {
         Some(h) => {
             println!("  host     {}  role={}  (matched {})", h.name, h.role, hn);
+            if let Ok(role) = schema::load_role(root, &h.role) {
+                let f = role.features.with_host(&h.features);
+                println!(
+                    "  features gui={} cursor={} remote_login={} tailscale={} thunderbolt={} stay_awake={}",
+                    yn(f.gui),
+                    yn(f.cursor),
+                    yn(f.remote_login),
+                    yn(f.tailscale),
+                    yn(f.thunderbolt),
+                    yn(f.stay_awake)
+                );
+            }
         }
         None => {
             println!("  host     {short}  (no hosts/{short}.toml — rig init)");
@@ -50,15 +62,34 @@ pub fn run(root: &Path) -> Result<()> {
                 st.package_sets.len()
             );
             println!("           {}", paths::state_path().display());
+            if !st.steps.is_empty() {
+                println!("  apply steps");
+                for (id, detail) in &st.steps {
+                    println!("    {id:<14} {detail}");
+                }
+            }
+            if !st.managed_files.is_empty() {
+                println!("  managed files");
+                for p in &st.managed_files {
+                    dump_managed(p);
+                }
+            }
         }
         None => println!("  apply    never  (rig apply --yes)"),
     }
 
+    apply::print_live(schema::detect_os());
+
     let ssh = dirs_home().join(".ssh/config.d/rig.conf");
     if ssh.is_file() {
         println!("  ssh      {}", ssh.display());
+        if let Ok(s) = std::fs::read_to_string(&ssh) {
+            for line in s.lines() {
+                println!("    {line}");
+            }
+        }
     } else {
-        println!("  ssh      not generated  (rig ssh-config --write)");
+        println!("  ssh      not generated  (rig ssh-config --yes)");
     }
 
     let overlay = root.join("overlay");
@@ -99,4 +130,39 @@ fn overlay_has_files(dir: &Path) -> bool {
         let name = e.file_name();
         name != ".gitkeep" && name != ".DS_Store"
     })
+}
+
+const MANAGED_DUMP_MAX: u64 = 8 * 1024;
+
+fn dump_managed(path_s: &str) {
+    let path = Path::new(path_s);
+    println!("    {path_s}");
+    let meta = match std::fs::metadata(path) {
+        Ok(m) => m,
+        Err(_) => {
+            println!("      (missing)");
+            return;
+        }
+    };
+    if meta.len() > MANAGED_DUMP_MAX {
+        println!("      (skipped, {} bytes)", meta.len());
+        return;
+    }
+    match std::fs::read_to_string(path) {
+        Ok(s) if !s.trim().is_empty() => {
+            for line in s.lines() {
+                println!("      {line}");
+            }
+        }
+        Ok(_) => println!("      (empty)"),
+        Err(_) => println!("      (unreadable)"),
+    }
+}
+
+fn yn(v: bool) -> &'static str {
+    if v {
+        "on"
+    } else {
+        "off"
+    }
 }

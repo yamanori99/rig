@@ -109,7 +109,7 @@ for n in nodes:
     )
     print("wrote", path)
 PY
-rig ssh-config --write
+rig ssh-config --yes
 echo "--- ssh-config ---"
 rig ssh-config | head -40
 EOS
