@@ -55,7 +55,7 @@ pub fn apply_tailscale(os: OsKind) -> Result<StepReport> {
     let Some(ts) = ts else {
         return Ok(StepReport {
             ok: true,
-            detail: "tailscale not installed — install via packages, then re-apply".into(),
+            detail: "tailscale not installed — skipped".into(),
         });
     };
 

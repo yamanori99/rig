@@ -40,6 +40,8 @@ pub fn run(root: &Path) -> Result<()> {
                         yn(f.stay_awake)
                     ),
                 );
+                let plan = apply::build_plan(h, &role);
+                apply::print_package_extras(root, &plan.package_sets, schema::detect_os())?;
                 live = apply::LiveWanted {
                     stay_awake: f.stay_awake,
                     remote_login: f.remote_login,

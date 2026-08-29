@@ -294,6 +294,110 @@ fn apt_install(root: &Path, sets: &[String]) -> Result<PackageReport> {
     })
 }
 
+const EXTRA_SHOW: usize = 24;
+const APT_NOISE: usize = 40;
+
+/// Formulae/casks (or apt manuals) installed but not in this host's package sets.
+pub fn extras_not_recommended(
+    root: &Path,
+    sets: &[String],
+    os: OsKind,
+) -> Result<Option<Vec<String>>> {
+    let recommended = packages::recommended_for_os(root, sets, os)?;
+    let Some(installed) = (match os {
+        OsKind::Macos => brew_installed_requested(),
+        OsKind::Linux => apt_manual_installed(),
+    }) else {
+        return Ok(None);
+    };
+    Ok(Some(packages::extras_sorted(&installed, &recommended)))
+}
+
+fn brew_installed_requested() -> Option<Vec<String>> {
+    if which("brew").is_none() {
+        return None;
+    }
+    let mut formulae = brew_list_lines(&["list", "--formula", "--installed-on-request", "-1"]);
+    if formulae.is_empty() {
+        formulae = brew_list_lines(&["leaves", "-1"]);
+    }
+    let mut out: Vec<String> = formulae
+        .into_iter()
+        .map(|n| format!("brew:{n}"))
+        .collect();
+    out.extend(
+        brew_list_lines(&["list", "--cask", "-1"])
+            .into_iter()
+            .map(|n| format!("cask:{n}")),
+    );
+    Some(out)
+}
+
+fn brew_list_lines(args: &[&str]) -> Vec<String> {
+    let out = Command::new("brew").args(args).output();
+    let Ok(out) = out else {
+        return Vec::new();
+    };
+    if !out.status.success() {
+        return Vec::new();
+    }
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect()
+}
+
+fn apt_manual_installed() -> Option<Vec<String>> {
+    if which("apt-mark").is_none() {
+        return None;
+    }
+    let out = Command::new("apt-mark").args(["showmanual"]).output();
+    let Ok(out) = out else {
+        return None;
+    };
+    if !out.status.success() {
+        return None;
+    }
+    let lines: Vec<String> = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect();
+    Some(lines)
+}
+
+pub fn print_extras(root: &Path, sets: &[String], os: OsKind) -> Result<()> {
+    let Some(extra) = extras_not_recommended(root, sets, os)? else {
+        return Ok(());
+    };
+    if os == OsKind::Linux && extra.len() > APT_NOISE {
+        crate::ui::kv(
+            "extra",
+            format!(
+                "{} apt manuals — skipped (noisy vs role lists)",
+                extra.len()
+            ),
+        );
+        return Ok(());
+    }
+    if extra.is_empty() {
+        crate::ui::kv("extra", "none");
+        crate::ui::kvc("on-request / casks all in role sets");
+        return Ok(());
+    }
+    crate::ui::kv("extra", format!("{} not in role sets", extra.len()));
+    crate::ui::kvc("installed besides recommended (brew deps omitted)");
+    let show = extra.len().min(EXTRA_SHOW);
+    for name in &extra[..show] {
+        crate::ui::item(name);
+    }
+    if extra.len() > EXTRA_SHOW {
+        crate::ui::item(format!("… {} more", extra.len() - EXTRA_SHOW));
+    }
+    Ok(())
+}
+
 fn which(bin: &str) -> Option<PathBuf> {
     std::env::var_os("PATH").and_then(|paths| {
         for dir in std::env::split_paths(&paths) {

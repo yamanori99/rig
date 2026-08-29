@@ -108,7 +108,7 @@ embedded). Use `--root` / `RIG_ROOT` only if you point at a checkout.
 | Role | Intent |
 | --- | --- |
 | `workstation` | GUI laptop/desktop, zsh default |
-| `compute` | Headless, bash default, remote/tailscale, stay-awake |
+| `compute` | Headless, bash default, remote login, stay-awake |
 
 ## Privacy
 
@@ -162,8 +162,8 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.10` — compact CLI output; brew/apt live lines; SSH without Full
-Disk Access via launchctl bootstrap.
+`v0.2.11` — compute no longer installs Tailscale; `rig status` lists
+packages outside the role sets.
 
 ## License
 

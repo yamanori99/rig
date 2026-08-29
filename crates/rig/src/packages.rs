@@ -1,6 +1,7 @@
 use crate::error::{Result, RigError};
 use crate::paths;
 use crate::schema::OsKind;
+use std::collections::HashSet;
 use std::path::Path;
 
 #[derive(Debug, Clone)]
@@ -86,4 +87,60 @@ pub fn parse_apt_list(body: &str) -> Vec<String> {
 
 fn strip_comment(line: &str) -> &str {
     line.split('#').next().unwrap_or(line)
+}
+
+/// Names from role/host package sets, tagged `brew:`, `cask:`, or unprefixed (apt).
+pub fn recommended_for_os(root: &Path, sets: &[String], os: OsKind) -> Result<HashSet<String>> {
+    let mut out = HashSet::new();
+    for set in sets {
+        let contents = load_package_set(root, set)?;
+        for raw in packages_for_os(&contents, os) {
+            match os {
+                OsKind::Macos => {
+                    if raw.starts_with("brew:") || raw.starts_with("cask:") {
+                        out.insert(raw.to_ascii_lowercase());
+                    }
+                }
+                OsKind::Linux => {
+                    out.insert(raw.to_ascii_lowercase());
+                }
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Installed names minus recommended. `installed` uses the same tags as recommended.
+pub fn extras_sorted(installed: &[String], recommended: &HashSet<String>) -> Vec<String> {
+    let mut extra: Vec<String> = installed
+        .iter()
+        .map(|s| s.to_ascii_lowercase())
+        .filter(|s| !s.is_empty() && !recommended.contains(s))
+        .collect();
+    extra.sort();
+    extra.dedup();
+    extra
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extras_ignore_recommended_and_sort() {
+        let rec: HashSet<String> = ["brew:git", "cask:cursor"]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        let installed = vec![
+            "cask:discord".into(),
+            "brew:git".into(),
+            "brew:ripgrep".into(),
+            "cask:cursor".into(),
+        ];
+        assert_eq!(
+            extras_sorted(&installed, &rec),
+            vec!["brew:ripgrep", "cask:discord"]
+        );
+    }
 }

@@ -109,7 +109,7 @@ enum Commands {
         #[arg(long)]
         os: Option<String>,
     },
-    /// Snapshot of this machine (host, apply, enabled live, ssh)
+    /// Snapshot of this machine (host, extra pkgs, apply, live, ssh)
     Status,
     /// Print product data root (hosts / overlay live here)
     #[command(after_help = AFTER_HELP)]
