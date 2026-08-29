@@ -42,51 +42,37 @@ install_bin_to_path() {
   mkdir -p "$dir"
   install -m 755 "$bin" "$dir/rig"
   echo "installed: $dir/rig"
-  export PATH="$dir:$PATH"
   persist_path "$dir"
+  echo
+  echo "this terminal does not pick that up. run:"
+  echo "  export PATH=\"$dir:\$PATH\""
+  echo "  hash -r"
+  echo "  rig --version"
 }
 
-# Login profile on macOS, interactive rc on Linux — one file per shell.
-path_rc_file() {
+# Login + interactive rc, so Terminal.app and Cursor both see PATH.
+path_rc_files() {
   name=$(basename "${SHELL:-}")
-  os=$(uname -s)
   case "$name" in
-    zsh)
-      if [ "$os" = Darwin ]; then
-        echo "$HOME/.zprofile"
-      else
-        echo "$HOME/.zshrc"
-      fi
-      ;;
-    bash)
-      if [ "$os" = Darwin ]; then
-        echo "$HOME/.bash_profile"
-      else
-        echo "$HOME/.bashrc"
-      fi
-      ;;
-    *)
-      if [ "$os" = Darwin ]; then
-        echo "$HOME/.zprofile"
-      else
-        echo "$HOME/.bashrc"
-      fi
-      ;;
+    zsh) printf '%s\n' "$HOME/.zprofile" "$HOME/.zshrc" ;;
+    bash) printf '%s\n' "$HOME/.bash_profile" "$HOME/.bashrc" ;;
+    *) printf '%s\n' "$HOME/.zprofile" "$HOME/.zshrc" "$HOME/.bashrc" ;;
   esac
 }
 
 persist_path() {
   dir=$1
-  rc=$(path_rc_file)
   line="export PATH=\"$dir:\$PATH\"  # rig PATH"
-  if grep -Fqs "$dir" "$rc" 2>/dev/null; then
-    echo "PATH already in $rc"
-    return 0
-  fi
-  touch "$rc"
-  printf '\n%s\n' "$line" >> "$rc"
-  echo "wrote PATH into $rc"
-  echo "new terminal, or: exec \$SHELL"
+  path_rc_files | while IFS= read -r rc; do
+    [ -n "$rc" ] || continue
+    if grep -Fqs "$dir" "$rc" 2>/dev/null; then
+      echo "PATH already in $rc"
+      continue
+    fi
+    touch "$rc"
+    printf '\n%s\n' "$line" >> "$rc"
+    echo "wrote PATH into $rc"
+  done
 }
 
 install_from_release() {
