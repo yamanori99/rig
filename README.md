@@ -8,6 +8,16 @@ entries — without putting personal IPs in the product repo.
 **You do not need Rust.** Install the release binary; product files
 (roles / packages / templates) are embedded and unpack on first run.
 
+## Requirements
+
+| | Needed |
+| --- | --- |
+| Install `rig` | `curl`, `tar` |
+| `rig apply` packages | **macOS: Homebrew** (`brew`). **Linux: apt** (Debian/Ubuntu) |
+| Apply without packages | `rig apply --yes --skip-packages` |
+
+Homebrew / apt are not installed by rig. Put them on the machine first.
+
 ## Install
 
 ```bash

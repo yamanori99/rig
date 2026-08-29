@@ -112,6 +112,8 @@ install_from_release() {
   fi
   echo
   echo "done. Rust is not required."
+  echo "packages: macOS needs Homebrew (brew); Linux needs apt."
+  echo "  skip packages: rig apply --yes --skip-packages"
   echo "next:"
   echo "  rig init --role workstation   # or compute"
   echo "  rig apply            # preview"
