@@ -42,17 +42,8 @@ install_bin_to_path() {
   mkdir -p "$dir"
   install -m 755 "$bin" "$dir/rig"
   echo "installed: $dir/rig"
-  case ":$PATH:" in
-    *":$dir:"*) echo "this shell already has $dir on PATH" ;;
-    *) echo "this shell: export PATH=\"$dir:\$PATH\"" ;;
-  esac
-  rc=$(path_rc_file)
-  echo
-  echo "PATH to add: $dir"
-  echo "file to edit: $rc"
-  echo "paste once:"
-  echo "  grep -Fqs '$dir' $rc 2>/dev/null || echo 'export PATH=\"$dir:\$PATH\"' >> $rc"
-  echo "then open a new terminal, or: exec \"\$SHELL\""
+  export PATH="$dir:$PATH"
+  persist_path "$dir"
 }
 
 # Login profile on macOS, interactive rc on Linux — one file per shell.
@@ -82,6 +73,20 @@ path_rc_file() {
       fi
       ;;
   esac
+}
+
+persist_path() {
+  dir=$1
+  rc=$(path_rc_file)
+  line="export PATH=\"$dir:\$PATH\"  # rig PATH"
+  if grep -Fqs "$dir" "$rc" 2>/dev/null; then
+    echo "PATH already in $rc"
+    return 0
+  fi
+  touch "$rc"
+  printf '\n%s\n' "$line" >> "$rc"
+  echo "wrote PATH into $rc"
+  echo "new terminal, or: exec \$SHELL"
 }
 
 install_from_release() {
