@@ -9,6 +9,12 @@ pub struct StepReport {
 
 /// Enable SSH remote login / ensure sshd is available.
 pub fn apply_remote_login(os: OsKind) -> Result<StepReport> {
+    if !ensure_sudo_ticket()? {
+        return Ok(StepReport {
+            ok: false,
+            detail: "sudo -v failed (password not accepted or cancelled)".into(),
+        });
+    }
     let report = match os {
         OsKind::Macos => enable_remote_login_macos()?,
         OsKind::Linux => enable_remote_login_linux()?,
@@ -536,28 +542,57 @@ fn thunderbolt_plist(ip: &str) -> String {
 }
 
 fn enable_remote_login_macos() -> Result<StepReport> {
-    let out = Command::new("sudo")
-        .args(["systemsetup", "-getremotelogin"])
-        .output()
-        .map_err(RigError::Io)?;
-    let text = String::from_utf8_lossy(&out.stdout);
-    if text.to_ascii_lowercase().contains("on") {
+    if remote_login_is_on()? {
         return Ok(StepReport {
             ok: true,
             detail: "already On".into(),
         });
     }
-    if sudo(&["systemsetup", "-setremotelogin", "on"])? {
-        Ok(StepReport {
+
+    // Without -f, systemsetup asks yes/no on a hidden stdout; the password
+    // the user just typed is consumed as that answer and the step fails.
+    let (ok, out) = sudo_output(&["/usr/sbin/systemsetup", "-f", "-setremotelogin", "on"])?;
+    if ok && remote_login_is_on()? {
+        return Ok(StepReport {
             ok: true,
-            detail: "systemsetup -setremotelogin on".into(),
-        })
-    } else {
-        Ok(StepReport {
-            ok: false,
-            detail: "systemsetup -setremotelogin on failed".into(),
-        })
+            detail: "systemsetup -f -setremotelogin on".into(),
+        });
     }
+
+    let _ = sudo(&["launchctl", "enable", "system/com.openssh.sshd"]);
+    let kicked = sudo(&["launchctl", "kickstart", "-k", "system/com.openssh.sshd"])?;
+    if remote_login_is_on()? {
+        return Ok(StepReport {
+            ok: true,
+            detail: "launchctl kickstart com.openssh.sshd".into(),
+        });
+    }
+
+    let mut detail = "remote login still off".to_string();
+    let extra = out.trim();
+    if !extra.is_empty() {
+        detail.push_str(": ");
+        detail.push_str(extra);
+    }
+    if !kicked {
+        detail.push_str("; launchctl kickstart failed");
+    }
+    Ok(StepReport { ok: false, detail })
+}
+
+fn remote_login_is_on() -> Result<bool> {
+    if ssh_port_open() {
+        return Ok(true);
+    }
+    let (ok, text) = sudo_output(&["/usr/sbin/systemsetup", "-getremotelogin"])?;
+    Ok(ok && text.to_ascii_lowercase().contains("on"))
+}
+
+fn ssh_port_open() -> bool {
+    let Ok(addr) = "127.0.0.1:22".parse() else {
+        return false;
+    };
+    std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(400)).is_ok()
 }
 
 /// Drop-in so idle SSH sessions survive NAT / flaky paths (pairs with client ServerAlive*).
@@ -672,6 +707,14 @@ fn sshd_listening() -> bool {
         .unwrap_or(false)
 }
 
+fn ensure_sudo_ticket() -> Result<bool> {
+    let status = Command::new("sudo")
+        .arg("-v")
+        .status()
+        .map_err(RigError::Io)?;
+    Ok(status.success())
+}
+
 fn sudo(args: &[&str]) -> Result<bool> {
     let status = Command::new("sudo")
         .args(args)
@@ -680,6 +723,22 @@ fn sudo(args: &[&str]) -> Result<bool> {
         .status()
         .map_err(RigError::Io)?;
     Ok(status.success())
+}
+
+fn sudo_output(args: &[&str]) -> Result<(bool, String)> {
+    let out = Command::new("sudo")
+        .args(args)
+        .output()
+        .map_err(RigError::Io)?;
+    let mut text = String::from_utf8_lossy(&out.stdout).into_owned();
+    let err = String::from_utf8_lossy(&out.stderr);
+    if !err.is_empty() {
+        if !text.is_empty() {
+            text.push('\n');
+        }
+        text.push_str(&err);
+    }
+    Ok((out.status.success(), text))
 }
 
 fn which(bin: &str) -> Option<std::path::PathBuf> {

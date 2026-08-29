@@ -162,8 +162,8 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.7` — close the terminal after install; brew verbose; no
-compute quarto.
+`v0.2.8` — remote-login uses `systemsetup -f` so sudo password is
+not eaten by the yes/no prompt.
 
 ## License
 
