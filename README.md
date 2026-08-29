@@ -10,13 +10,11 @@ entries — without putting personal IPs in the product repo.
 
 ## Requirements
 
-| | Needed |
-| --- | --- |
-| Install `rig` | `curl`, `tar` |
-| `rig apply` packages | **macOS: Homebrew** (`brew`). **Linux: apt** (Debian/Ubuntu) |
-| Apply without packages | `rig apply --yes --skip-packages` |
+Installing `rig` needs `curl` and `tar`.
 
-Homebrew / apt are not installed by rig. Put them on the machine first.
+`rig apply` installs packages with Homebrew (`brew`) on macOS, and `apt`
+on Debian/Ubuntu. Rig does not install those tools. Skip packages with
+`rig apply --yes --skip-packages`.
 
 ## Install
 
@@ -33,10 +31,11 @@ Optional: `RIG_BIN_DIR=...` or pin `RIG_VERSION=vX.Y.Z` on the **pipe
 side** (env must apply to `sh`, not only `curl`):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | RIG_BIN_DIR=/tmp/rig-bin sh
+curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh \
+  | RIG_BIN_DIR=/tmp/rig-bin sh
 ```
 
-Releases: https://github.com/yamanori99/rig/releases
+Releases: <https://github.com/yamanori99/rig/releases>
 
 ## Update
 
@@ -51,14 +50,17 @@ Installs the latest Release into `~/.local/bin/rig`. `hosts/` and
 ## Uninstall
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | sh
+curl -fsSL \
+  https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | sh
 ```
 
 Removes `~/.local/bin/rig` (override with `RIG_BIN_DIR`). Product data
 (hosts / overlay / state) is kept by default. Purge it too:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | RIG_PURGE=1 sh
+curl -fsSL \
+  https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh \
+  | RIG_PURGE=1 sh
 ```
 
 This does not undo shell snippets or packages from `rig apply` — run
@@ -84,10 +86,13 @@ rig check
 
 ### What to edit
 
-Release installs unpack product files under the OS data dir — run `rig root`
-to see the absolute path (macOS: `~/Library/Application Support/dev.rig.rig/product/`;
-Linux: typically `~/.local/share/rig/product/`). Checkout / `--root` uses that
-tree instead.
+Release installs unpack product files under the OS data dir. Run `rig root`
+for the absolute path.
+
+- macOS: `~/Library/Application Support/dev.rig.rig/product/`
+- Linux: typically `~/.local/share/rig/product/`
+
+Checkout / `--root` uses that tree instead.
 
 | Path | You edit? | Purpose |
 | --- | --- | --- |
@@ -114,7 +119,7 @@ Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 
 ```text
 rig root                         # product data path (hosts / overlay)
-rig status                       # this machine: apply steps; live for enabled features
+rig status                       # apply steps; live for enabled features
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
