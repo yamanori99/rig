@@ -137,15 +137,15 @@ pub(crate) fn has_systemd() -> bool {
 }
 
 fn apply_stay_awake_macos() -> Result<StepReport> {
-    if pmset_ac_awake() {
+    if pmset_all_sources_awake() {
         return Ok(StepReport {
             ok: true,
-            detail: "pmset -c already sleep=0 displaysleep=0 disksleep=0 powernap=0".into(),
+            detail: "pmset -a already sleep=0 displaysleep=0 disksleep=0 powernap=0".into(),
         });
     }
     if sudo(&[
         "pmset",
-        "-c",
+        "-a",
         "sleep",
         "0",
         "displaysleep",
@@ -157,43 +157,84 @@ fn apply_stay_awake_macos() -> Result<StepReport> {
     ])? {
         Ok(StepReport {
             ok: true,
-            detail: "pmset -c sleep=0 displaysleep=0 disksleep=0 powernap=0".into(),
+            detail: "pmset -a sleep=0 displaysleep=0 disksleep=0 powernap=0".into(),
         })
     } else {
         Ok(StepReport {
             ok: false,
-            detail: "pmset -c failed".into(),
+            detail: "pmset -a failed".into(),
         })
     }
 }
 
-/// True when the *currently in use* profile already has sleep/display/disk off.
-fn pmset_ac_awake() -> bool {
-    let Ok(out) = Command::new("pmset").args(["-g"]).output() else {
+/// True when every source in `pmset -g custom` has sleep/display/disk off
+/// (powernap too, when that key exists).
+fn pmset_all_sources_awake() -> bool {
+    let Ok(out) = Command::new("pmset").args(["-g", "custom"]).output() else {
         return false;
     };
     if !out.status.success() {
         return false;
     }
     let text = String::from_utf8_lossy(&out.stdout);
-    let mut sleep = false;
-    let mut display = false;
-    let mut disk = false;
-    let mut nap = false;
-    for line in text.lines() {
+    pmset_custom_all_awake(&text)
+}
+
+pub(crate) fn pmset_custom_all_awake(custom: &str) -> bool {
+    let sources = pmset_custom_sources(custom);
+    !sources.is_empty() && sources.iter().all(|(_, body)| pmset_stanza_awake(body))
+}
+
+pub(crate) fn pmset_custom_sources(custom: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut name = String::new();
+    let mut body = String::new();
+    let flush = |name: &mut String, body: &mut String, out: &mut Vec<(String, String)>| {
+        if !name.is_empty() {
+            out.push((name.clone(), body.clone()));
+        }
+        name.clear();
+        body.clear();
+    };
+    for line in custom.lines() {
+        let t = line.trim();
+        let header = t
+            .strip_suffix(':')
+            .and_then(|h| h.strip_suffix(" Power"))
+            .filter(|h| matches!(*h, "Battery" | "AC" | "UPS"));
+        if let Some(h) = header {
+            flush(&mut name, &mut body, &mut out);
+            name = h.to_string();
+            continue;
+        }
+        if !name.is_empty() {
+            body.push_str(line);
+            body.push('\n');
+        }
+    }
+    flush(&mut name, &mut body, &mut out);
+    out
+}
+
+fn pmset_stanza_awake(body: &str) -> bool {
+    let mut sleep = None;
+    let mut display = None;
+    let mut disk = None;
+    let mut nap = None;
+    for line in body.lines() {
         let t = line.trim();
         let mut parts = t.split_whitespace();
         let key = parts.next().unwrap_or("");
         let val = parts.next().unwrap_or("");
         match key {
-            "sleep" => sleep = val == "0",
-            "displaysleep" => display = val == "0",
-            "disksleep" => disk = val == "0",
-            "powernap" => nap = val == "0",
+            "sleep" => sleep = Some(val == "0"),
+            "displaysleep" => display = Some(val == "0"),
+            "disksleep" => disk = Some(val == "0"),
+            "powernap" => nap = Some(val == "0"),
             _ => {}
         }
     }
-    sleep && display && disk && nap
+    sleep == Some(true) && display == Some(true) && disk == Some(true) && nap.unwrap_or(true)
 }
 
 fn apply_stay_awake_linux() -> Result<StepReport> {
@@ -651,4 +692,47 @@ fn which(bin: &str) -> Option<std::path::PathBuf> {
         }
         None
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const CUSTOM: &str = "\
+Battery Power:
+ sleep                1
+ displaysleep         10
+ disksleep            10
+ powernap             1
+AC Power:
+ sleep                0
+ displaysleep         0
+ disksleep            0
+ powernap             0
+";
+
+    #[test]
+    fn custom_sources_splits_battery_and_ac() {
+        let s = pmset_custom_sources(CUSTOM);
+        assert_eq!(s.len(), 2);
+        assert_eq!(s[0].0, "Battery");
+        assert_eq!(s[1].0, "AC");
+    }
+
+    #[test]
+    fn custom_awake_false_if_battery_still_sleeps() {
+        assert!(!pmset_custom_all_awake(CUSTOM));
+    }
+
+    #[test]
+    fn custom_awake_true_when_every_source_is_zero() {
+        let t = "\
+AC Power:
+ sleep                0
+ displaysleep         0
+ disksleep            0
+ powernap             0
+";
+        assert!(pmset_custom_all_awake(t));
+    }
 }

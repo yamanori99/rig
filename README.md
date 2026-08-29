@@ -146,7 +146,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.5` — compact `rig status` (enabled features only); macOS + Linux.
+`v0.2.6` — compute stay-awake uses `pmset -a`; macOS + Linux.
 
 ## License
 

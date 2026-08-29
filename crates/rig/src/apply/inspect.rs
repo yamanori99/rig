@@ -53,8 +53,8 @@ fn print_stay_awake(os: OsKind) {
                 println!("      in-use  (pmset failed)");
             }
             if let Some(s) = cmd_stdout("pmset", &["-g", "custom"]) {
-                if let Some(ac) = pmset_stanza(&s, "AC Power:") {
-                    println!("      AC      {}", pmset_keys(ac));
+                for (name, body) in features::pmset_custom_sources(&s) {
+                    println!("      {:<7} {}", name, pmset_keys(&body));
                 }
             }
         }
@@ -159,17 +159,6 @@ fn print_cursor(os: OsKind) {
     } else {
         println!("      settings.json missing");
     }
-}
-
-fn pmset_stanza<'a>(custom: &'a str, header: &str) -> Option<&'a str> {
-    let start = custom.find(header)?;
-    let rest = &custom[start + header.len()..];
-    let end = rest
-        .find("\nBattery Power:")
-        .or_else(|| rest.find("\nAC Power:"))
-        .or_else(|| rest.find("\nUPS Power:"))
-        .unwrap_or(rest.len());
-    Some(rest[..end].trim())
 }
 
 fn pmset_keys(text: &str) -> String {
@@ -286,19 +275,5 @@ mod tests {
             pmset_keys(t),
             "sleep=0 displaysleep=120 disksleep=10 powernap=1"
         );
-    }
-
-    #[test]
-    fn pmset_stanza_ac_only() {
-        let t = "\
-Battery Power:
- sleep                1
-AC Power:
- sleep                0
- displaysleep         120
-";
-        let ac = pmset_stanza(t, "AC Power:").unwrap();
-        assert!(ac.contains("sleep                0"));
-        assert!(!ac.contains("Battery"));
     }
 }

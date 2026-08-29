@@ -117,7 +117,7 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         "stay-awake",
         f.stay_awake,
         match os {
-            crate::schema::OsKind::Macos => "pmset: AC sleep/display/disk/powernap off",
+            crate::schema::OsKind::Macos => "pmset -a: sleep/display/disk/powernap off",
             crate::schema::OsKind::Linux => "logind: ignore idle and lid (systemd)",
         },
     ));

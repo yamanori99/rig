@@ -91,7 +91,7 @@ fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> 
         println!("    → Thunderbolt bridge0 when [[ssh]] has link=thunderbolt");
     }
     if f.stay_awake {
-        println!("    → stay awake (macOS pmset / Linux logind)");
+        println!("    → stay awake (macOS pmset -a / Linux logind)");
     }
 
     println!("  package sets: {}", role.packages.join(", "));
