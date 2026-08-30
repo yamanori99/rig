@@ -117,6 +117,7 @@ Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
 ## Commands
 
 ```text
+rig --help                       # flow, data dir, examples
 rig root                         # product data path (hosts / overlay)
 rig status                       # apply steps; live for enabled features
 rig init [--role workstation|compute] [--name HOST]
@@ -131,6 +132,7 @@ rig update [-y] [--force]        # preview; -y installs
 ```
 
 Most commands also print the data root on stderr so the path stays visible.
+`rig COMMAND --help` has the longer notes.
 
 ## For maintainers
 
@@ -162,7 +164,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.12` — compute enables macOS Screen Sharing (VNC) on apply.
+`v0.2.13` — cask apply, TTY colors and help, first-time key copy.
 
 ## License
 

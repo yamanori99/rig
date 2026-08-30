@@ -1,5 +1,6 @@
 use crate::error::{Result, RigError};
 use crate::schema::Host;
+use std::io::IsTerminal;
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -15,6 +16,9 @@ pub struct DistributeReport {
 ///
 /// Prefers `link = lan|thunderbolt` (system sshd + authorized_keys). Falls back
 /// to `link = vpn` only when no LAN/TB path answers on TCP/22.
+///
+/// Already-authorized hosts use BatchMode. First-time copy inherits the TTY
+/// so ssh can ask for the login password once.
 pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeReport> {
     let pubkey = default_pubkey()?;
     if !pubkey.is_file() {
@@ -86,8 +90,8 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
         let mut last_err = String::new();
         for target in &copy_targets {
             match ssh_copy_id(&pubkey, target) {
-                Ok(()) => {
-                    successes.push(format!("{} via {target}", peer.name));
+                Ok(how) => {
+                    successes.push(format!("{} via {target} ({how})", peer.name));
                     peer_ok = true;
                     break;
                 }
@@ -120,10 +124,10 @@ fn tcp_port_open(ip: &str, port: u16) -> bool {
     TcpStream::connect_timeout(&addr, Duration::from_secs(3)).is_ok()
 }
 
-fn ssh_opts() -> [&'static str; 10] {
+fn ssh_batch_opts() -> [&'static str; 10] {
     [
         "-o",
-        "ConnectTimeout=5",
+        "ConnectTimeout=8",
         "-o",
         "ConnectionAttempts=1",
         "-o",
@@ -135,63 +139,123 @@ fn ssh_opts() -> [&'static str; 10] {
     ]
 }
 
-fn ssh_copy_id(pubkey: &Path, alias: &str) -> std::result::Result<(), String> {
-    if which("ssh-copy-id").is_some() {
-        let status = Command::new("ssh-copy-id")
-            .args(ssh_opts())
-            .arg("-i")
-            .arg(pubkey)
-            .arg(alias)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .map_err(|e| e.to_string())?;
-        if status.success() {
-            return Ok(());
-        }
+fn ssh_interactive_opts() -> [&'static str; 12] {
+    [
+        "-o",
+        "ConnectTimeout=20",
+        "-o",
+        "ConnectionAttempts=1",
+        "-o",
+        "NumberOfPasswordPrompts=1",
+        "-o",
+        "StrictHostKeyChecking=accept-new",
+        "-o",
+        "GSSAPIAuthentication=no",
+        "-o",
+        "PreferredAuthentications=publickey,keyboard-interactive,password",
+    ]
+}
+
+fn ssh_copy_id(pubkey: &Path, alias: &str) -> std::result::Result<&'static str, String> {
+    if pubkey_already_on(pubkey, alias) {
+        return Ok("already");
     }
 
-    let pub_text = std::fs::read_to_string(pubkey).map_err(|e| e.to_string())?;
+    if run_copy_id(pubkey, alias, true)? {
+        return Ok("key");
+    }
+
+    if !std::io::stdin().is_terminal() {
+        return Err(format!(
+            "{alias}: first copy needs a TTY for the login password"
+        ));
+    }
+
+    crate::ui::item(format!("password  {alias}  (once, then pubkey)"));
+    let _ = std::io::Write::flush(&mut std::io::stderr());
+    if run_copy_id(pubkey, alias, false)? {
+        return Ok("password");
+    }
+
+    Err(format!(
+        "could not install on {alias} (wrong password or sshd refused pubkey)"
+    ))
+}
+
+fn pubkey_already_on(pubkey: &Path, alias: &str) -> bool {
+    let Ok(pub_text) = std::fs::read_to_string(pubkey) else {
+        return false;
+    };
     let pub_line = pub_text.trim();
     if pub_line.is_empty() {
-        return Err("empty pubkey".into());
+        return false;
     }
     let q = shell_single_quote(pub_line);
-
-    let check = Command::new("ssh")
-        .args(ssh_opts())
+    Command::new("ssh")
+        .args(ssh_batch_opts())
         .arg(alias)
         .arg(format!("grep -qxF {q} ~/.ssh/authorized_keys 2>/dev/null"))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
-        .map_err(|e| e.to_string())?;
-    if check.success() {
-        return Ok(());
+        .map(|s| s.success())
+        .unwrap_or(false)
+}
+
+fn run_copy_id(pubkey: &Path, alias: &str, batch: bool) -> std::result::Result<bool, String> {
+    let opts: &[&str] = if batch {
+        &ssh_batch_opts()
+    } else {
+        &ssh_interactive_opts()
+    };
+
+    if which("ssh-copy-id").is_some() {
+        let mut cmd = Command::new("ssh-copy-id");
+        cmd.args(opts).arg("-i").arg(pubkey).arg(alias);
+        if batch {
+            cmd.stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null());
+        }
+        let status = cmd.status().map_err(|e| e.to_string())?;
+        if status.success() {
+            return Ok(true);
+        }
+        if batch {
+            return Ok(false);
+        }
     }
 
-    let install = Command::new("ssh")
-        .args(ssh_opts())
-        .arg(alias)
-        .arg(format!(
-            "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
-             touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && \
-             grep -qxF {q} ~/.ssh/authorized_keys || echo {q} >> ~/.ssh/authorized_keys"
-        ))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map_err(|e| e.to_string())?;
-    if install.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "could not install on {alias} (need one-time password access, then re-run)"
-        ))
+    install_via_ssh(pubkey, alias, batch)
+}
+
+fn install_via_ssh(pubkey: &Path, alias: &str, batch: bool) -> std::result::Result<bool, String> {
+    let pub_text = std::fs::read_to_string(pubkey).map_err(|e| e.to_string())?;
+    let pub_line = pub_text.trim();
+    if pub_line.is_empty() {
+        return Err("empty pubkey".into());
     }
+    let q = shell_single_quote(pub_line);
+    let remote = format!(
+        "mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+         touch ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && \
+         grep -qxF {q} ~/.ssh/authorized_keys || echo {q} >> ~/.ssh/authorized_keys"
+    );
+
+    let mut cmd = Command::new("ssh");
+    if batch {
+        cmd.args(ssh_batch_opts())
+            .arg(alias)
+            .arg(&remote)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+    } else {
+        cmd.args(ssh_interactive_opts()).arg(alias).arg(&remote);
+    }
+    let status = cmd.status().map_err(|e| e.to_string())?;
+    Ok(status.success())
 }
 
 fn shell_single_quote(s: &str) -> String {

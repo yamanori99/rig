@@ -1,12 +1,16 @@
 use crate::error::Result;
 use crate::packages;
-use crate::paths;
 use crate::schema::OsKind;
+use std::collections::HashSet;
 use std::path::Path;
 
 use super::features::StepReport;
+use super::packages as pkg;
 
 /// Install GUI casks from role package Brewfiles (macOS). Linux is a soft no-op.
+///
+/// Do not use `brew bundle --casks` here: current Homebrew treats `--cask(s)` as
+/// invalid on `bundle install` (`install` does not accept `--cask`).
 pub fn apply_gui(root: &Path, package_sets: &[String], os: OsKind) -> Result<StepReport> {
     match os {
         OsKind::Linux => Ok(StepReport {
@@ -45,51 +49,30 @@ fn install_casks(root: &Path, package_sets: &[String]) -> Result<StepReport> {
         });
     }
 
-    // Prefer brew bundle --casks when a Brewfile exists for the set.
-    let mut notes = Vec::new();
+    let have: HashSet<String> = pkg::brew_installed_casks().into_iter().collect();
     let mut ok = true;
-    for set in package_sets {
-        let file = paths::packages_dir(root)
-            .join("brew")
-            .join(format!("{set}.Brewfile"));
-        if !file.is_file() {
+    let mut installed = 0usize;
+    let mut already = 0usize;
+    for cask in &casks {
+        if have.contains(cask) {
+            crate::ui::item(format!("already  {cask}"));
+            already += 1;
             continue;
         }
-        super::packages::brew_banner(&format!("casks  {set}"));
-        let success = super::packages::run_brew(&[
-            "bundle",
-            "--file",
-            &file.display().to_string(),
-            "--casks",
-            "--no-upgrade",
-        ])?;
-        if success {
-            notes.push(format!("{set}: casks ok"));
+        pkg::brew_banner(&format!("cask  {cask}"));
+        if pkg::run_brew(&["install", "--cask", cask])? {
+            installed += 1;
         } else {
-            // Fallback: install each cask individually (partial Brewfiles / old brew).
-            let mut set_ok = true;
-            for cask in &casks {
-                super::packages::brew_banner(&format!("cask  {cask}"));
-                if !super::packages::run_brew(&["install", "--cask", cask])? {
-                    set_ok = false;
-                }
-            }
-            if set_ok {
-                notes.push(format!("{set}: casks ok (install)"));
-            } else {
-                notes.push(format!("{set}: some casks failed"));
-                ok = false;
-            }
+            ok = false;
         }
-    }
-
-    if notes.is_empty() {
-        notes.push(format!("casks: {}", casks.join(" ")));
     }
 
     Ok(StepReport {
         ok,
-        detail: notes.join("; "),
+        detail: format!(
+            "{} cask(s): {already} already, {installed} installed",
+            casks.len()
+        ),
     })
 }
 

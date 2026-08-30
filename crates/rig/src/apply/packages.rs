@@ -327,6 +327,10 @@ fn brew_installed_requested() -> Option<Vec<String>> {
     Some(out)
 }
 
+pub(crate) fn brew_installed_casks() -> Vec<String> {
+    brew_list_lines(&["list", "--cask", "-1"])
+}
+
 fn brew_list_lines(args: &[&str]) -> Vec<String> {
     let out = Command::new("brew").args(args).output();
     let Ok(out) = out else {

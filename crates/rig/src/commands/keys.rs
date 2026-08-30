@@ -18,6 +18,7 @@ pub fn distribute(root: &std::path::Path, yes: bool) -> Result<()> {
     ui::kv("pubkey", "~/.ssh/id_ed25519.pub");
     ui::kv("hosts", format!("{}/", root.join("hosts").display()));
     ui::kv("order", "lan/tb first, then vpn");
+    ui::kv("auth", "existing key, else one-time password");
     ui::blank();
 
     let report = apply::distribute_keys(root, &self_host.name, yes)?;
