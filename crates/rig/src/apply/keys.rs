@@ -1,5 +1,5 @@
 use crate::error::{Result, RigError};
-use crate::schema::Host;
+use crate::schema::{Host, SshPath};
 use std::io::IsTerminal;
 use std::net::{SocketAddr, TcpStream};
 use std::path::{Path, PathBuf};
@@ -63,17 +63,17 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
             continue;
         }
 
-        let mut copy_targets: Vec<String> = reachable
+        let mut copy_targets: Vec<SshPath> = reachable
             .iter()
             .filter(|p| p.link.prefer_for_keys())
-            .map(|p| p.alias.clone())
+            .cloned()
             .collect();
         if copy_targets.is_empty() {
             if let Some(p) = reachable
                 .into_iter()
                 .find(|p| p.link == crate::schema::LinkKind::Vpn)
             {
-                copy_targets.push(p.alias);
+                copy_targets.push(p);
             }
         }
 
@@ -81,17 +81,22 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
             successes.push(format!(
                 "{} → would copy via {}",
                 peer.name,
-                copy_targets.join(",")
+                copy_targets
+                    .iter()
+                    .map(|p| p.alias.as_str())
+                    .collect::<Vec<_>>()
+                    .join(",")
             ));
             continue;
         }
 
+        let user = peer.resolved_user();
         let mut peer_ok = false;
         let mut last_err = String::new();
-        for target in &copy_targets {
-            match ssh_copy_id(&pubkey, target) {
+        for path in &copy_targets {
+            match ssh_copy_id(&pubkey, peer, path, &user) {
                 Ok(how) => {
-                    successes.push(format!("{} via {target} ({how})", peer.name));
+                    successes.push(format!("{} via {} ({how})", peer.name, path.alias));
                     peer_ok = true;
                     break;
                 }
@@ -139,7 +144,7 @@ fn ssh_batch_opts() -> [&'static str; 10] {
     ]
 }
 
-fn ssh_interactive_opts() -> [&'static str; 12] {
+fn ssh_interactive_opts() -> [&'static str; 14] {
     [
         "-o",
         "ConnectTimeout=20",
@@ -153,15 +158,23 @@ fn ssh_interactive_opts() -> [&'static str; 12] {
         "GSSAPIAuthentication=no",
         "-o",
         "PreferredAuthentications=publickey,keyboard-interactive,password",
+        "-o",
+        "LogLevel=ERROR",
     ]
 }
 
-fn ssh_copy_id(pubkey: &Path, alias: &str) -> std::result::Result<&'static str, String> {
+fn ssh_copy_id(
+    pubkey: &Path,
+    peer: &Host,
+    path: &SshPath,
+    user: &str,
+) -> std::result::Result<&'static str, String> {
+    let alias = path.alias.as_str();
     if pubkey_already_on(pubkey, alias) {
         return Ok("already");
     }
 
-    if run_copy_id(pubkey, alias, true)? {
+    if run_copy_id(pubkey, alias)? {
         return Ok("key");
     }
 
@@ -171,15 +184,24 @@ fn ssh_copy_id(pubkey: &Path, alias: &str) -> std::result::Result<&'static str, 
         ));
     }
 
-    crate::ui::item(format!("password  {alias}  (once, then pubkey)"));
-    let _ = std::io::Write::flush(&mut std::io::stderr());
-    if run_copy_id(pubkey, alias, false)? {
+    prompt_which_machine(peer, path, user);
+    if install_via_ssh(pubkey, alias, false)? {
         return Ok("password");
     }
 
     Err(format!(
         "could not install on {alias} (wrong password or sshd refused pubkey)"
     ))
+}
+
+fn prompt_which_machine(peer: &Host, path: &SshPath, user: &str) {
+    crate::ui::blank();
+    crate::ui::kv("peer", &peer.name);
+    crate::ui::kv("via", format!("{}  ({})", path.alias, path.link.comment()));
+    crate::ui::kv("login", format!("{user}@{}", path.ip));
+    crate::ui::item("password for that peer (once)");
+    let _ = std::io::Write::flush(&mut std::io::stdout());
+    let _ = std::io::Write::flush(&mut std::io::stderr());
 }
 
 fn pubkey_already_on(pubkey: &Path, alias: &str) -> bool {
@@ -203,31 +225,24 @@ fn pubkey_already_on(pubkey: &Path, alias: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn run_copy_id(pubkey: &Path, alias: &str, batch: bool) -> std::result::Result<bool, String> {
-    let opts: &[&str] = if batch {
-        &ssh_batch_opts()
-    } else {
-        &ssh_interactive_opts()
-    };
-
+fn run_copy_id(pubkey: &Path, alias: &str) -> std::result::Result<bool, String> {
     if which("ssh-copy-id").is_some() {
-        let mut cmd = Command::new("ssh-copy-id");
-        cmd.args(opts).arg("-i").arg(pubkey).arg(alias);
-        if batch {
-            cmd.stdin(Stdio::null())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null());
-        }
-        let status = cmd.status().map_err(|e| e.to_string())?;
+        let status = Command::new("ssh-copy-id")
+            .args(ssh_batch_opts())
+            .arg("-i")
+            .arg(pubkey)
+            .arg(alias)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map_err(|e| e.to_string())?;
         if status.success() {
             return Ok(true);
         }
-        if batch {
-            return Ok(false);
-        }
     }
 
-    install_via_ssh(pubkey, alias, batch)
+    install_via_ssh(pubkey, alias, true)
 }
 
 fn install_via_ssh(pubkey: &Path, alias: &str, batch: bool) -> std::result::Result<bool, String> {

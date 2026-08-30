@@ -164,7 +164,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.13` — cask apply, TTY colors and help, first-time key copy.
+`v0.2.14` — keys distribute names the peer before the ssh password prompt.
 
 ## License
 

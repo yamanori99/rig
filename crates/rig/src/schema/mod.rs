@@ -1,7 +1,7 @@
 mod host;
 mod role;
 
-pub use host::{Host, LinkKind, ShellKind};
+pub use host::{Host, LinkKind, ShellKind, SshPath};
 pub use role::{OsKind, Role};
 
 use crate::error::{Result, RigError};
