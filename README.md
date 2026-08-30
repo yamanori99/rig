@@ -164,7 +164,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.14` — keys distribute names the peer before the ssh password prompt.
+`v0.2.15` — GitHub Actions on Node 24 (`checkout@v5`, artifact `@v6`).
 
 ## License
 
