@@ -19,6 +19,9 @@ pub struct RoleFeatures {
     pub cursor: bool,
     #[serde(default)]
     pub remote_login: bool,
+    /// macOS Screen Sharing (VNC, port 5900). No-op on Linux.
+    #[serde(default)]
+    pub screen_sharing: bool,
     #[serde(default)]
     pub tailscale: bool,
     #[serde(default)]
@@ -35,6 +38,7 @@ impl RoleFeatures {
             gui: host.gui.unwrap_or(self.gui),
             cursor: host.cursor.unwrap_or(self.cursor),
             remote_login: host.remote_login.unwrap_or(self.remote_login),
+            screen_sharing: host.screen_sharing.unwrap_or(self.screen_sharing),
             tailscale: host.tailscale.unwrap_or(self.tailscale),
             thunderbolt: host.thunderbolt.unwrap_or(self.thunderbolt),
             stay_awake: host.stay_awake.unwrap_or(self.stay_awake),

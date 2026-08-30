@@ -100,6 +100,14 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         "enable remote login / sshd",
     ));
     steps.push(feature_step(
+        "screen-sharing",
+        f.screen_sharing && matches!(os, crate::schema::OsKind::Macos),
+        match os {
+            crate::schema::OsKind::Macos => "enable Screen Sharing (VNC :5900)",
+            crate::schema::OsKind::Linux => "macOS only",
+        },
+    ));
+    steps.push(feature_step(
         "tailscale",
         f.tailscale,
         "configure Tailscale",

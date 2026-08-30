@@ -7,6 +7,23 @@ pub struct StepReport {
     pub detail: String,
 }
 
+/// Enable macOS Screen Sharing (VNC :5900). Linux is a no-op.
+pub fn apply_screen_sharing(os: OsKind) -> Result<StepReport> {
+    if !matches!(os, OsKind::Macos) {
+        return Ok(StepReport {
+            ok: true,
+            detail: "skipped on linux (macOS only)".into(),
+        });
+    }
+    if !ensure_sudo_ticket()? {
+        return Ok(StepReport {
+            ok: false,
+            detail: "sudo -v failed (password not accepted or cancelled)".into(),
+        });
+    }
+    enable_screen_sharing_macos()
+}
+
 /// Enable SSH remote login / ensure sshd is available.
 pub fn apply_remote_login(os: OsKind) -> Result<StepReport> {
     if !ensure_sudo_ticket()? {
@@ -543,6 +560,72 @@ fn thunderbolt_plist(ip: &str) -> String {
 
 const SSH_PLIST: &str = "/System/Library/LaunchDaemons/ssh.plist";
 const SSH_SERVICE: &str = "system/com.openssh.sshd";
+const SCREEN_SHARING_PLIST: &str = "/System/Library/LaunchDaemons/com.apple.screensharing.plist";
+const SCREEN_SHARING_SERVICE: &str = "system/com.apple.screensharing";
+
+fn enable_screen_sharing_macos() -> Result<StepReport> {
+    if screen_sharing_is_on() {
+        return Ok(StepReport {
+            ok: true,
+            detail: "already On".into(),
+        });
+    }
+
+    let launch = bootstrap_screen_sharing()?;
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    if screen_sharing_is_on() {
+        return Ok(StepReport {
+            ok: true,
+            detail: "launchctl bootstrap com.apple.screensharing".into(),
+        });
+    }
+
+    let mut detail = "Screen Sharing still off".to_string();
+    let launch = launch.trim();
+    if !launch.is_empty() {
+        detail.push_str(": ");
+        detail.push_str(launch);
+    }
+    detail.push_str(
+        ". System Settings > General > Sharing > Screen Sharing, or grant Terminal Full Disk Access",
+    );
+    Ok(StepReport { ok: false, detail })
+}
+
+fn bootstrap_screen_sharing() -> Result<String> {
+    let mut notes = Vec::new();
+    let (en_ok, en_out) = sudo_output(&["launchctl", "enable", SCREEN_SHARING_SERVICE])?;
+    if !en_ok {
+        notes.push(format!("enable: {}", en_out.trim()));
+    }
+    let (boot_ok, boot_out) =
+        sudo_output(&["launchctl", "bootstrap", "system", SCREEN_SHARING_PLIST])?;
+    let boot = boot_out.to_ascii_lowercase();
+    if !boot_ok && !boot.contains("already") && !boot.contains("in progress") {
+        notes.push(format!("bootstrap: {}", boot_out.trim()));
+        let (load_ok, load_out) = sudo_output(&["launchctl", "load", "-w", SCREEN_SHARING_PLIST])?;
+        if !load_ok {
+            notes.push(format!("load -w: {}", load_out.trim()));
+        }
+    }
+    let (kick_ok, kick_out) =
+        sudo_output(&["launchctl", "kickstart", "-k", SCREEN_SHARING_SERVICE])?;
+    if !kick_ok {
+        notes.push(format!("kickstart: {}", kick_out.trim()));
+    }
+    Ok(notes.join("; "))
+}
+
+fn screen_sharing_is_on() -> bool {
+    vnc_listening()
+}
+
+pub fn vnc_listening() -> bool {
+    let Ok(addr) = "127.0.0.1:5900".parse() else {
+        return false;
+    };
+    std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(400)).is_ok()
+}
 
 fn enable_remote_login_macos() -> Result<StepReport> {
     if remote_login_is_on()? {

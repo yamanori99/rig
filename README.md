@@ -108,7 +108,7 @@ embedded). Use `--root` / `RIG_ROOT` only if you point at a checkout.
 | Role | Intent |
 | --- | --- |
 | `workstation` | GUI laptop/desktop, zsh default |
-| `compute` | Headless, bash default, remote login, stay-awake |
+| `compute` | Headless, bash default, remote login, screen sharing, stay-awake |
 
 ## Privacy
 
@@ -162,8 +162,7 @@ Before push: `gitleaks protect --staged -c .gitleaks.toml`
 
 ## Status
 
-`v0.2.11` — compute no longer installs Tailscale; `rig status` lists
-packages outside the role sets.
+`v0.2.12` — compute enables macOS Screen Sharing (VNC) on apply.
 
 ## License
 

@@ -86,6 +86,7 @@ pub struct HostFeatures {
     pub gui: Option<bool>,
     pub cursor: Option<bool>,
     pub remote_login: Option<bool>,
+    pub screen_sharing: Option<bool>,
     pub tailscale: Option<bool>,
     pub thunderbolt: Option<bool>,
     pub stay_awake: Option<bool>,

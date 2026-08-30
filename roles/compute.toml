@@ -6,6 +6,7 @@ default_shell = "bash"
 gui = false
 cursor = false
 remote_login = true
+screen_sharing = true
 tailscale = false
 thunderbolt = true
 stay_awake = true

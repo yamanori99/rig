@@ -56,10 +56,7 @@ fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> 
 
     if let Some(sh) = role.default_shell {
         ui::kv("shell", sh.as_str());
-        ui::item(format!(
-            "templates  shell/common + shell/{}",
-            sh.as_str()
-        ));
+        ui::item(format!("templates  shell/common + shell/{}", sh.as_str()));
     } else {
         ui::kv("shell", "detect from $SHELL");
     }
@@ -67,10 +64,11 @@ fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> 
     let f = &role.features;
     ui::section("features");
     ui::item(format!(
-        "gui={}  cursor={}  remote_login={}  tailscale={}  thunderbolt={}  stay_awake={}",
+        "gui={}  cursor={}  remote_login={}  screen_sharing={}  tailscale={}  thunderbolt={}  stay_awake={}",
         yn(f.gui),
         yn(f.cursor),
         yn(f.remote_login),
+        yn(f.screen_sharing),
         yn(f.tailscale),
         yn(f.thunderbolt),
         yn(f.stay_awake)
@@ -83,6 +81,9 @@ fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> 
     }
     if f.remote_login {
         ui::item2("remote login / sshd");
+    }
+    if f.screen_sharing {
+        ui::item2("Screen Sharing (macOS VNC :5900)");
     }
     if f.tailscale {
         ui::item2("Tailscale");

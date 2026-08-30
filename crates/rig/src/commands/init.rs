@@ -56,7 +56,10 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
     ui::kvc("personal shell / tmux / cursor overrides");
     ui::item("leave templates/ alone — use overlay/");
     ui::blank();
-    ui::kv("detect", "os/shell at apply (override in the toml if needed)");
+    ui::kv(
+        "detect",
+        "os/shell at apply (override in the toml if needed)",
+    );
     ui::next("rig apply");
     Ok(())
 }

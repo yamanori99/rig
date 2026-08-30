@@ -6,6 +6,7 @@ default_shell = "zsh"
 gui = true
 cursor = true
 remote_login = false
+screen_sharing = false
 tailscale = false
 # Optional: [[ssh]] with link=thunderbolt puts this laptop on the TB bridge.
 thunderbolt = true

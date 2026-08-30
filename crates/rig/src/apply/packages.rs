@@ -108,10 +108,7 @@ pub(crate) fn run_brew(args: &[&str]) -> Result<bool> {
                 .map(|t| t.elapsed() >= Duration::from_secs(8))
                 .unwrap_or(false);
             if quiet {
-                eprint!(
-                    "\r    …  {}          ",
-                    fmt_dur(start.elapsed().as_secs())
-                );
+                eprint!("\r    …  {}          ", fmt_dur(start.elapsed().as_secs()));
                 let _ = io::stderr().flush();
             }
         }
@@ -321,10 +318,7 @@ fn brew_installed_requested() -> Option<Vec<String>> {
     if formulae.is_empty() {
         formulae = brew_list_lines(&["leaves", "-1"]);
     }
-    let mut out: Vec<String> = formulae
-        .into_iter()
-        .map(|n| format!("brew:{n}"))
-        .collect();
+    let mut out: Vec<String> = formulae.into_iter().map(|n| format!("brew:{n}")).collect();
     out.extend(
         brew_list_lines(&["list", "--cask", "-1"])
             .into_iter()
@@ -429,6 +423,9 @@ mod tests {
             restyle_brew_line("==> Fetching llvm"),
             Some("Fetching llvm".into())
         );
-        assert_eq!(restyle_brew_line("`brew bundle` complete! 38 Brewfile dependencies now installed."), None);
+        assert_eq!(
+            restyle_brew_line("`brew bundle` complete! 38 Brewfile dependencies now installed."),
+            None
+        );
     }
 }

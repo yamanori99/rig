@@ -48,3 +48,4 @@ schema_version = 1
 # --- Feature overrides (optional; unset keys keep the role) ---
 # [features]
 # stay_awake = false
+# screen_sharing = false

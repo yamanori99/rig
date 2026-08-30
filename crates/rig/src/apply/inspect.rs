@@ -10,6 +10,7 @@ use std::process::{Command, Stdio};
 pub struct LiveWanted {
     pub stay_awake: bool,
     pub remote_login: bool,
+    pub screen_sharing: bool,
     pub thunderbolt: bool,
     pub tailscale: bool,
     pub cursor: bool,
@@ -17,7 +18,12 @@ pub struct LiveWanted {
 
 impl LiveWanted {
     pub fn any(self) -> bool {
-        self.stay_awake || self.remote_login || self.thunderbolt || self.tailscale || self.cursor
+        self.stay_awake
+            || self.remote_login
+            || self.screen_sharing
+            || self.thunderbolt
+            || self.tailscale
+            || self.cursor
     }
 }
 
@@ -32,6 +38,9 @@ pub fn print_live(os: OsKind, wanted: LiveWanted) {
     }
     if wanted.remote_login {
         print_remote_login(os);
+    }
+    if wanted.screen_sharing {
+        print_screen_sharing(os);
     }
     if wanted.thunderbolt {
         print_thunderbolt(os);
@@ -107,6 +116,17 @@ fn print_remote_login(os: OsKind) {
             }
         }
         Err(_) => ui::item2("keepalive  missing"),
+    }
+}
+
+fn print_screen_sharing(os: OsKind) {
+    ui::item("screen-sharing");
+    match os {
+        OsKind::Macos => {
+            let open = features::vnc_listening();
+            ui::item2(format!("vnc :5900  {}", if open { "yes" } else { "no" }));
+        }
+        OsKind::Linux => ui::item2("macOS only"),
     }
 }
 

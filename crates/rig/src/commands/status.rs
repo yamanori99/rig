@@ -31,10 +31,11 @@ pub fn run(root: &Path) -> Result<()> {
                 ui::kv(
                     "features",
                     format!(
-                        "gui={}  cursor={}  remote_login={}  tailscale={}  thunderbolt={}  stay_awake={}",
+                        "gui={}  cursor={}  remote_login={}  screen_sharing={}  tailscale={}  thunderbolt={}  stay_awake={}",
                         yn(f.gui),
                         yn(f.cursor),
                         yn(f.remote_login),
+                        yn(f.screen_sharing),
                         yn(f.tailscale),
                         yn(f.thunderbolt),
                         yn(f.stay_awake)
@@ -45,6 +46,7 @@ pub fn run(root: &Path) -> Result<()> {
                 live = apply::LiveWanted {
                     stay_awake: f.stay_awake,
                     remote_login: f.remote_login,
+                    screen_sharing: f.screen_sharing,
                     thunderbolt: f.thunderbolt && h.thunderbolt_ip().is_some(),
                     tailscale: f.tailscale,
                     cursor: f.cursor,

@@ -120,9 +120,15 @@ pub fn execute(
         let report = packages::apply_packages(root, &plan.package_sets, os)?;
         st.note_step("packages", format!("{}: {}", report.backend, report.detail));
         if report.ok {
-            ui::ok("packages", &format!("{}  {}", report.backend, report.detail));
+            ui::ok(
+                "packages",
+                &format!("{}  {}", report.backend, report.detail),
+            );
         } else {
-            ui::fail("packages", &format!("{}  {}", report.backend, report.detail));
+            ui::fail(
+                "packages",
+                &format!("{}  {}", report.backend, report.detail),
+            );
             let _ = state::save(&st);
             return Err(RigError::Msg(format!(
                 "package step failed: {}",
@@ -142,6 +148,10 @@ pub fn execute(
             "remote-login" if !step.skip => {
                 let report = features::apply_remote_login(os)?;
                 finish_step(&mut st, "remote-login", report)?;
+            }
+            "screen-sharing" if !step.skip => {
+                let report = features::apply_screen_sharing(os)?;
+                finish_step(&mut st, "screen-sharing", report)?;
             }
             "thunderbolt" if !step.skip => {
                 let ip = host.thunderbolt_ip().ok_or_else(|| {
@@ -171,7 +181,8 @@ pub fn execute(
                 let report = gui::apply_gui(root, &plan.package_sets, os)?;
                 finish_step(&mut st, "gui", report)?;
             }
-            "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" | "stay-awake" => {
+            "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" | "screen-sharing"
+            | "stay-awake" => {
                 // Enabled steps are handled above; remaining matches are skips.
                 if step.skip {
                     st.note_step(&step.id, "skipped");
@@ -188,10 +199,16 @@ pub fn execute(
     ui::title("done", false);
     ui::blank();
     ui::section("customize");
-    ui::kv("host", format!("{}/hosts/{}.toml", root.display(), host.name));
+    ui::kv(
+        "host",
+        format!("{}/hosts/{}.toml", root.display(), host.name),
+    );
     ui::kv("overlay", format!("{}/overlay/", root.display()));
     ui::item("leave templates/ alone — use overlay/");
-    ui::kv("peers", "add hosts/<peer>.toml with [[ssh]], then rig ssh-config --yes");
+    ui::kv(
+        "peers",
+        "add hosts/<peer>.toml with [[ssh]], then rig ssh-config --yes",
+    );
     Ok(())
 }
 
