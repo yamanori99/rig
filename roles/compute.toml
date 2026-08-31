@@ -6,6 +6,7 @@ default_shell = "bash"
 gui = false
 cursor = false
 remote_login = true
+# VNC :5900. Screen Sharing.app still needs a one-time System Settings toggle (macOS 12.1+).
 screen_sharing = true
 # Off until the host opts in. Unrelated to `gui` / Tailscale.app.
 tailscale = false

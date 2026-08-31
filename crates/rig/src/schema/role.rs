@@ -19,7 +19,9 @@ pub struct RoleFeatures {
     pub cursor: bool,
     #[serde(default)]
     pub remote_login: bool,
-    /// macOS Screen Sharing (VNC, port 5900). No-op on Linux.
+    /// macOS Screen Sharing daemon (VNC :5900). Does not grant
+    /// Screen Sharing.app permission (macOS 12.1+: System Settings toggle or MDM).
+    /// No-op on Linux.
     #[serde(default)]
     pub screen_sharing: bool,
     #[serde(default)]

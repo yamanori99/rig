@@ -9,8 +9,9 @@ pub struct StepReport {
 
 /// Enable macOS Screen Sharing (VNC :5900). Linux is a no-op.
 ///
-/// Listening on :5900 is not enough: Screen Sharing.app checks ARD access
-/// ("not permitted" if we only `launchctl bootstrap` the daemon).
+/// macOS 12.1+ will not grant Screen Sharing.app control from CLI (needs MDM
+/// or a one-time System Settings toggle). Mixing Remote Management (`kickstart
+/// -activate`) with `launchctl` Screen Sharing produces "not permitted".
 pub fn apply_screen_sharing(os: OsKind, user: &str) -> Result<StepReport> {
     if !matches!(os, OsKind::Macos) {
         return Ok(StepReport {
@@ -599,105 +600,81 @@ const SCREEN_SHARING_SERVICE: &str = "system/com.apple.screensharing";
 const ARD_KICKSTART: &str =
     "/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart";
 
+const GUI_TOGGLE: &str = "toggle Screen Sharing off/on once in System Settings > Sharing";
+
 fn enable_screen_sharing_macos(user: &str) -> Result<StepReport> {
     let mut notes = Vec::new();
-    let ard = configure_ard_access(user)?;
-    if !ard.is_empty() {
-        notes.push(ard);
+    let ard = remote_management_running();
+    let vnc = screen_sharing_is_on();
+
+    // Remote Management + Screen Sharing → "not permitted". Drop RM; never activate it.
+    if ard && std::path::Path::new(ARD_KICKSTART).is_file() {
+        let _ = sudo_output(&[ARD_KICKSTART, "-deactivate", "-stop"]);
+        notes.push("stopped Remote Management".into());
+        std::thread::sleep(std::time::Duration::from_millis(300));
+    } else if vnc {
+        return Ok(StepReport {
+            ok: true,
+            detail: "vnc :5900".into(),
+        });
     }
 
-    // Apple's own dialog: disable then re-enable. Clears the mixed
-    // Screen Sharing / Remote Management state that launchctl-only leaves.
-    let _ = sudo_output(&["launchctl", "bootout", "system", SCREEN_SHARING_PLIST]);
     let launch = bootstrap_screen_sharing()?;
     if !launch.is_empty() {
         notes.push(launch);
     }
+    open_sharing_pane(user);
+    notes.push(GUI_TOGGLE.into());
 
     std::thread::sleep(std::time::Duration::from_millis(500));
     if screen_sharing_is_on() {
+        notes.insert(0, "vnc :5900".into());
         return Ok(StepReport {
             ok: true,
-            detail: if notes.is_empty() {
-                "vnc :5900".into()
-            } else {
-                notes.join("; ")
-            },
+            detail: notes.join("; "),
         });
     }
 
-    let mut detail = "Screen Sharing still off".to_string();
+    let mut detail = "vnc :5900 still closed".to_string();
     if !notes.is_empty() {
         detail.push_str(": ");
         detail.push_str(&notes.join("; "));
     }
-    detail.push_str(
-        ". System Settings > General > Sharing > Screen Sharing, or grant Terminal Full Disk Access",
-    );
     Ok(StepReport { ok: false, detail })
 }
 
-/// Grant RFB access. `launchctl` alone opens :5900 but Screen Sharing.app
-/// then says "Screen Sharing is not permitted".
-fn configure_ard_access(user: &str) -> Result<String> {
-    if !std::path::Path::new(ARD_KICKSTART).is_file() {
-        return Ok(String::new());
+fn open_sharing_pane(user: &str) {
+    const URL: &str = "x-apple.systempreferences:com.apple.Sharing-Settings.extension";
+    let who = console_user()
+        .filter(|u| u != "root" && u != "loginwindow")
+        .unwrap_or_else(|| user.trim().to_string());
+    if who.is_empty() {
+        return;
     }
-    let mut notes = Vec::new();
-    let _ = sudo_output(&[ARD_KICKSTART, "-deactivate", "-stop"]);
-
-    let allow: &[&str] = if user.is_empty() {
-        &[ARD_KICKSTART, "-configure", "-allowAccessFor", "-allUsers"]
-    } else {
-        &[
-            ARD_KICKSTART,
-            "-configure",
-            "-allowAccessFor",
-            "-specifiedUsers",
-        ]
+    let uid = Command::new("id")
+        .args(["-u", &who])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+    let Some(uid) = uid else {
+        return;
     };
-    let (ok, out) = sudo_output(allow)?;
-    if !ok {
-        notes.push(format!("allowAccessFor: {}", out.trim()));
-    }
+    let _ = crate::ui::sudo_command()
+        .args(["launchctl", "asuser", &uid, "sudo", "-u", &who, "open", URL])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status();
+}
 
-    let (ok, out) = if user.is_empty() {
-        sudo_output(&[
-            ARD_KICKSTART,
-            "-activate",
-            "-configure",
-            "-access",
-            "-on",
-            "-privs",
-            "-all",
-            "-restart",
-            "-agent",
-        ])?
-    } else {
-        sudo_output(&[
-            ARD_KICKSTART,
-            "-activate",
-            "-configure",
-            "-access",
-            "-on",
-            "-privs",
-            "-all",
-            "-users",
-            user,
-            "-restart",
-            "-agent",
-        ])?
-    };
-    if !ok {
-        notes.push(format!("activate: {}", out.trim()));
-    } else if notes.is_empty() {
-        notes.push(if user.is_empty() {
-            "ARD access all users".into()
-        } else {
-            format!("ARD access {user}")
-        });
-    }
-    Ok(notes.join("; "))
+fn console_user() -> Option<String> {
+    Command::new("stat")
+        .args(["-f", "%Su", "/dev/console"])
+        .output()
+        .ok()
+        .filter(|o| o.status.success())
+        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+        .filter(|s| !s.is_empty())
 }
 
 fn bootstrap_screen_sharing() -> Result<String> {
@@ -733,6 +710,10 @@ pub fn vnc_listening() -> bool {
         return false;
     };
     std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_millis(400)).is_ok()
+}
+
+pub fn remote_management_running() -> bool {
+    pgrep("ARDAgent")
 }
 
 fn enable_remote_login_macos() -> Result<StepReport> {

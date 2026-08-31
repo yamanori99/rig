@@ -109,7 +109,7 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
     steps.push(feature_step(
         "screen-sharing",
         f.screen_sharing && matches!(os, crate::schema::OsKind::Macos),
-        "enable Screen Sharing (VNC :5900)",
+        "listen :5900 (Screen Sharing.app: toggle once in System Settings)",
         match os {
             crate::schema::OsKind::Macos => "off in role",
             crate::schema::OsKind::Linux => "macOS only",

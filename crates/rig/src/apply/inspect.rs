@@ -121,10 +121,11 @@ fn print_screen_sharing(os: OsKind) {
     match os {
         OsKind::Macos => {
             let open = features::vnc_listening();
-            ui::note(
-                "screen",
-                format!("vnc :5900  {}", if open { "yes" } else { "no" }),
-            );
+            let mut msg = format!("vnc :5900  {}", if open { "yes" } else { "no" });
+            if features::remote_management_running() {
+                msg.push_str("  Remote Management on");
+            }
+            ui::note("screen", msg);
         }
         OsKind::Linux => ui::note("screen", "macOS only"),
     }

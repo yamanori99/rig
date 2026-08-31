@@ -48,5 +48,5 @@ schema_version = 1
 # --- Feature overrides (optional; unset keys keep the role) ---
 # [features]
 # stay_awake = false
-# screen_sharing = false
+# screen_sharing = false   # daemon is :5900; Screen Sharing.app needs a GUI toggle once
 # tailscale = true   # roles leave this off; Tailscale.app counts as installed
