@@ -25,8 +25,14 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
         .to_string();
 
     let dest = paths::hosts_dir(root).join(format!("{short}.toml"));
-    if dest.exists() {
-        return Err(RigError::Msg(format!("already exists: {}", dest.display())).into());
+    if dest.symlink_metadata().is_ok() {
+        return Err(RigError::Msg(format!(
+            "already exists: {} (file or symlink). skip init; `rig apply` uses this path. \
+             If apply cannot see the host, product/hosts is not your inventory — \
+             symlink it to the clone (e.g. ~/rig-hosts)",
+            dest.display()
+        ))
+        .into());
     }
 
     let example = paths::hosts_dir(root)

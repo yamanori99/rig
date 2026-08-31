@@ -64,10 +64,10 @@ pub fn list_roles(root: &Path) -> Result<Vec<String>> {
 }
 
 pub fn detect_current_host<'a>(hosts: &'a [(std::path::PathBuf, Host)]) -> Option<&'a Host> {
-    let hostname = current_hostname();
-    let short = hostname.split('.').next().unwrap_or(&hostname);
-    hosts.iter().find_map(|(_, h)| {
-        if h.name == short || h.name == hostname || hostname.contains(&h.name) {
+    let ids = machine_ids();
+    hosts.iter().find_map(|(path, h)| {
+        let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+        if identity_hit(&ids, &h.name, stem) {
             Some(h)
         } else {
             None
@@ -75,10 +75,100 @@ pub fn detect_current_host<'a>(hosts: &'a [(std::path::PathBuf, Host)]) -> Optio
     })
 }
 
+/// Why `rig apply` / `keys` could not bind this machine to hosts/*.toml.
+pub fn unregistered_hint(root: &Path, hosts: &[(std::path::PathBuf, Host)]) -> String {
+    let hn = current_hostname();
+    let short = short_host(&hn);
+    let dir = paths::hosts_dir(root);
+    if hosts.is_empty() {
+        return format!(
+            "no host toml in {} (this OS hostname is {hn}, short {short}). \
+             `rig init` only seeds an empty product dir. Point that hosts/ at your \
+             inventory clone (symlink ~/rig-hosts), then apply — do not init over a symlink",
+            dir.display()
+        );
+    }
+    let names: Vec<&str> = hosts.iter().map(|(_, h)| h.name.as_str()).collect();
+    format!(
+        "this machine is not in hosts/ (hostname={hn}, short={short}). \
+         have: {}. expected {}/{short}.toml with name = \"{short}\"",
+        names.join(", "),
+        dir.display()
+    )
+}
+
 pub fn current_hostname() -> String {
     whoami::fallible::hostname()
         .unwrap_or_else(|_| "unknown".into())
         .to_lowercase()
+}
+
+fn short_host(name: &str) -> &str {
+    name.split('.').next().unwrap_or(name)
+}
+
+fn machine_ids() -> Vec<String> {
+    let mut ids = Vec::new();
+    let hn = current_hostname();
+    ids.push(hn.clone());
+    ids.push(short_host(&hn).to_string());
+    #[cfg(target_os = "macos")]
+    if let Some(local) = scutil_get("LocalHostName") {
+        let local = local.to_lowercase();
+        ids.push(local.clone());
+        ids.push(short_host(&local).to_string());
+    }
+    ids.sort();
+    ids.dedup();
+    ids
+}
+
+fn identity_hit(machine_ids: &[String], inventory_name: &str, file_stem: &str) -> bool {
+    let inv = inventory_name.to_ascii_lowercase();
+    let stem = file_stem.to_ascii_lowercase();
+    for raw in [&inv, &stem] {
+        if raw.is_empty() {
+            continue;
+        }
+        let short = short_host(raw);
+        for id in machine_ids {
+            if raw == id || short == short_host(id) || raw == short_host(id) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+#[cfg(target_os = "macos")]
+fn scutil_get(key: &str) -> Option<String> {
+    let out = std::process::Command::new("scutil")
+        .args(["--get", key])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identity_matches_bonjour_suffix() {
+        let ids = vec!["m4-mini-tak.local".into(), "m4-mini-tak".into()];
+        assert!(identity_hit(&ids, "m4-mini-tak", "m4-mini-tak"));
+        assert!(identity_hit(&ids, "M4-Mini-Tak", "other"));
+        assert!(identity_hit(&ids, "nope", "m4-mini-tak"));
+        assert!(!identity_hit(&ids, "m4-mba-neva", "m4-mba-neva"));
+    }
 }
 
 pub fn detect_shell() -> ShellKind {

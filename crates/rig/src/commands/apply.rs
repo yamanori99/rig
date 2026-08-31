@@ -6,12 +6,8 @@ use miette::Result;
 
 pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
-    let host = schema::detect_current_host(&hosts).ok_or_else(|| {
-        RigError::Msg(format!(
-            "this machine is not registered (hostname={}). run `rig init` first",
-            schema::current_hostname()
-        ))
-    })?;
+    let host = schema::detect_current_host(&hosts)
+        .ok_or_else(|| RigError::Msg(schema::unregistered_hint(root, &hosts)))?;
     let role = schema::load_role(root, &host.role)?;
     let plan = build_plan(host, &role);
 

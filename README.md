@@ -1,20 +1,27 @@
 # rig
 
-Opinionated setup for **workstation** and **compute** machines.
+[日本語](README.ja.md)
 
-One CLI configures shell (zsh/bash), role-based packages, and SSH host
-entries — without putting personal IPs in the product repo.
+`rig` installs a development environment on your Mac or Linux machines.
+Use the same steps on a laptop and on a Mini.
 
-**You do not need Rust.** Install the release binary; product files
-(roles / packages / templates) are embedded and unpack on first run.
+It installs the shell, the packages for that machine, and SSH between
+your machines.
+
+Rust is not required. A release binary is enough. Extra files are
+written to disk on first run.
 
 ## Requirements
 
-Installing `rig` needs `curl` and `tar`.
+You need `curl` and `tar` to install.
 
-`rig apply` installs packages with Homebrew (`brew`) on macOS, and `apt`
-on Debian/Ubuntu. Rig does not install those tools. Skip packages with
-`rig apply --yes --skip-packages`.
+`rig apply` installs packages with Homebrew (`brew`) on macOS and
+`apt` on Debian/Ubuntu. Rig does not install brew or apt. To skip
+packages:
+
+```bash
+rig apply --yes --skip-packages
+```
 
 ## Install
 
@@ -22,19 +29,20 @@ on Debian/Ubuntu. Rig does not install those tools. Skip packages with
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
-Puts `rig` in `~/.local/bin` (override with `RIG_BIN_DIR`). That is the
-**latest** GitHub Release. Install appends that dir to zsh/bash startup
-files, then tells you to close the terminal and open a new one.
+`rig` goes in `~/.local/bin`. That path is also added to zsh and bash
+startup files. When it finishes, close the terminal and open a new one.
 
-Optional: `RIG_BIN_DIR=...` or pin `RIG_VERSION=vX.Y.Z` on the **pipe
-side** (env must apply to `sh`, not only `curl`):
+Latest release: <https://github.com/yamanori99/rig/releases>
+
+To change the install directory or version, set the variable on the
+right side of the pipe (`sh`). Setting it only on `curl` does nothing.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh \
   | RIG_BIN_DIR=/tmp/rig-bin sh
 ```
 
-Releases: <https://github.com/yamanori99/rig/releases>
+`RIG_VERSION=vX.Y.Z` works the same way.
 
 ## Update
 
@@ -43,8 +51,8 @@ rig update           # preview
 rig update --yes
 ```
 
-Installs the latest Release into `~/.local/bin/rig`. `hosts/` and
-`overlay/` stay. Templates refresh on the next run if the version changed.
+Only `~/.local/bin/rig` is replaced. `hosts/` and `overlay/` stay.
+If the version went up, templates refresh on the next run.
 
 ## Uninstall
 
@@ -53,8 +61,8 @@ curl -fsSL \
   https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | sh
 ```
 
-Removes `~/.local/bin/rig` (override with `RIG_BIN_DIR`). Product data
-(hosts / overlay / state) is kept by default. Purge it too:
+Removes `~/.local/bin/rig`. Hosts, overlay, and state stay. To delete
+those too:
 
 ```bash
 curl -fsSL \
@@ -62,14 +70,15 @@ curl -fsSL \
   | RIG_PURGE=1 sh
 ```
 
-This does not undo shell snippets or packages from `rig apply` — run
-`rig clean --yes` first while the binary is still installed if you want that.
+This does not undo packages or shell settings from `rig apply`. To undo
+those, run `rig clean --yes` first, while the binary is still there.
 
 ## Use
 
+First machine:
+
 ```bash
 rig init --role workstation   # or: --role compute
-# init prints the paths to edit — then:
 rig apply            # preview
 rig apply --yes
 rig status
@@ -83,43 +92,77 @@ rig keys distribute --yes
 rig check
 ```
 
-### What to edit
+### Where files live
 
-Release installs unpack product files under the OS data dir. Run `rig root`
-for the absolute path.
+Data is stored here:
 
 - macOS: `~/Library/Application Support/dev.rig.rig/product/`
-- Linux: typically `~/.local/share/rig/product/`
+- Linux: usually `~/.local/share/rig/product/`
 
-Checkout / `--root` uses that tree instead.
+The exact path is the first line of `rig root`. A checkout of this repo
+or `--root` uses that tree instead.
 
-| Path | You edit? | Purpose |
-| --- | --- | --- |
-| `hosts/<this-host>.toml` | yes | role, `[[ssh]]`, package add/remove |
-| `hosts/<peer>.toml` | yes | peer reachability (`alias` / `ip` / `link`) |
-| `overlay/` | yes | personal shell / tmux / Cursor overrides |
-| `templates/` | no | product defaults — override via `overlay/` |
+```text
+$(rig root)/
+  hosts/
+    examples/              # samples. leave them
+      workstation.toml
+      compute.toml
+    m4-mba-neva.toml       # your machines. edit these
+    m4-mini-tak.toml
+  overlay/                 # your shell / tmux / Cursor
+  templates/               # defaults. leave them
+  roles/
+  packages/
+```
 
-`[[ssh]]` goes on the **peer** host file. Seeds: `hosts/examples/` (also
-embedded). Use `--root` / `RIG_ROOT` only if you point at a checkout.
+Put `[[ssh]]` on the toml of the machine you connect **to**.
+
+`name` is the short hostname: `m4-mini-tak`, not
+`m4-mini-tak.local`.
+
+### A second machine
+
+`rig apply` only looks at `hosts/` above. A git repo of machine files
+(`~/rig-hosts` or similar) is a different directory until you symlink
+it.
+
+```text
+~/rig-hosts/               # private git
+  m4-mba-neva.toml
+  m4-mini-tak.toml
+
+$(rig root)/hosts  ->  ~/rig-hosts
+```
+
+`git pull` in `~/rig-hosts` does not update `rig apply` on a machine
+without that symlink. On the second machine:
+
+```bash
+ln -sfn ~/rig-hosts "$(rig root | head -1)/hosts"
+rig host detect            # should print this machine's name
+rig apply --yes
+```
+
+If the toml is already in git, do not run `rig init`. Init only creates
+a file when `hosts/` is empty.
+
+If you see `File exists`, there is already a file or a broken symlink
+at that path. Fix the link. Do not run init again.
 
 ## Roles
 
-| Role | Intent |
+| Role | What it is |
 | --- | --- |
-| `workstation` | GUI laptop/desktop, zsh default |
-| `compute` | Headless, bash default, remote login, screen sharing, stay-awake |
-
-## Privacy
-
-Do not put real VPN / LAN / Thunderbolt addresses in a shared git repo.
+| `workstation` | GUI laptop or desktop. Shell: zsh |
+| `compute` | No display. Shell: bash. SSH, screen sharing, no sleep |
 
 ## Commands
 
 ```text
-rig --help                       # flow, data dir, examples
-rig root                         # product data path (hosts / overlay)
-rig status                       # apply steps; live for enabled features
+rig --help                       # overview
+rig root                         # data path
+rig status                       # this machine
 rig init [--role workstation|compute] [--name HOST]
 rig host list | detect
 rig roles [NAME] [--os macos|linux]
@@ -131,12 +174,12 @@ rig ssh-config [-y|--write]      # preview; -y writes
 rig update [-y] [--force]        # preview; -y installs
 ```
 
-Most commands also print the data root on stderr so the path stays visible.
-`rig COMMAND --help` has the longer notes.
+Most commands print the data path on stderr. For the long help, run
+`rig COMMAND --help`.
 
-## For maintainers
+## For developers
 
-Needs [Rust](https://rustup.rs/). Normal users should ignore this section.
+You need [Rust](https://rustup.rs/). Skip this section for normal use.
 
 ```bash
 git clone https://github.com/yamanori99/rig.git
@@ -145,26 +188,23 @@ RIG_FORCE_SOURCE=1 ./install.sh
 # or: cargo install --path crates/rig --force
 ```
 
-Inside a checkout, `rig` uses that tree; otherwise it materializes embedded
-assets. Tag `v*` publishes binaries via GitHub Actions.
+Inside a checkout, `rig` uses that tree. Otherwise it unpacks the
+embedded files. Tags `v*` publish binaries with GitHub Actions.
 
-Linux smoke (Apple `container`):
+Linux check (Apple `container`):
 
 ```bash
-# local checkout + cargo
 ./testenv/apple-container/scripts/up.sh --smoke
-
-# release binary (no Rust in guest)
 ./testenv/apple-container/scripts/up.sh --smoke --from-release
 ```
 
-See [testenv/apple-container/README.md](testenv/apple-container/README.md).
+[testenv/apple-container/README.md](testenv/apple-container/README.md)
 
-Before push: `gitleaks protect --staged -c .gitleaks.toml`
+Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
 
 ## Status
 
-`v0.2.15` — GitHub Actions on Node 24 (`checkout@v5`, artifact `@v6`).
+`v0.2.15` — Japanese README, clearer host matching and init errors, Actions on Node 24.
 
 ## License
 

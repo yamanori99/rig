@@ -6,12 +6,8 @@ use miette::Result;
 
 pub fn distribute(root: &std::path::Path, yes: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
-    let self_host = schema::detect_current_host(&hosts).ok_or_else(|| {
-        RigError::Msg(format!(
-            "this machine is not registered (hostname={}). run `rig init` first",
-            schema::current_hostname()
-        ))
-    })?;
+    let self_host = schema::detect_current_host(&hosts)
+        .ok_or_else(|| RigError::Msg(schema::unregistered_hint(root, &hosts)))?;
 
     ui::title("keys distribute", !yes);
     ui::kv("self", &self_host.name);
