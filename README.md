@@ -204,7 +204,7 @@ Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
 
 ## Status
 
-`v0.2.16` — quieter CLI: brew/apt noise gone, aligned colors, shorter status.
+`v0.2.17` — aligned CLI columns, `~` paths, restore clear password prompts.
 
 ## License
 

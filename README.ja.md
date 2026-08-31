@@ -202,7 +202,7 @@ push の前に `gitleaks protect --staged -c .gitleaks.toml` を実行する。
 
 ## Status
 
-`v0.2.16` — CLI を静かにする。brew/apt のノイズを消し、色と status を揃える。
+`v0.2.17` — CLI の列揃えと `~` パス。パスワード表示はわかりやすく戻す。
 
 ## License
 

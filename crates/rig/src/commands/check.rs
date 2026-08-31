@@ -33,7 +33,7 @@ pub fn run(root: &std::path::Path) -> Result<()> {
     }
 
     let header = format!(
-        "{:<18} {:<18} {:<4} {:<18} {:<5} {}",
+        "{:<16} {:<16} {:<4} {:<15} {:<5} {}",
         "peer", "alias", "link", "ip", "tcp", "ssh"
     );
     ui::table_head(&header);
@@ -55,7 +55,7 @@ pub fn run(root: &std::path::Path) -> Result<()> {
                 "-"
             };
             ui::table_row(format!(
-                "{:<18} {:<18} {:<4} {:<18} {} {}",
+                "{:<16} {:<16} {:<4} {:<15} {} {}",
                 peer.name,
                 path.alias,
                 path.link.as_str(),

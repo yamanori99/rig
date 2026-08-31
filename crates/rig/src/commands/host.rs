@@ -11,7 +11,7 @@ pub fn list(root: &std::path::Path) -> Result<()> {
         return Ok(());
     }
     ui::table_head(&format!(
-        "{:<20} {:<12} {:<8} {:<6} {}",
+        "{:<16} {:<12} {:<8} {:<6} {}",
         "name", "role", "os", "shell", "net"
     ));
     for (_, h) in hosts {
@@ -20,9 +20,9 @@ pub fn list(root: &std::path::Path) -> Result<()> {
             .iter()
             .map(|p| format!("{}:{}", p.link.as_str(), p.alias))
             .collect::<Vec<_>>()
-            .join(",");
+            .join("  ");
         ui::table_row(format!(
-            "{:<20} {:<12} {:<8} {:<6} {}",
+            "{:<16} {:<12} {:<8} {:<6} {}",
             h.name,
             h.role,
             h.resolved_os().as_str(),

@@ -3,9 +3,11 @@ use std::io::IsTerminal;
 use std::path::Path;
 use std::sync::OnceLock;
 
-const KEY: usize = 10;
+/// `  ok  screen-sharing  detail` — values share this column.
+const INDENT: usize = 2;
 const MARK: usize = 4;
-const ID: usize = 14;
+const LABEL: usize = 16;
+const VALUE_COL: usize = INDENT + MARK + 1 + LABEL + 1; // 24
 
 const RESET: &str = "\x1b[0m";
 const DIM: &str = "\x1b[2m";
@@ -44,6 +46,110 @@ fn paint(on: bool, codes: &[&str], s: &str) -> String {
     }
 }
 
+fn term_cols() -> usize {
+    if let Ok(v) = std::env::var("COLUMNS") {
+        if let Ok(n) = v.parse::<usize>() {
+            if n >= 40 {
+                return n;
+            }
+        }
+    }
+    ioctl_cols().unwrap_or(80)
+}
+
+#[cfg(unix)]
+fn ioctl_cols() -> Option<usize> {
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    {
+        #[repr(C)]
+        struct WinSize {
+            row: u16,
+            col: u16,
+            x: u16,
+            y: u16,
+        }
+        extern "C" {
+            fn ioctl(fd: i32, req: std::ffi::c_ulong, arg: *mut WinSize) -> i32;
+        }
+        #[cfg(target_os = "macos")]
+        const TIOCGWINSZ: std::ffi::c_ulong = 0x4008_7468;
+        #[cfg(target_os = "linux")]
+        const TIOCGWINSZ: std::ffi::c_ulong = 0x5413;
+        let mut ws = WinSize {
+            row: 0,
+            col: 0,
+            x: 0,
+            y: 0,
+        };
+        let fd = if std::io::stdout().is_terminal() {
+            1
+        } else {
+            0
+        };
+        let r = unsafe { ioctl(fd, TIOCGWINSZ, &mut ws) };
+        if r == 0 && ws.col >= 40 {
+            Some(ws.col as usize)
+        } else {
+            None
+        }
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        None
+    }
+}
+
+#[cfg(not(unix))]
+fn ioctl_cols() -> Option<usize> {
+    None
+}
+
+fn tilde_home(s: &str) -> String {
+    let Some(home) = std::env::var_os("HOME") else {
+        return s.to_string();
+    };
+    let home = home.to_string_lossy();
+    if let Some(rest) = s.strip_prefix(home.as_ref()) {
+        format!("~{rest}")
+    } else {
+        s.to_string()
+    }
+}
+
+fn ellipsize(s: &str, max: usize) -> String {
+    let n = s.chars().count();
+    if n <= max {
+        return s.to_string();
+    }
+    if max < 8 {
+        return s.chars().take(max).collect();
+    }
+    let keep = max.saturating_sub(1);
+    let head = keep / 2;
+    let tail = keep - head;
+    let chars: Vec<char> = s.chars().collect();
+    let h: String = chars[..head].iter().collect();
+    let t: String = chars[n - tail..].iter().collect();
+    format!("{h}…{t}")
+}
+
+fn tidy(s: &str) -> String {
+    let s = tilde_home(s);
+    if !std::io::stdout().is_terminal() {
+        return s;
+    }
+    let budget = term_cols().saturating_sub(VALUE_COL).max(24);
+    ellipsize(&s, budget)
+}
+
+fn label(key: &str) -> String {
+    format!("{key:<LABEL$}")
+}
+
+fn mark_field(mark: &str) -> String {
+    format!("{mark:<MARK$}")
+}
+
 pub fn title(name: &str, preview: bool) {
     let on = color_out();
     let n = paint(on, &[BOLD, CYAN], name);
@@ -55,13 +161,18 @@ pub fn title(name: &str, preview: bool) {
 }
 
 pub fn kv(key: &str, value: impl Display) {
-    let k = format!("{key:<KEY$}");
-    println!("  {} {value}", wrap(color_out(), DIM, &k));
+    let on = color_out();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label(key));
+    println!("  {m} {k} {}", tidy(&value.to_string()));
 }
 
 pub fn kvc(value: impl Display) {
-    let v = wrap(color_out(), DIM, &value.to_string());
-    println!("  {:KEY$} {v}", "");
+    let on = color_out();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label(""));
+    let v = wrap(on, DIM, &tidy(&value.to_string()));
+    println!("  {m} {k} {v}");
 }
 
 pub fn blank() {
@@ -72,23 +183,27 @@ pub fn section(name: &str) {
     println!("  {}", wrap(color_out(), DIM, name));
 }
 
-/// Nested labeled line under a step (`    key        value`).
+/// Nested labeled line — same value column as `kv` / steps.
 pub fn note(key: &str, value: impl Display) {
-    let k = format!("{key:<KEY$}");
-    println!("    {} {value}", wrap(color_out(), DIM, &k));
+    kv(key, value);
 }
 
 pub fn item(s: impl Display) {
-    println!("    {}", wrap(color_out(), DIM, &s.to_string()));
+    let on = color_out();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label(""));
+    println!("  {m} {k} {}", wrap(on, DIM, &tidy(&s.to_string())));
 }
 
 pub fn item2(s: impl Display) {
-    println!("      {}", wrap(color_out(), DIM, &s.to_string()));
+    item(s);
 }
 
-/// Live install / fetch (not dim).
 pub fn progress(s: impl Display) {
-    println!("    {}", wrap(color_out(), CYAN, &s.to_string()));
+    let on = color_out();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label(""));
+    println!("  {m} {k} {}", wrap(on, CYAN, &tidy(&s.to_string())));
 }
 
 pub fn plan(do_it: bool, id: &str, detail: &str) {
@@ -109,11 +224,9 @@ pub fn skip(id: &str, detail: &str) {
 
 fn step(mark: &str, id: &str, detail: &str) {
     let on = color_out();
-    let mark_pad = format!("{mark:<MARK$}");
-    let id_pad = format!("{id:<ID$}");
-    let mark_c = wrap(on, mark_code(mark), &mark_pad);
-    let id_c = wrap(on, CYAN, &id_pad);
-    let d = detail.trim();
+    let mark_c = wrap(on, mark_code(mark), &mark_field(mark));
+    let id_c = wrap(on, CYAN, &label(id));
+    let d = tidy(detail.trim());
     if d.is_empty() {
         println!("  {mark_c} {id_c}");
     } else {
@@ -131,13 +244,12 @@ fn mark_code(mark: &str) -> &'static str {
 }
 
 pub fn empty(msg: &str) {
-    println!("  {}", wrap(color_out(), DIM, msg));
+    kvc(msg);
 }
 
 pub fn preview(action: &str) {
     blank();
-    let msg = format!("pass --yes (-y) to {action}");
-    println!("  {}", wrap(color_out(), DIM, &msg));
+    kvc(format!("pass --yes (-y) to {action}"));
 }
 
 pub fn next(cmd: &str) {
@@ -146,32 +258,41 @@ pub fn next(cmd: &str) {
 
 pub fn error(msg: impl Display) {
     eprintln!("{}", paint(color_err(), &[BOLD, RED], "error"));
-    eprintln!("  {msg}");
+    eprintln!("  {}", tidy(&msg.to_string()));
 }
 
 pub fn error_help(help: impl Display) {
-    let k = format!("{:<KEY$}", "help");
-    eprintln!("  {} {help}", wrap(color_err(), DIM, &k));
+    let on = color_err();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label("help"));
+    eprintln!("  {m} {k} {help}");
 }
 
 pub fn error_cause(msg: impl Display) {
-    let k = format!("{:<KEY$}", "cause");
-    eprintln!("  {} {msg}", wrap(color_err(), DIM, &k));
+    let on = color_err();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label("cause"));
+    eprintln!("  {m} {k} {msg}");
 }
 
 pub fn data_hint(root: &Path, os: &str) {
     let on = color_err();
     eprintln!("{}", paint(on, &[BOLD, CYAN], "data"));
-    let root_k = wrap(on, DIM, &format!("{:<KEY$}", "root"));
-    let hosts_k = wrap(on, DIM, &format!("{:<KEY$}", "hosts"));
-    let overlay_k = wrap(on, DIM, &format!("{:<KEY$}", "overlay"));
+    let m = wrap(on, DIM, &mark_field(""));
+    let root_k = wrap(on, DIM, &label("root"));
+    let hosts_k = wrap(on, DIM, &label("hosts"));
+    let overlay_k = wrap(on, DIM, &label("overlay"));
+    let root_s = tidy(&root.display().to_string());
+    let os_s = wrap(on, DIM, &format!("os={os}"));
+    eprintln!("  {m} {root_k} {root_s}  {os_s}");
     eprintln!(
-        "  {root_k} {}  {}",
-        root.display(),
-        wrap(on, DIM, &format!("os={os}"))
+        "  {m} {hosts_k} {}",
+        tidy(&format!("{}/", root.join("hosts").display()))
     );
-    eprintln!("  {hosts_k} {}/", root.join("hosts").display());
-    eprintln!("  {overlay_k} {}/", root.join("overlay").display());
+    eprintln!(
+        "  {m} {overlay_k} {}",
+        tidy(&format!("{}/", root.join("overlay").display()))
+    );
 }
 
 pub fn table_head(line: &str) {
@@ -182,17 +303,38 @@ pub fn table_row(line: impl Display) {
     println!("  {line}");
 }
 
-/// Color `ok` / `fail` / `skip` for table cells; pad to `width` first.
 pub fn mark_pad(mark: &str, width: usize) -> String {
     let pad = format!("{mark:<width$}");
     wrap(color_out(), mark_code(mark), &pad)
 }
 
-/// `sudo` with a prompt that matches kv layout (`  password `).
 pub fn sudo_command() -> std::process::Command {
-    let on = color_err();
-    let label = wrap(on, DIM, "password");
-    let mut c = std::process::Command::new("sudo");
-    c.arg("-p").arg(format!("  {label} "));
-    c
+    std::process::Command::new("sudo")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ellipsize, tilde_home};
+
+    #[test]
+    fn ellipsize_keeps_short() {
+        assert_eq!(ellipsize("abc", 10), "abc");
+    }
+
+    #[test]
+    fn ellipsize_middle() {
+        let s = ellipsize("abcdefghijklmnopqrstuvwxyz", 11);
+        assert_eq!(s.chars().count(), 11);
+        assert!(s.contains('…'));
+        assert!(s.starts_with("abcde"));
+        assert!(s.ends_with("wxyz"));
+    }
+
+    #[test]
+    fn tilde_is_prefix_only() {
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/you".into());
+        let p = format!("{home}/Library/foo");
+        assert_eq!(tilde_home(&p), "~/Library/foo");
+        assert_eq!(tilde_home("/other"), "/other");
+    }
 }
