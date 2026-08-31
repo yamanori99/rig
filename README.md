@@ -160,18 +160,20 @@ at that path. Fix the link. Do not run init again.
 ## Commands
 
 ```text
-rig --help                       # overview
-rig root                         # data path
-rig status                       # this machine
-rig init [--role workstation|compute] [--name HOST]
-rig host list | detect
-rig roles [NAME] [--os macos|linux]
-rig apply [-y] [--skip-packages] # preview; -y writes
-rig check
-rig keys distribute [-y]         # preview; -y copies
-rig clean [-y] [--packages]      # preview; -y deletes
-rig ssh-config [-y|--write]      # preview; -y writes
-rig update [-y] [--force]        # preview; -y installs
+rig -h                           # overview (logo)
+rig -v                           # version
+rig s | status                   # this machine
+rig a -y | apply -y              # preview; -y writes
+rig c | check
+rig i | init [-R role] [-n HOST]
+rig h list | host list
+rig roles [NAME] [-o macos|linux]
+rig k distribute -y | keys ...
+rig ssh-config -y | ssh -y
+rig u -y | update -y [-f]
+rig root                         # data path (stdout line 1)
+rig apply [-y] [-S]              # -S skip packages
+rig clean [-y] [-p]              # -p uninstall packages
 ```
 
 Most commands print the data path on stderr. For the long help, run
@@ -204,7 +206,7 @@ Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
 
 ## Status
 
-`v0.2.17` — aligned CLI columns, `~` paths, restore clear password prompts.
+`v0.2.18` — help banner, `-v`, aliases, yellow values.
 
 ## License
 

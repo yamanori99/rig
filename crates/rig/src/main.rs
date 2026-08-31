@@ -8,7 +8,7 @@ mod schema;
 mod ui;
 
 use clap::builder::styling::{AnsiColor, Effects, Styles};
-use clap::{ColorChoice, Parser, Subcommand};
+use clap::{ArgAction, ColorChoice, CommandFactory, Parser, Subcommand};
 use miette::{Report, Result};
 
 fn clap_styles() -> Styles {
@@ -57,9 +57,10 @@ Data (rig root):
 
 Examples:
   rig status
-  rig apply
+  rig s
   rig apply -y
-  rig roles compute --os macos
+  rig -v
+  rig roles compute -o macos
   rig host detect
 "
     )
@@ -133,15 +134,24 @@ Prefers lan/thunderbolt, then vpn. Preview without --yes.";
 #[command(
     name = "rig",
     version,
+    disable_version_flag = true,
+    propagate_version = true,
+    arg_required_else_help = true,
+    subcommand_required = true,
     color = ColorChoice::Auto,
     styles = clap_styles(),
     about = "Opinionated setup for workstation and compute machines",
     long_about = LONG_ABOUT,
+    before_help = crate::ui::banner(),
     after_help = after_help()
 )]
 struct Cli {
+    /// Print version
+    #[arg(short = 'v', short_alias = 'V', long = "version", action = ArgAction::Version, global = true)]
+    _version: (),
+
     /// Product root (cwd / RIG_ROOT / embedded unpack)
-    #[arg(long, global = true, env = "RIG_ROOT")]
+    #[arg(short = 'r', long, global = true, env = "RIG_ROOT")]
     root: Option<std::path::PathBuf>,
 
     #[command(subcommand)]
@@ -151,26 +161,26 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Seed hosts/<name>.toml from a role
-    #[command(long_about = INIT_LONG)]
+    #[command(visible_alias = "i", long_about = INIT_LONG)]
     Init {
         /// Role: workstation or compute
-        #[arg(long, default_value = "workstation")]
+        #[arg(short = 'R', long, default_value = "workstation")]
         role: String,
         /// Inventory name (default: short hostname)
-        #[arg(long)]
+        #[arg(short = 'n', long)]
         name: Option<String>,
     },
     /// List or detect registered hosts
-    #[command(subcommand)]
+    #[command(visible_alias = "h", subcommand)]
     Host(HostCmd),
     /// Apply this machine's role (preview; --yes writes)
-    #[command(long_about = APPLY_LONG)]
+    #[command(visible_alias = "a", long_about = APPLY_LONG)]
     Apply {
         /// Write (default is preview)
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         /// Skip brew/apt (shell + ssh-config + features)
-        #[arg(long)]
+        #[arg(short = 'S', long)]
         skip_packages: bool,
     },
     /// Remove apply artifacts (preview; --yes deletes)
@@ -180,21 +190,21 @@ enum Commands {
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         /// Also uninstall role packages
-        #[arg(long)]
+        #[arg(short = 'p', long)]
         packages: bool,
     },
     /// Generate SSH config from hosts (preview; --yes writes)
-    #[command(long_about = SSH_CONFIG_LONG)]
+    #[command(visible_alias = "ssh", long_about = SSH_CONFIG_LONG)]
     SshConfig {
         /// Write config (alias: --write)
         #[arg(short = 'y', long = "yes", visible_alias = "write")]
         yes: bool,
     },
     /// Probe peer TCP/22 and BatchMode SSH
-    #[command(long_about = CHECK_LONG)]
+    #[command(visible_alias = "c", long_about = CHECK_LONG)]
     Check,
     /// Copy SSH keys to peers
-    #[command(subcommand)]
+    #[command(visible_alias = "k", subcommand)]
     Keys(KeysCmd),
     /// Show role features and packages
     #[command(long_about = ROLES_LONG)]
@@ -202,26 +212,26 @@ enum Commands {
         /// Role name (omit for all)
         name: Option<String>,
         /// macos or linux
-        #[arg(long)]
+        #[arg(short = 'o', long)]
         os: Option<String>,
     },
     /// Snapshot host, extras, apply, live, ssh
-    #[command(long_about = STATUS_LONG)]
+    #[command(visible_alias = "s", long_about = STATUS_LONG)]
     Status,
     /// Print product data root
     #[command(long_about = ROOT_LONG)]
     Root,
     /// Install a GitHub Release binary (preview; --yes)
-    #[command(long_about = UPDATE_LONG)]
+    #[command(visible_alias = "u", long_about = UPDATE_LONG)]
     Update {
         /// Release tag (default: latest)
-        #[arg(long)]
+        #[arg(short = 't', long)]
         tag: Option<String>,
         /// Install (default is preview)
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         /// Reinstall even if versions match
-        #[arg(long)]
+        #[arg(short = 'f', long)]
         force: bool,
     },
 }
@@ -248,6 +258,11 @@ enum KeysCmd {
 }
 
 fn main() {
+    if std::env::args_os().nth(1).is_none() {
+        let mut cmd = Cli::command();
+        let _ = cmd.print_help();
+        std::process::exit(0);
+    }
     if let Err(report) = try_main() {
         print_error(&report);
         std::process::exit(1);

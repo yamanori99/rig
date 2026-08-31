@@ -15,6 +15,7 @@ const BOLD: &str = "\x1b[1m";
 const RED: &str = "\x1b[31m";
 const GREEN: &str = "\x1b[32m";
 const CYAN: &str = "\x1b[36m";
+const YELLOW: &str = "\x1b[33m";
 
 fn color_out() -> bool {
     static V: OnceLock<bool> = OnceLock::new();
@@ -142,6 +143,10 @@ fn tidy(s: &str) -> String {
     ellipsize(&s, budget)
 }
 
+fn val(on: bool, s: &str) -> String {
+    wrap(on, YELLOW, s)
+}
+
 fn label(key: &str) -> String {
     format!("{key:<LABEL$}")
 }
@@ -164,7 +169,7 @@ pub fn kv(key: &str, value: impl Display) {
     let on = color_out();
     let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label(key));
-    println!("  {m} {k} {}", tidy(&value.to_string()));
+    println!("  {m} {k} {}", val(on, &tidy(&value.to_string())));
 }
 
 pub fn kvc(value: impl Display) {
@@ -196,7 +201,10 @@ pub fn item(s: impl Display) {
 }
 
 pub fn item2(s: impl Display) {
-    item(s);
+    let on = color_out();
+    let m = wrap(on, DIM, &mark_field(""));
+    let k = wrap(on, DIM, &label(""));
+    println!("  {m} {k} {}", val(on, &tidy(&s.to_string())));
 }
 
 pub fn progress(s: impl Display) {
@@ -230,7 +238,7 @@ fn step(mark: &str, id: &str, detail: &str) {
     if d.is_empty() {
         println!("  {mark_c} {id_c}");
     } else {
-        println!("  {mark_c} {id_c} {d}");
+        println!("  {mark_c} {id_c} {}", val(on, &d));
     }
 }
 
@@ -282,16 +290,16 @@ pub fn data_hint(root: &Path, os: &str) {
     let root_k = wrap(on, DIM, &label("root"));
     let hosts_k = wrap(on, DIM, &label("hosts"));
     let overlay_k = wrap(on, DIM, &label("overlay"));
-    let root_s = tidy(&root.display().to_string());
-    let os_s = wrap(on, DIM, &format!("os={os}"));
+    let root_s = val(on, &tidy(&root.display().to_string()));
+    let os_s = format!("os={}", val(on, os));
     eprintln!("  {m} {root_k} {root_s}  {os_s}");
     eprintln!(
         "  {m} {hosts_k} {}",
-        tidy(&format!("{}/", root.join("hosts").display()))
+        val(on, &tidy(&format!("{}/", root.join("hosts").display())))
     );
     eprintln!(
         "  {m} {overlay_k} {}",
-        tidy(&format!("{}/", root.join("overlay").display()))
+        val(on, &tidy(&format!("{}/", root.join("overlay").display())))
     );
 }
 
@@ -310,6 +318,17 @@ pub fn mark_pad(mark: &str, width: usize) -> String {
 
 pub fn sudo_command() -> std::process::Command {
     std::process::Command::new("sudo")
+}
+
+/// Compact mark for `rig` / `rig -h`.
+pub fn banner() -> String {
+    let on = color_out();
+    let top = wrap(on, DIM, "  ┌───────┐");
+    let bot = wrap(on, DIM, "  └───────┘");
+    let name = paint(on, &[BOLD, CYAN], "rig");
+    let mid_l = wrap(on, DIM, "  │  ");
+    let mid_r = wrap(on, DIM, "  │");
+    format!("{top}\n{mid_l}{name}{mid_r}\n{bot}")
 }
 
 #[cfg(test)]

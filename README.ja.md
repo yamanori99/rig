@@ -158,18 +158,20 @@ git に toml がすでにあるなら `rig init` は実行しない。init は
 ## コマンド
 
 ```text
-rig --help                       # 概要
-rig root                         # データのパス
-rig status                       # このマシン
-rig init [--role workstation|compute] [--name HOST]
-rig host list | detect
-rig roles [NAME] [--os macos|linux]
-rig apply [-y] [--skip-packages] # preview; -y で書く
-rig check
-rig keys distribute [-y]         # preview; -y でコピー
-rig clean [-y] [--packages]      # preview; -y で削除
-rig ssh-config [-y|--write]      # preview; -y で書く
-rig update [-y] [--force]        # preview; -y で入れる
+rig -h                           # 概要 (ロゴ)
+rig -v                           # バージョン
+rig s | status                   # このマシン
+rig a -y | apply -y              # preview; -y で書く
+rig c | check
+rig i | init [-R role] [-n HOST]
+rig h list | host list
+rig roles [NAME] [-o macos|linux]
+rig k distribute -y | keys ...
+rig ssh-config -y | ssh -y
+rig u -y | update -y [-f]
+rig root                         # データのパス (stdout 1 行目)
+rig apply [-y] [-S]              # -S で packages を飛ばす
+rig clean [-y] [-p]              # -p でパッケージ削除
 ```
 
 多くのコマンドは、データのパスを stderr に出す。長い説明は
@@ -202,7 +204,7 @@ push の前に `gitleaks protect --staged -c .gitleaks.toml` を実行する。
 
 ## Status
 
-`v0.2.17` — CLI の列揃えと `~` パス。パスワード表示はわかりやすく戻す。
+`v0.2.18` — help のロゴ、`-v`、短縮、値を黄色。
 
 ## License
 
