@@ -193,6 +193,25 @@ _dots_max_width() {
   print -r -- $w
 }
 
+# fastfetch が末尾に ANSI だけの空行を付けるので、見た目の空行は落とす
+_dots_trim_blank_lines() {
+  local -a lines out
+  local line
+  lines=("${(@f)1}")
+  out=()
+  for line in "${lines[@]}"; do
+    if (( $(_dots_visible_len "$line") > 0 )); then
+      out+=("$line")
+    elif (( ${#out} > 0 )); then
+      out+=("$line")
+    fi
+  done
+  while (( ${#out} > 0 )) && (( $(_dots_visible_len "${out[-1]}") == 0 )); do
+    out=("${out[@]:0:${#out}-1}")
+  done
+  print -r -- "${(F)out}"
+}
+
 _dots_hrule() {
   local n=${1:-${DOTS_BANNER_WIDTH:-40}}
   (( n < 1 )) && n=1
@@ -203,6 +222,7 @@ _dots_hrule() {
 _dots_frame() {
   local body="$1"
   local w tw
+  body=$(_dots_trim_blank_lines "$body")
   w=$(_dots_max_width "$body")
   if [[ -n ${DOTS_SSH_BANNER:-} ]]; then
     tw=$(_dots_visible_len "$DOTS_SSH_BANNER")
