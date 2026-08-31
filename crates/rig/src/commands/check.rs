@@ -30,44 +30,86 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         return Ok(());
     }
 
-    let mut ssh_ok: Vec<(String, String, String)> = Vec::new();
-    for peer in peers {
-        ui::group(&peer.name);
+    struct Row {
+        peer: String,
+        link: String,
+        ip: String,
+        status: String,
+        ssh: bool,
+    }
+
+    let mut rows: Vec<Row> = Vec::new();
+    for peer in &peers {
+        let mut first = true;
         for path in peer.ssh_paths() {
             let tcp = tcp_port_open(&path.ip, 22);
             let ssh = tcp && ssh_batch_ok(&path.alias);
-            let link = path.link.as_str();
-            let detail = if ssh {
-                ssh_ok.push((
-                    peer.name.clone(),
-                    path.alias.clone(),
-                    path.link.comment().to_string(),
-                ));
-                format!("{}  {}  ssh ok", path.alias, path.ip)
+            let status = if ssh {
+                "ssh ok".to_string()
             } else if tcp {
-                format!(
-                    "{}  {}  tcp open  ssh no (try: rig host keys -y)",
-                    path.alias, path.ip
-                )
+                "tcp/22 open  ssh fail".to_string()
             } else {
-                format!("{}  {}  no tcp/22", path.alias, path.ip)
+                "tcp/22 closed".to_string()
             };
-            if ssh {
-                ui::ok(link, &detail);
-            } else {
-                ui::fail(link, &detail);
-            }
+            rows.push(Row {
+                peer: if first {
+                    peer.name.clone()
+                } else {
+                    String::new()
+                },
+                link: path.link.as_str().to_string(),
+                ip: path.ip.clone(),
+                status,
+                ssh,
+            });
+            first = false;
         }
     }
 
+    let pw = rows
+        .iter()
+        .map(|r| r.peer.chars().count())
+        .max()
+        .unwrap_or(4)
+        .max(4);
+    let iw = rows
+        .iter()
+        .map(|r| r.ip.chars().count())
+        .max()
+        .unwrap_or(2)
+        .max(2);
+    let sw = rows
+        .iter()
+        .map(|r| r.status.chars().count())
+        .max()
+        .unwrap_or(6)
+        .max(6);
+
     ui::blank();
-    if ssh_ok.is_empty() {
-        ui::empty("no passwordless SSH yet — try: rig host keys -y");
-    } else {
-        ui::section("can ssh");
-        for (peer, alias, how) in ssh_ok {
-            ui::kv("ssh", format!("ssh {alias}  {peer}  {how}"));
-        }
+    ui::table_head(&format!(
+        "{}  {}  {}  {}",
+        ui::pad("peer", pw),
+        ui::pad("link", 3),
+        ui::pad("ip", iw),
+        ui::pad("status", sw)
+    ));
+    let mut any_ssh = false;
+    for r in &rows {
+        any_ssh |= r.ssh;
+        let st = ui::pad(&r.status, sw);
+        let st = if r.ssh { ui::good(&st) } else { ui::bad(&st) };
+        ui::table_row(format!(
+            "{}  {}  {}  {}",
+            ui::pad(&r.peer, pw),
+            ui::pad(&r.link, 3),
+            ui::pad(&r.ip, iw),
+            st
+        ));
+    }
+
+    if !any_ssh {
+        ui::blank();
+        ui::empty("ssh fail on every path — try: rig host keys -y");
     }
     Ok(())
 }

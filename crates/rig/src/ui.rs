@@ -286,10 +286,6 @@ pub fn data_hint(root: &Path, os: &str) {
     eprintln!("  {k} {path}  {os_s}");
 }
 
-pub fn group(name: &str) {
-    println!("  {}", wrap(color_out(), CYAN, name));
-}
-
 pub fn table_head(line: &str) {
     println!("  {}", wrap(color_out(), DIM, line));
 }
@@ -306,6 +302,14 @@ pub fn pad(s: &str, width: usize) -> String {
     } else {
         format!("{s}{}", " ".repeat(width - n))
     }
+}
+
+pub fn good(s: &str) -> String {
+    wrap(color_out(), GREEN, s)
+}
+
+pub fn bad(s: &str) -> String {
+    wrap(color_out(), RED, s)
 }
 
 pub fn sudo_command() -> std::process::Command {
