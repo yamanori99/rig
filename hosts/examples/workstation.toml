@@ -7,7 +7,7 @@
 # `name` equal to the short hostname (or pass --name at init).
 #
 # To reach compute nodes, add *their* host files beside this one with [[ssh]]
-# filled in, then:  rig apply   or   rig ssh-config --yes
+# filled in, then:  rig apply
 
 name = "my-laptop"
 role = "workstation"

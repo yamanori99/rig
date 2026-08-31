@@ -71,7 +71,7 @@ curl -fsSL \
 ```
 
 This does not undo packages or shell settings from `rig apply`. To undo
-those, run `rig clean --yes` first, while the binary is still there.
+those, run `rig apply --undo --yes` first, while the binary is still there.
 
 ## Use
 
@@ -87,9 +87,8 @@ rig status
 Then:
 
 ```bash
-rig ssh-config --yes
-rig keys distribute --yes
-rig check
+rig host keys -y
+rig host check
 ```
 
 ### Where files live
@@ -140,7 +139,7 @@ without that symlink. On the second machine:
 
 ```bash
 ln -sfn ~/rig-hosts "$(rig root | head -1)/hosts"
-rig host detect            # should print this machine's name
+rig status                 # this machine should match a host file
 rig apply --yes
 ```
 
@@ -160,20 +159,13 @@ at that path. Fix the link. Do not run init again.
 ## Commands
 
 ```text
-rig -h                           # overview (logo)
-rig -v                           # version
-rig s | status                   # this machine
-rig a -y | apply -y              # preview; -y writes
-rig c | check
-rig i | init [-R role] [-n HOST]
-rig h list | host list
-rig roles [NAME] [-o macos|linux]
-rig k distribute -y | keys ...
-rig ssh-config -y | ssh -y
-rig u -y | update -y [-f]
-rig root                         # data path (stdout line 1)
-rig apply [-y] [-S]              # -S skip packages
-rig clean [-y] [-p]              # -p uninstall packages
+rig                 # this help
+rig -v
+
+rig init -R workstation|compute
+rig apply -y
+rig status
+rig host            # list | check | keys
 ```
 
 Most commands print the data path on stderr. For the long help, run
@@ -203,10 +195,6 @@ Linux check (Apple `container`):
 [testenv/apple-container/README.md](testenv/apple-container/README.md)
 
 Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
-
-## Status
-
-`v0.3.1` — version on `rig` / `rig -h` banner.
 
 ## License
 

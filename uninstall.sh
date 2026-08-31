@@ -67,4 +67,4 @@ fi
 
 echo "done"
 echo "  note     shell snippets / packages from apply are not undone"
-echo "  next     rig clean --yes before uninstall if the binary is still there"
+echo "  next     rig apply --undo --yes before uninstall if the binary is still there"

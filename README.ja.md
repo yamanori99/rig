@@ -70,7 +70,7 @@ curl -fsSL \
 ```
 
 `rig apply` が入れたパッケージやシェル設定は、これでは元に戻らない。
-戻すなら、バイナリが残っているうちに `rig clean --yes` を先に実行する。
+戻すなら、バイナリが残っているうちに `rig apply --undo --yes` を先に実行する。
 
 ## 使い方
 
@@ -86,9 +86,8 @@ rig status
 続けて:
 
 ```bash
-rig ssh-config --yes
-rig keys distribute --yes
-rig check
+rig host keys -y
+rig host check
 ```
 
 ### ファイルの場所
@@ -138,7 +137,7 @@ $(rig root)/hosts  ->  ~/rig-hosts
 
 ```bash
 ln -sfn ~/rig-hosts "$(rig root | head -1)/hosts"
-rig host detect            # このマシンの name が出ること
+rig status                 # このマシンが host ファイルに載ること
 rig apply --yes
 ```
 
@@ -158,20 +157,13 @@ git に toml がすでにあるなら `rig init` は実行しない。init は
 ## コマンド
 
 ```text
-rig -h                           # 概要 (ロゴ)
-rig -v                           # バージョン
-rig s | status                   # このマシン
-rig a -y | apply -y              # preview; -y で書く
-rig c | check
-rig i | init [-R role] [-n HOST]
-rig h list | host list
-rig roles [NAME] [-o macos|linux]
-rig k distribute -y | keys ...
-rig ssh-config -y | ssh -y
-rig u -y | update -y [-f]
-rig root                         # データのパス (stdout 1 行目)
-rig apply [-y] [-S]              # -S で packages を飛ばす
-rig clean [-y] [-p]              # -p でパッケージ削除
+rig                 # この help
+rig -v
+
+rig init -R workstation|compute
+rig apply -y
+rig status
+rig host            # list | check | keys
 ```
 
 多くのコマンドは、データのパスを stderr に出す。長い説明は
@@ -201,10 +193,6 @@ Linux の確認 (Apple `container`):
 [testenv/apple-container/README.md](testenv/apple-container/README.md)
 
 push の前に `gitleaks protect --staged -c .gitleaks.toml` を実行する。
-
-## Status
-
-`v0.3.1` — `rig` / `rig -h` のロゴにバージョン。
 
 ## License
 

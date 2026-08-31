@@ -70,7 +70,7 @@ pub fn run(root: &std::path::Path) -> Result<()> {
     if any_ssh {
         ui::empty("at least one passwordless SSH path works");
     } else {
-        ui::empty("no passwordless SSH yet — try: rig keys distribute --yes");
+        ui::empty("no passwordless SSH yet — try: rig host keys -y");
     }
     Ok(())
 }

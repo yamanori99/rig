@@ -41,27 +41,20 @@ const DATA_DEFAULT: &str = "pass --root / RIG_ROOT";
 fn after_help() -> String {
     format!(
         "\
-Typical flow:
-  rig init --role workstation|compute
-  edit hosts/<name>.toml  (and peer files with [[ssh]])
-  rig apply --yes
-  rig check
-  rig keys distribute --yes
-
-Data (rig root):
-  hosts      this host + peers  ([[ssh]], packages add/remove)
-  overlay    personal shell / tmux / Cursor overrides
-  templates  product defaults — do not edit; use overlay/
-  default    {DATA_DEFAULT}
-  path       rig root   (or --root / RIG_ROOT)
-
-Examples:
-  rig status
-  rig s
+Flow
+  rig init -R workstation|compute
+  edit hosts/<name>.toml              peers: [[ssh]]
   rig apply -y
-  rig -v
-  rig roles compute -o macos
-  rig host detect
+  rig host check                      then: rig host keys -y
+
+Layout  (product root)
+  hosts/       this host + peers
+  overlay/     your shell / tmux / Cursor
+  templates/   product defaults — do not edit
+  default      {DATA_DEFAULT}
+
+  -y write   -v version   -r root   -h help
+  rig host    list | check | keys
 "
     )
 }
@@ -77,13 +70,16 @@ Preview the plan, then write with --yes.
 
 Links shell/tmux, installs brew/apt sets, writes ssh config, then
 role features (gui, cursor, remote-login, screen-sharing, tailscale,
-thunderbolt, stay-awake). --skip-packages leaves brew/apt alone.";
+thunderbolt, stay-awake). --skip-packages leaves brew/apt alone.
+
+--undo reverses apply (preview; --yes deletes). --packages with
+--undo also uninstalls role brew/apt packages.";
 
 const CLEAN_LONG: &str = "\
 Preview deletions, then run with --yes.
 
-Removes apply state and managed links. --packages also uninstalls
-role brew/apt packages (destructive).";
+Same as `rig apply --undo`. Removes apply state and managed links.
+--packages also uninstalls role brew/apt packages (destructive).";
 
 const SSH_CONFIG_LONG: &str = "\
 Build ~/.ssh/config.d/rig.conf from every hosts/*.toml [[ssh]] path.
@@ -94,7 +90,7 @@ in ~/.ssh/config if needed.";
 const CHECK_LONG: &str = "\
 For each peer path: TCP/22, then ssh -o BatchMode=yes.
 
-Does not copy keys. Use `rig keys distribute` after check fails
+Does not copy keys. Use `rig host keys -y` after check fails
 on auth.";
 
 const ROLES_LONG: &str = "\
@@ -114,6 +110,12 @@ const UPDATE_LONG: &str = "\
 Install a GitHub Release binary to ~/.local/bin/rig.
 
 Preview first; --yes downloads. --force reinstalls the same tag.";
+
+const HOST_AFTER: &str = "
+  rig host list
+  rig host check
+  rig host keys -y
+";
 
 const HOST_LIST_LONG: &str = "\
 List hosts/*.toml: name, role, os, shell, network paths.";
@@ -138,6 +140,7 @@ Prefers lan/thunderbolt, then vpn. Preview without --yes.";
     propagate_version = true,
     arg_required_else_help = true,
     subcommand_required = true,
+    disable_help_subcommand = true,
     color = ColorChoice::Auto,
     styles = clap_styles(),
     about = "Opinionated setup for workstation and compute machines",
@@ -166,7 +169,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Seed hosts/<name>.toml from a role
+    /// Write hosts/<name>.toml
     #[command(visible_alias = "i", long_about = INIT_LONG)]
     Init {
         /// Role: workstation or compute
@@ -176,21 +179,39 @@ enum Commands {
         #[arg(short = 'n', long)]
         name: Option<String>,
     },
-    /// List or detect registered hosts
-    #[command(visible_alias = "h", subcommand)]
-    Host(HostCmd),
-    /// Apply this machine's role (preview; --yes writes)
+    /// Apply this host (preview; -y writes)
     #[command(visible_alias = "a", long_about = APPLY_LONG)]
     Apply {
         /// Write (default is preview)
         #[arg(short = 'y', long = "yes")]
         yes: bool,
         /// Skip brew/apt (shell + ssh-config + features)
-        #[arg(short = 'S', long)]
+        #[arg(short = 'S', long, conflicts_with = "undo")]
         skip_packages: bool,
+        /// Reverse apply (preview; -y deletes)
+        #[arg(long = "undo")]
+        undo: bool,
+        /// With --undo, also uninstall role packages
+        #[arg(short = 'p', long, requires = "undo")]
+        packages: bool,
     },
-    /// Remove apply artifacts (preview; --yes deletes)
-    #[command(long_about = CLEAN_LONG)]
+    /// Show this machine
+    #[command(visible_alias = "s", long_about = STATUS_LONG)]
+    Status,
+    /// Peers and SSH
+    #[command(visible_alias = "h", subcommand)]
+    Host(HostCmd),
+    /// Role features and packages
+    #[command(hide = true, long_about = ROLES_LONG)]
+    Roles {
+        /// Role name (omit for all)
+        name: Option<String>,
+        /// macos or linux
+        #[arg(short = 'o', long)]
+        os: Option<String>,
+    },
+    /// Undo apply links (preview; -y deletes)
+    #[command(hide = true, long_about = CLEAN_LONG)]
     Clean {
         /// Delete (default is preview)
         #[arg(short = 'y', long = "yes")]
@@ -199,36 +220,8 @@ enum Commands {
         #[arg(short = 'p', long)]
         packages: bool,
     },
-    /// Generate SSH config from hosts (preview; --yes writes)
-    #[command(visible_alias = "ssh", long_about = SSH_CONFIG_LONG)]
-    SshConfig {
-        /// Write config (alias: --write)
-        #[arg(short = 'y', long = "yes", visible_alias = "write")]
-        yes: bool,
-    },
-    /// Probe peer TCP/22 and BatchMode SSH
-    #[command(visible_alias = "c", long_about = CHECK_LONG)]
-    Check,
-    /// Copy SSH keys to peers
-    #[command(visible_alias = "k", subcommand)]
-    Keys(KeysCmd),
-    /// Show role features and packages
-    #[command(long_about = ROLES_LONG)]
-    Roles {
-        /// Role name (omit for all)
-        name: Option<String>,
-        /// macos or linux
-        #[arg(short = 'o', long)]
-        os: Option<String>,
-    },
-    /// Snapshot host, extras, apply, live, ssh
-    #[command(visible_alias = "s", long_about = STATUS_LONG)]
-    Status,
-    /// Print product data root
-    #[command(long_about = ROOT_LONG)]
-    Root,
-    /// Install a GitHub Release binary (preview; --yes)
-    #[command(visible_alias = "u", long_about = UPDATE_LONG)]
+    /// Install a GitHub Release
+    #[command(hide = true, visible_alias = "u", long_about = UPDATE_LONG)]
     Update {
         /// Release tag (default: latest)
         #[arg(short = 't', long)]
@@ -240,16 +233,55 @@ enum Commands {
         #[arg(short = 'f', long)]
         force: bool,
     },
+    /// Print the product data path
+    #[command(hide = true, long_about = ROOT_LONG)]
+    Root,
+    /// Probe peer TCP/22 and SSH
+    #[command(hide = true, visible_alias = "c", long_about = CHECK_LONG)]
+    Check,
+    /// Copy pubkey to peers
+    #[command(hide = true, visible_alias = "k", subcommand)]
+    Keys(KeysCmd),
+    /// Write ~/.ssh/config.d/rig.conf
+    #[command(hide = true, visible_alias = "ssh", long_about = SSH_CONFIG_LONG)]
+    SshConfig {
+        /// Write config (alias: --write)
+        #[arg(short = 'y', long = "yes", visible_alias = "write")]
+        yes: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
+#[command(
+    arg_required_else_help = true,
+    subcommand_required = true,
+    disable_help_subcommand = true,
+    after_help = HOST_AFTER
+)]
 enum HostCmd {
     /// List hosts/*.toml
     #[command(long_about = HOST_LIST_LONG)]
     List,
     /// Match this hostname to a host file
-    #[command(long_about = HOST_DETECT_LONG)]
+    #[command(hide = true, long_about = HOST_DETECT_LONG)]
     Detect,
+    /// Probe peer TCP/22 and SSH
+    #[command(long_about = CHECK_LONG)]
+    Check,
+    /// Copy pubkey to peers
+    #[command(long_about = KEYS_DIST_LONG)]
+    Keys {
+        /// Copy keys (default is preview)
+        #[arg(short = 'y', long = "yes")]
+        yes: bool,
+    },
+    /// Write ~/.ssh/config.d/rig.conf
+    #[command(hide = true, name = "ssh-config", alias = "ssh", long_about = SSH_CONFIG_LONG)]
+    SshConfig {
+        /// Write config (alias: --write)
+        #[arg(short = 'y', long = "yes", visible_alias = "write")]
+        yes: bool,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -306,11 +338,26 @@ fn try_main() -> Result<()> {
         Commands::Init { role, name } => commands::init::run(&root, &role, name.as_deref())?,
         Commands::Host(HostCmd::List) => commands::host::list(&root)?,
         Commands::Host(HostCmd::Detect) => commands::host::detect(&root)?,
-        Commands::Apply { yes, skip_packages } => commands::apply::run(&root, yes, skip_packages)?,
+        Commands::Host(HostCmd::Check) | Commands::Check => commands::check::run(&root)?,
+        Commands::Host(HostCmd::Keys { yes }) | Commands::Keys(KeysCmd::Distribute { yes }) => {
+            commands::keys::distribute(&root, yes)?
+        }
+        Commands::Host(HostCmd::SshConfig { yes }) | Commands::SshConfig { yes } => {
+            commands::ssh_config::run(&root, yes)?
+        }
+        Commands::Apply {
+            yes,
+            skip_packages,
+            undo,
+            packages,
+        } => {
+            if undo {
+                commands::clean::run(&root, yes, packages)?
+            } else {
+                commands::apply::run(&root, yes, skip_packages)?
+            }
+        }
         Commands::Clean { yes, packages } => commands::clean::run(&root, yes, packages)?,
-        Commands::SshConfig { yes } => commands::ssh_config::run(&root, yes)?,
-        Commands::Check => commands::check::run(&root)?,
-        Commands::Keys(KeysCmd::Distribute { yes }) => commands::keys::distribute(&root, yes)?,
         Commands::Roles { name, os } => {
             commands::roles::run(&root, name.as_deref(), os.as_deref())?
         }

@@ -61,7 +61,7 @@ pub fn run(root: &Path) -> Result<()> {
     ui::kv(
         "hosts",
         format!(
-            "{} file(s), {peer_paths} peer path(s)  (rig check)",
+            "{} file(s), {peer_paths} peer path(s)  (rig host check)",
             hosts.len()
         ),
     );
@@ -108,7 +108,7 @@ pub fn run(root: &Path) -> Result<()> {
             }
         }
     } else {
-        ui::kv("ssh", "not generated  (rig ssh-config --yes)");
+        ui::kv("ssh", "not generated  (rig host ssh-config -y)");
     }
 
     let overlay = root.join("overlay");

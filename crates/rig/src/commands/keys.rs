@@ -9,7 +9,7 @@ pub fn distribute(root: &std::path::Path, yes: bool) -> Result<()> {
     let self_host = schema::detect_current_host(&hosts)
         .ok_or_else(|| RigError::Msg(schema::unregistered_hint(root, &hosts)))?;
 
-    ui::title("keys distribute", !yes);
+    ui::title("host keys", !yes);
     ui::kv("self", &self_host.name);
     ui::kv("pubkey", "~/.ssh/id_ed25519.pub");
     ui::kv("hosts", format!("{}/", root.join("hosts").display()));
