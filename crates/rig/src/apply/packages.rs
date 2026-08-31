@@ -47,15 +47,14 @@ fn brew_bundle(root: &Path, sets: &[String]) -> Result<PackageReport> {
             continue;
         }
         let path = file.display().to_string();
-        brew_banner(&format!("bundle  {set}"));
         let started = Instant::now();
-        let success = run_brew(&["bundle", "--file", &path, "--no-upgrade"])?;
+        let (success, already) = run_brew_stats(&["bundle", "--file", &path, "--no-upgrade"])?;
         let took = fmt_dur(started.elapsed().as_secs());
         if success {
-            crate::ui::item(format!("done    {set}  {took}"));
+            crate::ui::note(set, format!("{already} already  {took}"));
             notes.push(format!("{set}: ok"));
         } else {
-            crate::ui::item(format!("fail    {set}  {took}"));
+            crate::ui::note(set, format!("fail  {took}"));
             notes.push(format!("{set}: brew bundle failed"));
             ok = false;
         }
@@ -70,12 +69,17 @@ fn brew_bundle(root: &Path, sets: &[String]) -> Result<PackageReport> {
 }
 
 pub(crate) fn brew_banner(title: &str) {
-    crate::ui::item(title);
+    crate::ui::progress(title);
     let _ = io::stdout().flush();
 }
 
 /// Run brew with compact, color-forced output (no --verbose dump).
 pub(crate) fn run_brew(args: &[&str]) -> Result<bool> {
+    Ok(run_brew_stats(args)?.0)
+}
+
+fn run_brew_stats(args: &[&str]) -> Result<(bool, usize)> {
+    let already = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let mut child = Command::new("brew")
         .args(args)
         .env("HOMEBREW_COLOR", "1")
@@ -94,9 +98,11 @@ pub(crate) fn run_brew(args: &[&str]) -> Result<bool> {
     let start = Instant::now();
 
     let last_out = last.clone();
-    let t_out = thread::spawn(move || pump_brew(stdout, last_out));
+    let already_out = already.clone();
+    let t_out = thread::spawn(move || pump_brew(stdout, last_out, already_out));
     let last_err = last.clone();
-    let t_err = thread::spawn(move || pump_brew(stderr, last_err));
+    let already_err = already.clone();
+    let t_err = thread::spawn(move || pump_brew(stderr, last_err, already_err));
 
     let stop_beat = stop.clone();
     let last_beat = last.clone();
@@ -120,10 +126,11 @@ pub(crate) fn run_brew(args: &[&str]) -> Result<bool> {
     let _ = t_out.join();
     let _ = t_err.join();
     let _ = t_beat.join();
-    Ok(status.success())
+    Ok((status.success(), already.load(Ordering::Relaxed)))
 }
 
-fn run_prefixed(mut cmd: Command) -> Result<bool> {
+fn run_prefixed(mut cmd: Command) -> Result<(bool, usize)> {
+    let already = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let mut child = cmd
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -134,19 +141,25 @@ fn run_prefixed(mut cmd: Command) -> Result<bool> {
     let last = Arc::new(Mutex::new(Instant::now()));
     let t_out = {
         let last = last.clone();
-        thread::spawn(move || pump_all(stdout, last))
+        let already = already.clone();
+        thread::spawn(move || pump_apt(stdout, last, already))
     };
     let t_err = {
         let last = last.clone();
-        thread::spawn(move || pump_all(stderr, last))
+        let already = already.clone();
+        thread::spawn(move || pump_apt(stderr, last, already))
     };
     let status = child.wait().map_err(RigError::Io)?;
     let _ = t_out.join();
     let _ = t_err.join();
-    Ok(status.success())
+    Ok((status.success(), already.load(Ordering::Relaxed)))
 }
 
-fn pump_all(stream: impl io::Read + Send, last: Arc<Mutex<Instant>>) {
+fn pump_apt(
+    stream: impl io::Read + Send,
+    last: Arc<Mutex<Instant>>,
+    already: Arc<std::sync::atomic::AtomicUsize>,
+) {
     let reader = BufReader::new(stream);
     for line in reader.lines() {
         let Ok(line) = line else {
@@ -155,57 +168,113 @@ fn pump_all(stream: impl io::Read + Send, last: Arc<Mutex<Instant>>) {
         if let Ok(mut t) = last.lock() {
             *t = Instant::now();
         }
-        let t = strip_ansi(&line);
-        let t = t.trim();
-        if t.is_empty() {
-            continue;
-        }
-        crate::ui::item(t);
-    }
-}
-
-fn pump_brew(stream: impl io::Read + Send, last: Arc<Mutex<Instant>>) {
-    let reader = BufReader::new(stream);
-    for line in reader.lines() {
-        let Ok(line) = line else {
-            break;
-        };
-        if let Ok(mut t) = last.lock() {
-            *t = Instant::now();
-        }
-        if let Some(shown) = restyle_brew_line(&line) {
-            clear_spinner();
-            crate::ui::item(shown);
+        match restyle_apt_line(&line) {
+            BrewShow::Skip => {}
+            BrewShow::Already => {
+                already.fetch_add(1, Ordering::Relaxed);
+            }
+            BrewShow::Progress(s) => crate::ui::progress(s),
+            BrewShow::Line(s) => crate::ui::item(s),
         }
     }
 }
 
-fn restyle_brew_line(raw: &str) -> Option<String> {
+fn restyle_apt_line(raw: &str) -> BrewShow {
     let line = strip_ansi(raw);
     let line = line.trim();
     if line.is_empty() {
-        return None;
+        return BrewShow::Skip;
     }
     let lower = line.to_ascii_lowercase();
-    if lower.contains("brewfile dependencies") || lower.contains("`brew bundle` complete") {
-        return None;
+    if lower.contains("already the newest") || lower.contains("already installed") {
+        return BrewShow::Already;
     }
-    if let Some(name) = line.strip_prefix("Using ") {
-        return Some(format!("already  {}", name.trim()));
+    if lower.starts_with("e:")
+        || lower.starts_with("err:")
+        || lower.starts_with("error")
+        || lower.contains("unable to")
+    {
+        return BrewShow::Line(line.to_string());
+    }
+    if lower.starts_with("get:")
+        || lower.starts_with("unpacking")
+        || lower.starts_with("setting up")
+    {
+        return BrewShow::Progress(line.to_string());
+    }
+    BrewShow::Skip
+}
+
+fn pump_brew(
+    stream: impl io::Read + Send,
+    last: Arc<Mutex<Instant>>,
+    already: Arc<std::sync::atomic::AtomicUsize>,
+) {
+    let reader = BufReader::new(stream);
+    for line in reader.lines() {
+        let Ok(line) = line else {
+            break;
+        };
+        if let Ok(mut t) = last.lock() {
+            *t = Instant::now();
+        }
+        match restyle_brew_line(&line) {
+            BrewShow::Skip => {}
+            BrewShow::Already => {
+                already.fetch_add(1, Ordering::Relaxed);
+            }
+            BrewShow::Progress(s) => {
+                clear_spinner();
+                crate::ui::progress(s);
+            }
+            BrewShow::Line(s) => {
+                clear_spinner();
+                crate::ui::item(s);
+            }
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum BrewShow {
+    Skip,
+    Already,
+    Progress(String),
+    Line(String),
+}
+
+fn restyle_brew_line(raw: &str) -> BrewShow {
+    let line = strip_ansi(raw);
+    let line = line.trim();
+    if line.is_empty() {
+        return BrewShow::Skip;
+    }
+    let lower = line.to_ascii_lowercase();
+    if lower.contains("brewfile dependencies")
+        || lower.contains("`brew bundle` complete")
+        || lower.contains("circular dependency")
+    {
+        return BrewShow::Skip;
+    }
+    if line.starts_with("Using ") {
+        return BrewShow::Already;
     }
     if let Some(name) = line.strip_prefix("Installing ") {
-        return Some(format!("install  {}", name.trim()));
+        return BrewShow::Progress(format!("install  {}", name.trim()));
     }
     if let Some(rest) = line.strip_prefix("==> ") {
         if rest.to_ascii_lowercase().starts_with("pouring") {
-            return None;
+            return BrewShow::Skip;
         }
-        return Some(rest.to_string());
+        return BrewShow::Progress(rest.to_string());
     }
-    if lower.starts_with("error") || lower.starts_with("warning") || lower.starts_with("fatal") {
-        return Some(line.to_string());
+    if lower.starts_with("warning") {
+        return BrewShow::Skip;
     }
-    None
+    if lower.starts_with("error") || lower.starts_with("fatal") {
+        return BrewShow::Line(line.to_string());
+    }
+    BrewShow::Skip
 }
 
 fn clear_spinner() {
@@ -269,15 +338,15 @@ fn apt_install(root: &Path, sets: &[String]) -> Result<PackageReport> {
 
     brew_banner("apt-get install");
     let started = Instant::now();
-    let mut cmd = Command::new("sudo");
+    let mut cmd = crate::ui::sudo_command();
     cmd.args(["apt-get", "install", "-y"]);
     cmd.args(&pkgs);
-    let success = run_prefixed(cmd)?;
+    let (success, already) = run_prefixed(cmd)?;
     let took = fmt_dur(started.elapsed().as_secs());
     if success {
-        crate::ui::item(format!("done    apt  {took}"));
+        crate::ui::note("apt", format!("{already} already  {took}"));
     } else {
-        crate::ui::item(format!("fail    apt  {took}"));
+        crate::ui::note("apt", format!("fail  {took}"));
     }
     Ok(PackageReport {
         backend: "apt",
@@ -388,7 +457,7 @@ pub fn print_extras(root: &Path, sets: &[String], os: OsKind) -> Result<()> {
     crate::ui::kvc("installed besides recommended (brew deps omitted)");
     let show = extra.len().min(EXTRA_SHOW);
     for name in &extra[..show] {
-        crate::ui::item(name);
+        crate::ui::note("pkg", name);
     }
     if extra.len() > EXTRA_SHOW {
         crate::ui::item(format!("… {} more", extra.len() - EXTRA_SHOW));
@@ -410,26 +479,45 @@ fn which(bin: &str) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::restyle_brew_line;
+    use super::{restyle_apt_line, restyle_brew_line, BrewShow};
 
     #[test]
     fn restyle_using_and_install() {
-        assert_eq!(
-            restyle_brew_line("Using cmake"),
-            Some("already  cmake".into())
-        );
+        assert_eq!(restyle_brew_line("Using cmake"), BrewShow::Already);
         assert_eq!(
             restyle_brew_line("Installing llvm"),
-            Some("install  llvm".into())
+            BrewShow::Progress("install  llvm".into())
         );
-        assert_eq!(restyle_brew_line("==> Pouring llvm.bottle.tar.gz"), None);
+        assert_eq!(
+            restyle_brew_line("==> Pouring llvm.bottle.tar.gz"),
+            BrewShow::Skip
+        );
         assert_eq!(
             restyle_brew_line("==> Fetching llvm"),
-            Some("Fetching llvm".into())
+            BrewShow::Progress("Fetching llvm".into())
         );
         assert_eq!(
             restyle_brew_line("`brew bundle` complete! 38 Brewfile dependencies now installed."),
-            None
+            BrewShow::Skip
+        );
+        assert_eq!(
+            restyle_brew_line(
+                "Warning: Formulae dependency graph sorting found a circular dependency:"
+            ),
+            BrewShow::Skip
+        );
+    }
+
+    #[test]
+    fn restyle_apt_hides_noise() {
+        assert_eq!(
+            restyle_apt_line("git is already the newest version (1:2.0)."),
+            BrewShow::Already
+        );
+        assert_eq!(restyle_apt_line("Reading package lists..."), BrewShow::Skip);
+        assert_eq!(
+            restyle_apt_line("E: Unable to locate package foo"),
+            BrewShow::Line("E: Unable to locate package foo".into())
         );
     }
 }

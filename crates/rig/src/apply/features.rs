@@ -302,7 +302,7 @@ fn apply_stay_awake_linux() -> Result<StepReport> {
 }
 
 fn sudo_write(path: &str, contents: &str) -> Result<bool> {
-    let mut child = Command::new("sudo")
+    let mut child = crate::ui::sudo_command()
         .args(["tee", path])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -356,7 +356,7 @@ fn ensure_tailscaled_macos() -> Result<Option<String>> {
 
     let existing = std::fs::read_to_string(&path).ok();
     if existing.as_deref() != Some(desired.as_str()) {
-        let mut child = Command::new("sudo")
+        let mut child = crate::ui::sudo_command()
             .args(["tee", &path])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
@@ -498,7 +498,7 @@ fn ensure_thunderbolt_launchdaemon(ip: &str) -> Result<Option<String>> {
     }
 
     // Write via sudo tee
-    let mut child = Command::new("sudo")
+    let mut child = crate::ui::sudo_command()
         .args(["tee", &path])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -730,7 +730,7 @@ ClientAliveCountMax 6
         return Ok(None);
     }
 
-    let mut child = Command::new("sudo")
+    let mut child = crate::ui::sudo_command()
         .args(["tee", SSHD_KEEPALIVE_PATH])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
@@ -774,7 +774,7 @@ fn enable_remote_login_linux() -> Result<StepReport> {
     // No systemd (Apple container smoke): start sshd in the background if present.
     if which("sshd").is_some() || std::path::Path::new("/usr/sbin/sshd").is_file() {
         let bin = which("sshd").unwrap_or_else(|| std::path::PathBuf::from("/usr/sbin/sshd"));
-        let status = Command::new("sudo")
+        let status = crate::ui::sudo_command()
             .arg(&bin)
             .status()
             .map_err(RigError::Io)?;
@@ -826,7 +826,7 @@ fn sshd_listening() -> bool {
 }
 
 fn ensure_sudo_ticket() -> Result<bool> {
-    let status = Command::new("sudo")
+    let status = crate::ui::sudo_command()
         .arg("-v")
         .status()
         .map_err(RigError::Io)?;
@@ -834,7 +834,7 @@ fn ensure_sudo_ticket() -> Result<bool> {
 }
 
 fn sudo(args: &[&str]) -> Result<bool> {
-    let status = Command::new("sudo")
+    let status = crate::ui::sudo_command()
         .args(args)
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -844,7 +844,7 @@ fn sudo(args: &[&str]) -> Result<bool> {
 }
 
 fn sudo_output(args: &[&str]) -> Result<(bool, String)> {
-    let out = Command::new("sudo")
+    let out = crate::ui::sudo_command()
         .args(args)
         .output()
         .map_err(RigError::Io)?;

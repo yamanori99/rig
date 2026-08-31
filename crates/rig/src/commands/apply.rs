@@ -34,6 +34,7 @@ pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()>
         ),
     );
     ui::blank();
+    ui::section("plan");
     for step in &plan.steps {
         let do_it = !(step.skip || (skip_packages && step.id == "packages"));
         ui::plan(do_it, &step.id, &step.detail);

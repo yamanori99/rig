@@ -7,9 +7,14 @@ pub fn run(root: &std::path::Path, yes: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     let text = apply::generate_ssh_config(root, &hosts);
     if !yes {
-        eprintln!("ssh-config  preview");
-        eprintln!("  write     pass --yes / --write → ~/.ssh/config.d/rig.conf");
-        print!("{text}");
+        ui::title("ssh-config", true);
+        ui::kv("write", "~/.ssh/config.d/rig.conf");
+        let aliases = apply::host_aliases(&text);
+        ui::kv("aliases", aliases.len());
+        for a in aliases {
+            ui::note("host", a);
+        }
+        ui::preview("write");
         return Ok(());
     }
     let path = apply::write_ssh_config(root, &hosts)?;

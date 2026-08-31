@@ -54,53 +54,51 @@ pub fn print_live(os: OsKind, wanted: LiveWanted) {
 }
 
 fn print_stay_awake(os: OsKind) {
-    ui::item("stay-awake");
     match os {
         OsKind::Macos => {
             if let Some(s) = cmd_stdout("pmset", &["-g"]) {
-                ui::item2(format!("in-use  {}", pmset_keys(&s)));
+                ui::note("awake", format!("in-use  {}", pmset_keys(&s)));
             } else {
-                ui::item2("in-use  (pmset failed)");
+                ui::note("awake", "in-use  (pmset failed)");
             }
             if let Some(s) = cmd_stdout("pmset", &["-g", "custom"]) {
                 for (name, body) in features::pmset_custom_sources(&s) {
-                    ui::item2(format!("{:<7} {}", name, pmset_keys(&body)));
+                    ui::note(&name, pmset_keys(&body));
                 }
             }
         }
         OsKind::Linux => {
             if !features::has_systemd() {
-                ui::item2("no systemd — skip");
+                ui::note("awake", "no systemd — skip");
                 return;
             }
             let path = Path::new(LOGIND_DROPIN_PATH);
             match std::fs::read_to_string(path) {
                 Ok(s) if !s.trim().is_empty() => {
-                    ui::item2(path.display());
+                    ui::note("awake", path.display());
                     for line in s.lines() {
                         let t = line.trim();
                         if t.is_empty() || t.starts_with('#') {
                             continue;
                         }
-                        ui::item3(t);
+                        ui::item2(t);
                     }
                 }
-                _ => ui::item2(format!("{}  missing", path.display())),
+                _ => ui::note("awake", format!("{}  missing", path.display())),
             }
         }
     }
 }
 
 fn print_remote_login(os: OsKind) {
-    ui::item("remote-login");
     let label = match os {
         OsKind::Macos => "sshd process",
         OsKind::Linux => "sshd listening",
     };
-    ui::item2(format!(
-        "{label}  {}",
-        if sshd_listening() { "yes" } else { "no" }
-    ));
+    ui::note(
+        "remote",
+        format!("{label}  {}", if sshd_listening() { "yes" } else { "no" }),
+    );
     let path = Path::new(SSHD_KEEPALIVE_PATH);
     match std::fs::read_to_string(path) {
         Ok(s) => {
@@ -110,39 +108,43 @@ fn print_remote_login(os: OsKind) {
                 .filter(|l| !l.is_empty() && !l.starts_with('#'))
                 .collect();
             if keys.is_empty() {
-                ui::item2(format!("keepalive  {}", path.display()));
+                ui::note("keepalive", path.display());
             } else {
-                ui::item2(format!("keepalive  {}", keys.join(" ")));
+                ui::note("keepalive", keys.join(" "));
             }
         }
-        Err(_) => ui::item2("keepalive  missing"),
+        Err(_) => ui::note("keepalive", "missing"),
     }
 }
 
 fn print_screen_sharing(os: OsKind) {
-    ui::item("screen-sharing");
     match os {
         OsKind::Macos => {
             let open = features::vnc_listening();
-            ui::item2(format!("vnc :5900  {}", if open { "yes" } else { "no" }));
+            ui::note(
+                "screen",
+                format!("vnc :5900  {}", if open { "yes" } else { "no" }),
+            );
         }
-        OsKind::Linux => ui::item2("macOS only"),
+        OsKind::Linux => ui::note("screen", "macOS only"),
     }
 }
 
 fn print_thunderbolt(os: OsKind) {
-    ui::item("thunderbolt");
     match cmd_stdout("ifconfig", &["bridge0"]) {
         Some(text) => {
             let status = ifconfig_field(&text, "status:");
             let inet = ifconfig_inet(&text);
-            ui::item2(format!(
-                "bridge0  {}  inet={}",
-                status.unwrap_or("-"),
-                inet.unwrap_or("-")
-            ));
+            ui::note(
+                "tb",
+                format!(
+                    "bridge0  {}  inet={}",
+                    status.unwrap_or("-"),
+                    inet.unwrap_or("-")
+                ),
+            );
         }
-        None => ui::item2("bridge0  absent"),
+        None => ui::note("tb", "bridge0  absent"),
     }
     if matches!(os, OsKind::Macos) {
         let plist = "/Library/LaunchDaemons/dev.rig.thunderbolt-bridge.plist";
@@ -151,34 +153,32 @@ fn print_thunderbolt(os: OsKind) {
         } else {
             "missing"
         };
-        ui::item2(format!("plist    {note}"));
+        ui::note("plist", note);
     }
 }
 
 fn print_tailscale() {
-    ui::item("tailscale");
     let Some(ts) = which("tailscale") else {
-        ui::item2("not installed");
+        ui::note("tailscale", "not installed");
         return;
     };
     let bin = ts.to_str().unwrap_or("tailscale");
     match cmd_stdout(bin, &["ip", "-4"]) {
-        Some(ip) => ui::item2(format!("ip  {}", ip.trim())),
-        None => ui::item2("ip  not connected"),
+        Some(ip) => ui::note("tailscale", format!("ip  {}", ip.trim())),
+        None => ui::note("tailscale", "ip  not connected"),
     }
 }
 
 fn print_cursor(os: OsKind) {
-    ui::item("cursor");
     let Ok(dir) = cursor::cursor_user_dir(os) else {
-        ui::item2("HOME unset");
+        ui::note("cursor", "HOME unset");
         return;
     };
     let settings = dir.join("settings.json");
     if settings.is_file() {
-        ui::item2(settings.display());
+        ui::note("cursor", settings.display());
     } else {
-        ui::item2("settings.json missing");
+        ui::note("cursor", "settings.json missing");
     }
 }
 

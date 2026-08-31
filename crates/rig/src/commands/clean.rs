@@ -22,7 +22,7 @@ pub fn run(root: &std::path::Path, yes: bool, packages: bool) -> Result<()> {
         ui::empty("nothing to do");
     }
     for line in &report.lines {
-        ui::item(line);
+        ui::note("do", line);
     }
     for err in &report.errors {
         ui::fail("clean", err);

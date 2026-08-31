@@ -55,7 +55,6 @@ fn install_casks(root: &Path, package_sets: &[String]) -> Result<StepReport> {
     let mut already = 0usize;
     for cask in &casks {
         if have.contains(cask) {
-            crate::ui::item(format!("already  {cask}"));
             already += 1;
             continue;
         }

@@ -32,10 +32,11 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         return Ok(());
     }
 
-    println!(
-        "  {:<18} {:<18} {:<4} {:<18} {:<5} {}",
+    let header = format!(
+        "{:<18} {:<18} {:<4} {:<18} {:<5} {}",
         "peer", "alias", "link", "ip", "tcp", "ssh"
     );
+    ui::table_head(&header);
 
     let mut any_ssh = false;
     for peer in peers {
@@ -53,14 +54,15 @@ pub fn run(root: &std::path::Path) -> Result<()> {
             } else {
                 "-"
             };
-            println!(
-                "  {:<18} {:<18} {:<4} {:<18} {:<5} {ssh}",
+            ui::table_row(format!(
+                "{:<18} {:<18} {:<4} {:<18} {} {}",
                 peer.name,
                 path.alias,
                 path.link.as_str(),
                 path.ip,
-                tcp
-            );
+                ui::mark_pad(tcp, 5),
+                ui::mark_pad(ssh, 4)
+            ));
         }
     }
 

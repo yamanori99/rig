@@ -60,7 +60,7 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
     ui::kvc("role / [[ssh]] / [packages] / [features]");
     ui::kv("overlay", format!("{}/", overlay.display()));
     ui::kvc("personal shell / tmux / cursor overrides");
-    ui::item("leave templates/ alone — use overlay/");
+    ui::note("templates", "leave alone — use overlay/");
     ui::blank();
     ui::kv(
         "detect",

@@ -1,6 +1,6 @@
 [package]
 name = "rig"
-version = "0.2.15"
+version = "0.2.16"
 edition = "2021"
 description = "Opinionated machine setup for workstation and compute hosts"
 license = "MIT"

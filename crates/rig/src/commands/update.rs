@@ -39,7 +39,7 @@ pub fn run(tag: Option<&str>, yes: bool, force: bool) -> Result<()> {
     ui::kv("installed", dest.display());
     if running != dest.display().to_string() {
         ui::kv("running", &running);
-        ui::item(format!(
+        ui::kvc(format!(
             "new binary is {} — open a new shell if PATH differs",
             dest.display()
         ));

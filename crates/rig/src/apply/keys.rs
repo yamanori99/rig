@@ -199,7 +199,7 @@ fn prompt_which_machine(peer: &Host, path: &SshPath, user: &str) {
     crate::ui::kv("peer", &peer.name);
     crate::ui::kv("via", format!("{}  ({})", path.alias, path.link.comment()));
     crate::ui::kv("login", format!("{user}@{}", path.ip));
-    crate::ui::item("password for that peer (once)");
+    crate::ui::note("password", "once for that peer");
     let _ = std::io::Write::flush(&mut std::io::stdout());
     let _ = std::io::Write::flush(&mut std::io::stderr());
 }

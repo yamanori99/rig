@@ -28,19 +28,14 @@ pub fn run(root: &Path) -> Result<()> {
             ui::kv("role", &h.role);
             if let Ok(role) = schema::load_role(root, &h.role) {
                 let f = role.features.with_host(&h.features);
-                ui::kv(
-                    "features",
-                    format!(
-                        "gui={}  cursor={}  remote_login={}  screen_sharing={}  tailscale={}  thunderbolt={}  stay_awake={}",
-                        yn(f.gui),
-                        yn(f.cursor),
-                        yn(f.remote_login),
-                        yn(f.screen_sharing),
-                        yn(f.tailscale),
-                        yn(f.thunderbolt),
-                        yn(f.stay_awake)
-                    ),
-                );
+                ui::section("features");
+                ui::note("gui", yn(f.gui));
+                ui::note("cursor", yn(f.cursor));
+                ui::note("remote", yn(f.remote_login));
+                ui::note("screen", yn(f.screen_sharing));
+                ui::note("tailscale", yn(f.tailscale));
+                ui::note("thunderbolt", yn(f.thunderbolt));
+                ui::note("awake", yn(f.stay_awake));
                 let plan = apply::build_plan(h, &role);
                 apply::print_package_extras(root, &plan.package_sets, schema::detect_os())?;
                 live = apply::LiveWanted {
@@ -87,7 +82,7 @@ pub fn run(root: &Path) -> Result<()> {
             if !st.steps.is_empty() {
                 ui::section("steps");
                 for (id, detail) in &st.steps {
-                    ui::item(format!("{id:<14} {detail}"));
+                    ui::note(id, detail);
                 }
             }
             if !st.managed_files.is_empty() {
@@ -106,8 +101,10 @@ pub fn run(root: &Path) -> Result<()> {
     if ssh.is_file() {
         ui::kv("ssh", ssh.display());
         if let Ok(s) = std::fs::read_to_string(&ssh) {
-            for line in s.lines() {
-                ui::item(line);
+            let aliases = apply::host_aliases(&s);
+            ui::kvc(format!("{} alias(es)", aliases.len()));
+            for a in aliases {
+                ui::note("host", a);
             }
         }
     } else {

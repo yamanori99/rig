@@ -22,7 +22,7 @@ pub use inspect::{print_live, LiveWanted};
 pub use keys::distribute as distribute_keys;
 pub use packages::print_extras as print_package_extras;
 pub use plan::build_plan;
-pub use ssh::{generate as generate_ssh_config, write_ssh_config};
+pub use ssh::{generate as generate_ssh_config, host_aliases, write_ssh_config};
 pub use state::load as load_state;
 
 /// Run a real apply (caller already printed the plan). Requires `yes` for safety.
@@ -87,15 +87,15 @@ pub fn execute(
     );
     ui::ok("link-shell", &format!("→ {}", link.config_dir.display()));
     if !link.sources.is_empty() {
-        ui::item(format!("sources  {}", link.sources.join(", ")));
+        ui::note("sources", link.sources.join(", "));
     }
     for p in &link.touched_rcs {
-        ui::item(format!("snippet  {}", p.display()));
+        ui::note("snippet", p.display());
     }
     if thick_zsh {
-        ui::item("product rc  OMZ + p10k");
+        ui::note("rc", "OMZ + p10k");
     } else {
-        ui::item("thin shell  common.sh; product rc optional");
+        ui::note("rc", "common.sh; product rc optional");
     }
 
     let tmux = tmux::link_tmux(root)?;
@@ -120,10 +120,7 @@ pub fn execute(
         let report = packages::apply_packages(root, &plan.package_sets, os)?;
         st.note_step("packages", format!("{}: {}", report.backend, report.detail));
         if report.ok {
-            ui::ok(
-                "packages",
-                &format!("{}  {}", report.backend, report.detail),
-            );
+            ui::ok("packages", report.backend);
         } else {
             ui::fail(
                 "packages",
@@ -195,20 +192,8 @@ pub fn execute(
 
     let state_path = state::save(&st)?;
     ui::blank();
-    ui::kv("state", state_path.display());
     ui::title("done", false);
-    ui::blank();
-    ui::section("customize");
-    ui::kv(
-        "host",
-        format!("{}/hosts/{}.toml", root.display(), host.name),
-    );
-    ui::kv("overlay", format!("{}/overlay/", root.display()));
-    ui::item("leave templates/ alone — use overlay/");
-    ui::kv(
-        "peers",
-        "add hosts/<peer>.toml with [[ssh]], then rig ssh-config --yes",
-    );
+    ui::kv("state", state_path.display());
     Ok(())
 }
 

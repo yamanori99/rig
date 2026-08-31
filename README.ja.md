@@ -202,7 +202,7 @@ push の前に `gitleaks protect --staged -c .gitleaks.toml` を実行する。
 
 ## Status
 
-`v0.2.15` — 日本語 README、ホスト判定と init のエラー、Actions を Node 24。
+`v0.2.16` — CLI を静かにする。brew/apt のノイズを消し、色と status を揃える。
 
 ## License
 

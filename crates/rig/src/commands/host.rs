@@ -10,10 +10,10 @@ pub fn list(root: &std::path::Path) -> Result<()> {
         ui::empty("none — copy hosts/examples/*.toml to hosts/ and edit");
         return Ok(());
     }
-    println!(
-        "  {:<20} {:<12} {:<8} {:<6} {}",
+    ui::table_head(&format!(
+        "{:<20} {:<12} {:<8} {:<6} {}",
         "name", "role", "os", "shell", "net"
-    );
+    ));
     for (_, h) in hosts {
         let net = h
             .ssh_paths()
@@ -21,14 +21,14 @@ pub fn list(root: &std::path::Path) -> Result<()> {
             .map(|p| format!("{}:{}", p.link.as_str(), p.alias))
             .collect::<Vec<_>>()
             .join(",");
-        println!(
-            "  {:<20} {:<12} {:<8} {:<6} {}",
+        ui::table_row(format!(
+            "{:<20} {:<12} {:<8} {:<6} {}",
             h.name,
             h.role,
             h.resolved_os().as_str(),
             h.resolved_shell().as_str(),
             if net.is_empty() { "-" } else { &net }
-        );
+        ));
     }
     Ok(())
 }

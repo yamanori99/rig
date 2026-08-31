@@ -119,14 +119,14 @@ fn clean_stay_awake(st: &state::RigState, preview: bool) -> Result<Option<String
             if preview {
                 return Ok(Some(format!("would remove {path}")));
             }
-            let status = Command::new("sudo")
+            let status = crate::ui::sudo_command()
                 .args(["rm", "-f", path])
                 .status()
                 .map_err(RigError::Io)?;
             if !status.success() {
                 return Err(RigError::Msg(format!("rm {path} failed ({status})")));
             }
-            let _ = Command::new("sudo")
+            let _ = crate::ui::sudo_command()
                 .args(["systemctl", "restart", "systemd-logind"])
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
@@ -273,7 +273,7 @@ fn uninstall_packages(
                 msgs.push(format!("would apt-get remove {}", pkgs.join(" ")));
                 return Ok(msgs);
             }
-            let status = Command::new("sudo")
+            let status = crate::ui::sudo_command()
                 .args(["apt-get", "remove", "-y"])
                 .args(&pkgs)
                 .status()

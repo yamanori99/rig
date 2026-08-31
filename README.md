@@ -204,7 +204,7 @@ Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
 
 ## Status
 
-`v0.2.15` — Japanese README, clearer host matching and init errors, Actions on Node 24.
+`v0.2.16` — quieter CLI: brew/apt noise gone, aligned colors, shorter status.
 
 ## License
 

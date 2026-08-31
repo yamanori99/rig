@@ -25,6 +25,15 @@ pub fn generate(root: &Path, hosts: &[(PathBuf, Host)]) -> String {
     out
 }
 
+pub fn host_aliases(text: &str) -> Vec<String> {
+    text.lines()
+        .filter_map(|l| l.strip_prefix("Host "))
+        .map(str::trim)
+        .filter(|s| !s.is_empty() && !s.contains('*'))
+        .map(str::to_string)
+        .collect()
+}
+
 fn push_host(out: &mut String, alias: &str, ip: &str, user: &str, comment: &str) {
     out.push_str(&format!(
         "Host {alias}\n  # {comment}\n  HostName {ip}\n  User {user}\n\n"

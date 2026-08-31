@@ -296,6 +296,7 @@ fn try_main() -> Result<()> {
         Commands::Status => commands::status::run(&root)?,
         Commands::Root => {
             println!("{}", root.display());
+            crate::ui::title("root", false);
             crate::ui::kv("os", schema::detect_os().as_str());
             crate::ui::kvc("(auto-detect; override in hosts/*.toml)");
             crate::ui::kv("hosts", format!("{}/", root.join("hosts").display()));

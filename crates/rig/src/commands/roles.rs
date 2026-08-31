@@ -52,48 +52,24 @@ pub fn run(root: &std::path::Path, name: Option<&str>, os_filter: Option<&str>) 
 fn print_role(root: &std::path::Path, name: &str, os_filter: Option<OsKind>) -> Result<()> {
     let role = schema::load_role(root, name)?;
     ui::kv("role", name);
-    ui::item(&role.description);
+    ui::kvc(&role.description);
 
     if let Some(sh) = role.default_shell {
         ui::kv("shell", sh.as_str());
-        ui::item(format!("templates  shell/common + shell/{}", sh.as_str()));
+        ui::note("templates", format!("shell/common + shell/{}", sh.as_str()));
     } else {
         ui::kv("shell", "detect from $SHELL");
     }
 
     let f = &role.features;
     ui::section("features");
-    ui::item(format!(
-        "gui={}  cursor={}  remote_login={}  screen_sharing={}  tailscale={}  thunderbolt={}  stay_awake={}",
-        yn(f.gui),
-        yn(f.cursor),
-        yn(f.remote_login),
-        yn(f.screen_sharing),
-        yn(f.tailscale),
-        yn(f.thunderbolt),
-        yn(f.stay_awake)
-    ));
-    if f.gui {
-        ui::item2("GUI apps / workstation extras");
-    }
-    if f.cursor {
-        ui::item2("Cursor user settings link");
-    }
-    if f.remote_login {
-        ui::item2("remote login / sshd");
-    }
-    if f.screen_sharing {
-        ui::item2("Screen Sharing (macOS VNC :5900)");
-    }
-    if f.tailscale {
-        ui::item2("Tailscale");
-    }
-    if f.thunderbolt {
-        ui::item2("Thunderbolt bridge0 when [[ssh]] has link=thunderbolt");
-    }
-    if f.stay_awake {
-        ui::item2("stay awake (macOS pmset -a / Linux logind)");
-    }
+    ui::note("gui", yn(f.gui));
+    ui::note("cursor", yn(f.cursor));
+    ui::note("remote", yn(f.remote_login));
+    ui::note("screen", yn(f.screen_sharing));
+    ui::note("tailscale", yn(f.tailscale));
+    ui::note("thunderbolt", yn(f.thunderbolt));
+    ui::note("awake", yn(f.stay_awake));
 
     ui::kv("packages", role.packages.join(", "));
 
@@ -120,7 +96,7 @@ fn print_packages(root: &std::path::Path, sets: &[String], os: OsKind) -> Result
     for set_name in sets {
         let set = packages::load_package_set(root, set_name)?;
         let pkgs = packages::packages_for_os(&set, os);
-        ui::item(format!("set  {set_name}"));
+        ui::note("set", set_name);
         if pkgs.is_empty() {
             ui::item2("empty or missing file");
             continue;
