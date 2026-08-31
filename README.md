@@ -206,7 +206,7 @@ Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
 
 ## Status
 
-`v0.3.0` — slant wordmark, short flags, yellow values, quieter apply.
+`v0.3.1` — version on `rig` / `rig -h` banner.
 
 ## License
 

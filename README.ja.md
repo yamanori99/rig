@@ -204,7 +204,7 @@ push の前に `gitleaks protect --staged -c .gitleaks.toml` を実行する。
 
 ## Status
 
-`v0.3.0` — 斜めロゴ、短縮フラグ、値の黄色、静かな apply。
+`v0.3.1` — `rig` / `rig -h` のロゴにバージョン。
 
 ## License
 

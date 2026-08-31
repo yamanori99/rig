@@ -332,7 +332,8 @@ pub fn banner() -> String {
       /____/"#;
     let hues = [YELLOW, GREEN, CYAN, MAGENTA];
     let mut i = 0usize;
-    art.lines()
+    let mut lines: Vec<String> = art
+        .lines()
         .map(|line| {
             let mut out = String::from("  ");
             for ch in line.chars() {
@@ -346,8 +347,12 @@ pub fn banner() -> String {
             }
             out
         })
-        .collect::<Vec<_>>()
-        .join("\n")
+        .collect();
+    if let Some(last) = lines.last_mut() {
+        last.push_str("  ");
+        last.push_str(&wrap(on, DIM, &format!("v{}", env!("CARGO_PKG_VERSION"))));
+    }
+    lines.join("\n")
 }
 
 #[cfg(test)]
