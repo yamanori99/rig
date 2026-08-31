@@ -7,9 +7,19 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 pub struct DistributeReport {
+    pub key: Option<String>,
     pub ok: Vec<String>,
     pub skip: Vec<String>,
     pub fail: Vec<String>,
+}
+
+fn empty_report() -> DistributeReport {
+    DistributeReport {
+        key: None,
+        ok: Vec::new(),
+        skip: Vec::new(),
+        fail: Vec::new(),
+    }
 }
 
 /// Copy this machine's ed25519 pubkey to peers via their [[ssh]] aliases.
@@ -21,15 +31,31 @@ pub struct DistributeReport {
 /// so ssh can ask for the login password once.
 pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeReport> {
     let pubkey = default_pubkey()?;
+    let key_note = match ensure_local_ed25519(yes)? {
+        KeyEnsure::Existing => None,
+        KeyEnsure::WouldGenerate => Some(format!(
+            "would generate {} (empty passphrase)",
+            default_privkey()?.display()
+        )),
+        KeyEnsure::Generated => Some(format!(
+            "generated {} (empty passphrase)",
+            default_privkey()?.display()
+        )),
+        KeyEnsure::DerivedPub => Some("wrote .pub from existing private key".into()),
+        KeyEnsure::WouldDerivePub => Some("would write .pub from existing private key".into()),
+    };
+
     if !pubkey.is_file() {
-        return Ok(DistributeReport {
-            ok: Vec::new(),
-            skip: Vec::new(),
-            fail: vec![format!(
-                "no public key at {} — run: ssh-keygen -t ed25519",
-                pubkey.display()
-            )],
-        });
+        let mut report = empty_report();
+        report.key = key_note;
+        if !yes {
+            return Ok(report);
+        }
+        report.fail.push(format!(
+            "no public key at {} after generate",
+            pubkey.display()
+        ));
+        return Ok(report);
     }
 
     let hosts = crate::schema::load_hosts(root)?;
@@ -42,6 +68,7 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
 
     if peers.is_empty() {
         return Ok(DistributeReport {
+            key: key_note,
             ok: Vec::new(),
             skip: vec!["no peers with [[ssh]] in hosts/".into()],
             fail: Vec::new(),
@@ -109,17 +136,127 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
     }
 
     Ok(DistributeReport {
+        key: key_note,
         ok: successes,
         skip: skipped,
         fail: failed,
     })
 }
 
-fn default_pubkey() -> Result<PathBuf> {
+enum KeyEnsure {
+    Existing,
+    WouldGenerate,
+    Generated,
+    WouldDerivePub,
+    DerivedPub,
+}
+
+fn ssh_dir() -> Result<PathBuf> {
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .ok_or_else(|| RigError::Msg("HOME is not set".into()))?;
-    Ok(home.join(".ssh/id_ed25519.pub"))
+    Ok(home.join(".ssh"))
+}
+
+fn default_privkey() -> Result<PathBuf> {
+    Ok(ssh_dir()?.join("id_ed25519"))
+}
+
+fn default_pubkey() -> Result<PathBuf> {
+    Ok(ssh_dir()?.join("id_ed25519.pub"))
+}
+
+fn ensure_local_ed25519(yes: bool) -> Result<KeyEnsure> {
+    let dir = ssh_dir()?;
+    let privkey = dir.join("id_ed25519");
+    let pubkey = dir.join("id_ed25519.pub");
+
+    if privkey.is_file() && pubkey.is_file() {
+        return Ok(KeyEnsure::Existing);
+    }
+
+    if privkey.is_file() && !pubkey.is_file() {
+        if !yes {
+            return Ok(KeyEnsure::WouldDerivePub);
+        }
+        derive_pubkey(&privkey, &pubkey)?;
+        return Ok(KeyEnsure::DerivedPub);
+    }
+
+    if pubkey.is_file() && !privkey.is_file() {
+        return Err(RigError::Msg(format!(
+            "public key at {} but no private key — not generating over that",
+            pubkey.display()
+        )));
+    }
+
+    if !yes {
+        return Ok(KeyEnsure::WouldGenerate);
+    }
+
+    std::fs::create_dir_all(&dir).map_err(RigError::Io)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o700))
+            .map_err(RigError::Io)?;
+    }
+
+    let comment = key_comment();
+    let status = Command::new("ssh-keygen")
+        .args(["-t", "ed25519", "-N", "", "-q", "-f"])
+        .arg(&privkey)
+        .arg("-C")
+        .arg(&comment)
+        .status()
+        .map_err(|e| RigError::Msg(format!("ssh-keygen: {e}")))?;
+    if !status.success() {
+        return Err(RigError::Msg(format!(
+            "ssh-keygen failed ({status}) writing {}",
+            privkey.display()
+        )));
+    }
+    Ok(KeyEnsure::Generated)
+}
+
+fn derive_pubkey(privkey: &Path, pubkey: &Path) -> Result<()> {
+    let out = Command::new("ssh-keygen")
+        .args(["-y", "-f"])
+        .arg(privkey)
+        .output()
+        .map_err(|e| RigError::Msg(format!("ssh-keygen -y: {e}")))?;
+    if !out.status.success() {
+        return Err(RigError::Msg(format!(
+            "ssh-keygen -y failed ({})",
+            String::from_utf8_lossy(&out.stderr).trim()
+        )));
+    }
+    std::fs::write(pubkey, out.stdout).map_err(RigError::Io)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(pubkey, std::fs::Permissions::from_mode(0o644))
+            .map_err(RigError::Io)?;
+    }
+    Ok(())
+}
+
+fn key_comment() -> String {
+    let user = std::env::var("USER").unwrap_or_else(|_| "rig".into());
+    let host = hostname_short();
+    format!("{user}@{host}")
+}
+
+fn hostname_short() -> String {
+    Command::new("hostname")
+        .arg("-s")
+        .output()
+        .ok()
+        .and_then(|o| {
+            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
+            (!s.is_empty()).then_some(s)
+        })
+        .unwrap_or_else(|| "localhost".into())
 }
 
 fn tcp_port_open(ip: &str, port: u16) -> bool {

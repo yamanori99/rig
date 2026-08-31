@@ -149,11 +149,11 @@ Match the current short hostname to hosts/<name>.toml.
 Apply uses the same match. If none, run `rig init`.";
 
 const KEYS_DIST_LONG: &str = "\
-Install ~/.ssh/id_ed25519.pub on peers (ssh-copy-id).
+Make pubkey login work on peers.
 
-If the key is already there, this is silent. Otherwise --yes
-prompts for the peer login password once (needs a TTY).
-Prefers lan/thunderbolt, then vpn. Preview without --yes.";
+--yes creates ~/.ssh/id_ed25519 if missing (empty passphrase),
+then copies the pubkey. Password is asked once per new peer.
+Preview without --yes.";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -267,9 +267,6 @@ enum Commands {
     /// Probe peer TCP/22 and SSH
     #[command(hide = true, visible_alias = "c", long_about = CHECK_LONG)]
     Check,
-    /// Copy pubkey to peers
-    #[command(hide = true, visible_alias = "k", subcommand)]
-    Keys(KeysCmd),
     /// Write ~/.ssh/config.d/rig.conf
     #[command(hide = true, visible_alias = "ssh", long_about = SSH_CONFIG_LONG)]
     SshConfig {
@@ -295,10 +292,10 @@ enum HostCmd {
     /// Probe peer TCP/22 and SSH
     #[command(long_about = CHECK_LONG)]
     Check,
-    /// Copy pubkey to peers
+    /// Local ed25519 + copy to peers
     #[command(long_about = KEYS_DIST_LONG)]
     Keys {
-        /// Copy keys (default is preview)
+        /// Write (default is preview)
         #[arg(short = 'y', long = "yes")]
         yes: bool,
     },
@@ -307,17 +304,6 @@ enum HostCmd {
     SshConfig {
         /// Write config (alias: --write)
         #[arg(short = 'y', long = "yes", visible_alias = "write")]
-        yes: bool,
-    },
-}
-
-#[derive(Subcommand, Debug)]
-enum KeysCmd {
-    /// Copy this pubkey to peers (preview; --yes)
-    #[command(long_about = KEYS_DIST_LONG)]
-    Distribute {
-        /// Copy keys (default is preview)
-        #[arg(short = 'y', long = "yes")]
         yes: bool,
     },
 }
@@ -370,9 +356,7 @@ fn try_main() -> Result<()> {
         Commands::Host(HostCmd::List) => commands::host::list(&root)?,
         Commands::Host(HostCmd::Detect) => commands::host::detect(&root)?,
         Commands::Host(HostCmd::Check) | Commands::Check => commands::check::run(&root)?,
-        Commands::Host(HostCmd::Keys { yes }) | Commands::Keys(KeysCmd::Distribute { yes }) => {
-            commands::keys::distribute(&root, yes)?
-        }
+        Commands::Host(HostCmd::Keys { yes }) => commands::keys::run(&root, yes)?,
         Commands::Host(HostCmd::SshConfig { yes }) | Commands::SshConfig { yes } => {
             commands::ssh_config::run(&root, yes)?
         }
