@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 pub fn discover_root(explicit: Option<PathBuf>) -> miette::Result<PathBuf> {
     if let Some(p) = explicit {
         if looks_like_root(&p) {
-            return Ok(p);
+            return Ok(refresh_if_embedded(p));
         }
         return Err(RigError::Msg(format!(
             "path does not look like a rig root: {}",
@@ -18,7 +18,7 @@ pub fn discover_root(explicit: Option<PathBuf>) -> miette::Result<PathBuf> {
         let mut dir = dir;
         loop {
             if looks_like_root(&dir) {
-                return Ok(dir);
+                return Ok(refresh_if_embedded(dir));
             }
             if !dir.pop() {
                 break;
@@ -33,12 +33,23 @@ pub fn discover_root(explicit: Option<PathBuf>) -> miette::Result<PathBuf> {
             .find(|p| looks_like_root(p))
             .map(|p| p.to_path_buf())
         {
-            return Ok(root);
+            return Ok(refresh_if_embedded(root));
         }
     }
 
     // Standalone binary: materialize embedded roles/packages/templates.
     Ok(embed::ensure_embedded_root()?)
+}
+
+/// Application Support unpack is pinned as RIG_ROOT after apply. Refresh it
+/// when the binary version is newer so `rig update` actually ships templates.
+fn refresh_if_embedded(root: PathBuf) -> PathBuf {
+    if root == embed::product_data_root() {
+        if let Ok(fresh) = embed::ensure_embedded_root() {
+            return fresh;
+        }
+    }
+    root
 }
 
 fn looks_like_root(p: &Path) -> bool {

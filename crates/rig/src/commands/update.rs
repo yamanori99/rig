@@ -45,6 +45,7 @@ pub fn run(tag: Option<&str>, yes: bool, force: bool) -> Result<()> {
         ));
     }
     ui::next("rig --version");
+    ui::next("rig apply -y");
     Ok(())
 }
 

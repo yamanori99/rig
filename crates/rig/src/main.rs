@@ -309,6 +309,9 @@ enum HostCmd {
 }
 
 fn main() {
+    // Bare `rig` prints help and exits before clap. Still refresh the unpack
+    // so a newer binary is not stuck on an old product stamp / templates.
+    let _ = embed::ensure_embedded_root();
     if std::env::args_os().nth(1).is_none() {
         let mut cmd = Cli::command();
         let _ = cmd.print_help();
