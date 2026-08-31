@@ -5,6 +5,7 @@ use crate::paths;
 use crate::schema;
 use crate::ui;
 use std::path::Path;
+use std::process::{Command, Stdio};
 
 pub fn run(root: &Path) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
@@ -17,7 +18,9 @@ pub fn run(root: &Path) -> Result<()> {
         "version",
         format!("{}  ({})", env!("CARGO_PKG_VERSION"), running_exe()),
     );
-    ui::kv("os", schema::detect_os().as_str());
+    if !print_machine(root) {
+        ui::kv("os", schema::detect_os().as_str());
+    }
     ui::kv("root", root.display());
     ui::kvc(root_kind(root));
 
@@ -119,6 +122,60 @@ pub fn run(root: &Path) -> Result<()> {
     };
     ui::kv("overlay", format!("{overlay_note}  {}", overlay.display()));
     Ok(())
+}
+
+/// Banner fields via fastfetch, no ASCII logo. False if fastfetch is missing.
+fn print_machine(root: &Path) -> bool {
+    let cfg = root.join("templates/shell/fastfetch/config.jsonc");
+    if !cfg.is_file() {
+        return false;
+    }
+    let Ok(out) = Command::new("fastfetch")
+        .arg("-c")
+        .arg(&cfg)
+        .args(["-l", "none", "--pipe", "true"])
+        .stdin(Stdio::null())
+        .output()
+    else {
+        return false;
+    };
+    if !out.status.success() {
+        return false;
+    }
+    let text = String::from_utf8_lossy(&out.stdout);
+    let mut any = false;
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        if !any {
+            ui::section("machine");
+            any = true;
+        }
+        if let Some((k, v)) = line.split_once(':') {
+            let v = v.trim();
+            if v.is_empty() {
+                continue;
+            }
+            ui::kv(machine_key(k.trim()), v);
+        } else {
+            ui::kv("who", line);
+        }
+    }
+    any
+}
+
+fn machine_key(k: &str) -> &'static str {
+    match k.to_ascii_lowercase().as_str() {
+        "os" => "system",
+        "host" => "model",
+        "kernel" => "kernel",
+        "uptime" => "uptime",
+        "memory" => "memory",
+        "shell" => "shell",
+        _ => "info",
+    }
 }
 
 fn running_exe() -> String {

@@ -128,8 +128,8 @@ Print role features and package lists from roles/ + packages/.
 Omit NAME to list every role. --os macos|linux filters brew vs apt.";
 
 const STATUS_LONG: &str = "\
-This machine: matched host, features, extra packages, last apply,
-live probes, generated ssh config.";
+This machine: sysinfo (no logo), matched host, features,
+extra packages, last apply, live probes, ssh config.";
 
 const ROOT_LONG: &str = "\
 Print the product data root. First stdout line is the path only
