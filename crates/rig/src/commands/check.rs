@@ -17,8 +17,6 @@ pub fn run(root: &std::path::Path) -> Result<()> {
 
     ui::title("check", false);
     ui::kv("self", &self_name);
-    ui::kv("hosts", format!("{}/", root.join("hosts").display()));
-    ui::blank();
 
     let peers: Vec<&Host> = hosts
         .iter()
@@ -32,14 +30,23 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         return Ok(());
     }
 
-    let header = format!(
-        "{:<12} {:<14} {:<4} {:<15} {:<4} {}",
-        "peer", "alias", "link", "ip", "tcp", "ssh"
-    );
-    ui::table_head(&header);
+    let paths: Vec<_> = peers.iter().flat_map(|p| p.ssh_paths()).collect();
+    let aw = paths
+        .iter()
+        .map(|p| p.alias.chars().count())
+        .max()
+        .unwrap_or(5)
+        .max(5);
+    let iw = paths
+        .iter()
+        .map(|p| p.ip.chars().count())
+        .max()
+        .unwrap_or(2)
+        .max(2);
 
     let mut any_ssh = false;
     for peer in peers {
+        ui::group(&peer.name);
         for path in peer.ssh_paths() {
             let tcp = if tcp_port_open(&path.ip, 22) {
                 "ok"
@@ -55,11 +62,10 @@ pub fn run(root: &std::path::Path) -> Result<()> {
                 "-"
             };
             ui::table_row(format!(
-                "{:<12} {:<14} {:<4} {:<15} {} {}",
-                peer.name,
-                path.alias,
-                path.link.as_str(),
-                path.ip,
+                "  {}  {}  {}  {} {}",
+                ui::pad(path.link.as_str(), 3),
+                ui::pad(&path.alias, aw),
+                ui::pad(&path.ip, iw),
                 ui::mark_pad(tcp, 4),
                 ui::mark_pad(ssh, 3)
             ));

@@ -356,7 +356,11 @@ fn try_main() -> Result<()> {
 
     if !matches!(
         cli.command,
-        Commands::Root | Commands::Status | Commands::Update { .. }
+        Commands::Root
+            | Commands::Status
+            | Commands::Update { .. }
+            | Commands::Host(_)
+            | Commands::Check
     ) {
         paths::eprint_data_hint(&root);
     }

@@ -2,17 +2,26 @@ use crate::schema;
 use crate::ui;
 use miette::Result;
 
+fn col_w<'a>(min: usize, xs: impl Iterator<Item = &'a str>) -> usize {
+    xs.map(|s| s.chars().count()).max().unwrap_or(min).max(min)
+}
+
 pub fn list(root: &std::path::Path) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     ui::title("host list", false);
-    ui::kv("hosts", format!("{}/", root.join("hosts").display()));
     if hosts.is_empty() {
         ui::empty("none — copy hosts/examples/*.toml to hosts/ and edit");
         return Ok(());
     }
+    let nw = col_w(4, hosts.iter().map(|(_, h)| h.name.as_str())).max(4);
+    let rw = col_w(4, hosts.iter().map(|(_, h)| h.role.as_str())).max(4);
     ui::table_head(&format!(
-        "{:<14} {:<12} {:<6} {:<5} {}",
-        "name", "role", "os", "shell", "net"
+        "{}  {}  {:<5} {:<5} {}",
+        ui::pad("name", nw),
+        ui::pad("role", rw),
+        "os",
+        "shell",
+        "net"
     ));
     for (_, h) in hosts {
         let net = h
@@ -22,9 +31,9 @@ pub fn list(root: &std::path::Path) -> Result<()> {
             .collect::<Vec<_>>()
             .join("  ");
         ui::table_row(format!(
-            "{:<14} {:<12} {:<6} {:<5} {}",
-            h.name,
-            h.role,
+            "{}  {}  {:<5} {:<5} {}",
+            ui::pad(&h.name, nw),
+            ui::pad(&h.role, rw),
             h.resolved_os().as_str(),
             h.resolved_shell().as_str(),
             if net.is_empty() { "-" } else { &net }

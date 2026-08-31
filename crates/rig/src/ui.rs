@@ -248,12 +248,12 @@ fn mark_code(mark: &str) -> &'static str {
 }
 
 pub fn empty(msg: &str) {
-    kvc(msg);
+    println!("  {}", wrap(color_out(), DIM, msg));
 }
 
 pub fn preview(action: &str) {
     blank();
-    kvc(format!("pass --yes (-y) to {action}"));
+    empty(&format!("pass --yes (-y) to {action}"));
 }
 
 pub fn next(cmd: &str) {
@@ -286,12 +286,26 @@ pub fn data_hint(root: &Path, os: &str) {
     eprintln!("  {k} {path}  {os_s}");
 }
 
+pub fn group(name: &str) {
+    println!("  {}", wrap(color_out(), CYAN, name));
+}
+
 pub fn table_head(line: &str) {
     println!("  {}", wrap(color_out(), DIM, line));
 }
 
 pub fn table_row(line: impl Display) {
     println!("  {line}");
+}
+
+/// Pad to `width` using Unicode scalar count (host names are ASCII).
+pub fn pad(s: &str, width: usize) -> String {
+    let n = s.chars().count();
+    if n >= width {
+        s.to_string()
+    } else {
+        format!("{s}{}", " ".repeat(width - n))
+    }
 }
 
 pub fn mark_pad(mark: &str, width: usize) -> String {

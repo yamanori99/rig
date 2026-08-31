@@ -292,9 +292,6 @@ mod tests {
          disksleep            10
          powernap             1
 ";
-        assert_eq!(
-            pmset_keys(t),
-            "sleep 0  display 120  disk 10  nap 1"
-        );
+        assert_eq!(pmset_keys(t), "sleep 0  display 120  disk 10  nap 1");
     }
 }
