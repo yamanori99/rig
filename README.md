@@ -206,7 +206,7 @@ Before push, run `gitleaks protect --staged -c .gitleaks.toml`.
 
 ## Status
 
-`v0.2.18` — help banner, `-v`, aliases, yellow values.
+`v0.3.0` — slant wordmark, short flags, yellow values, quieter apply.
 
 ## License
 

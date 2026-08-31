@@ -16,6 +16,7 @@ const RED: &str = "\x1b[31m";
 const GREEN: &str = "\x1b[32m";
 const CYAN: &str = "\x1b[36m";
 const YELLOW: &str = "\x1b[33m";
+const MAGENTA: &str = "\x1b[35m";
 
 fn color_out() -> bool {
     static V: OnceLock<bool> = OnceLock::new();
@@ -320,15 +321,33 @@ pub fn sudo_command() -> std::process::Command {
     std::process::Command::new("sudo")
 }
 
-/// Compact mark for `rig` / `rig -h`.
+/// Wordmark for `rig` / `rig -h`. Original slant art; hues are ours, not OMZ.
 pub fn banner() -> String {
     let on = color_out();
-    let top = wrap(on, DIM, "  ┌───────┐");
-    let bot = wrap(on, DIM, "  └───────┘");
-    let name = paint(on, &[BOLD, CYAN], "rig");
-    let mid_l = wrap(on, DIM, "  │  ");
-    let mid_r = wrap(on, DIM, "  │");
-    format!("{top}\n{mid_l}{name}{mid_r}\n{bot}")
+    let art = r#"        _
+   ____(_)___ _
+  / __/ / __ `/
+ / / / / /_/ /
+/_/ /_/\__, /
+      /____/"#;
+    let hues = [YELLOW, GREEN, CYAN, MAGENTA];
+    let mut i = 0usize;
+    art.lines()
+        .map(|line| {
+            let mut out = String::from("  ");
+            for ch in line.chars() {
+                if ch == ' ' {
+                    out.push(' ');
+                    continue;
+                }
+                let s = ch.to_string();
+                out.push_str(&paint(on, &[BOLD, hues[i % hues.len()]], &s));
+                i += 1;
+            }
+            out
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 #[cfg(test)]

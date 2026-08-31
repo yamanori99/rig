@@ -151,7 +151,7 @@ struct Cli {
     _version: (),
 
     /// Product root (cwd / RIG_ROOT / embedded unpack)
-    #[arg(short = 'r', long, global = true, env = "RIG_ROOT")]
+    #[arg(short = 'r', long, global = true, env = "RIG_ROOT", hide_env_values = true)]
     root: Option<std::path::PathBuf>,
 
     #[command(subcommand)]
