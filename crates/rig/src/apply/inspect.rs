@@ -158,8 +158,13 @@ fn print_thunderbolt(os: OsKind) {
 }
 
 fn print_tailscale() {
-    let Some(ts) = which("tailscale") else {
-        ui::note("tailscale", "not installed");
+    let Some(ts) = features::find_tailscale_cli() else {
+        let msg = if std::path::Path::new("/Applications/Tailscale.app").is_dir() {
+            "Tailscale.app (CLI missing)"
+        } else {
+            "not installed"
+        };
+        ui::note("tailscale", msg);
         return;
     };
     let bin = ts.to_str().unwrap_or("tailscale");
@@ -265,18 +270,6 @@ fn sshd_listening() -> bool {
             })
         })
         .unwrap_or(false)
-}
-
-fn which(bin: &str) -> Option<std::path::PathBuf> {
-    std::env::var_os("PATH").and_then(|paths| {
-        for dir in std::env::split_paths(&paths) {
-            let p = dir.join(bin);
-            if p.is_file() {
-                return Some(p);
-            }
-        }
-        None
-    })
 }
 
 #[cfg(test)]

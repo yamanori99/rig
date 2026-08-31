@@ -88,37 +88,52 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
 
     let features = role.features.with_host(&host.features);
     let f = &features;
-    steps.push(feature_step("gui", f.gui, "install / enable GUI apps"));
+    steps.push(feature_step(
+        "gui",
+        f.gui,
+        "install / enable GUI apps",
+        "off in role",
+    ));
     steps.push(feature_step(
         "cursor",
         f.cursor,
         "link Cursor user settings",
+        "off in role",
     ));
     steps.push(feature_step(
         "remote-login",
         f.remote_login,
         "enable remote login / sshd",
+        "off in role",
     ));
     steps.push(feature_step(
         "screen-sharing",
         f.screen_sharing && matches!(os, crate::schema::OsKind::Macos),
+        "enable Screen Sharing (VNC :5900)",
         match os {
-            crate::schema::OsKind::Macos => "enable Screen Sharing (VNC :5900)",
+            crate::schema::OsKind::Macos => "off in role",
             crate::schema::OsKind::Linux => "macOS only",
         },
     ));
     steps.push(feature_step(
         "tailscale",
         f.tailscale,
-        "configure Tailscale",
+        "configure Tailscale (CLI or Tailscale.app)",
+        "off in role",
     ));
     let tb_ip = host.thunderbolt_ip();
+    let tb_on = f.thunderbolt && tb_ip.is_some();
     steps.push(feature_step(
         "thunderbolt",
-        f.thunderbolt && tb_ip.is_some(),
+        tb_on,
         match &tb_ip {
             Some(ip) => format!("configure thunderbolt IP {ip}"),
             None => "no thunderbolt [[ssh]] link on host".into(),
+        },
+        if f.thunderbolt {
+            "no thunderbolt [[ssh]] link on host"
+        } else {
+            "off in role"
         },
     ));
     steps.push(feature_step(
@@ -128,6 +143,7 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
             crate::schema::OsKind::Macos => "pmset -a: sleep/display/disk/powernap off",
             crate::schema::OsKind::Linux => "logind: ignore idle and lid (systemd)",
         },
+        "off in role",
     ));
 
     ApplyPlan {
@@ -141,10 +157,15 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
     }
 }
 
-fn feature_step(id: &str, enabled: bool, detail: impl Into<String>) -> ApplyStep {
+fn feature_step(
+    id: &str,
+    enabled: bool,
+    on: impl Into<String>,
+    off: impl Into<String>,
+) -> ApplyStep {
     ApplyStep {
         id: id.into(),
-        detail: detail.into(),
+        detail: if enabled { on.into() } else { off.into() },
         skip: !enabled,
     }
 }

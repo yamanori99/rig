@@ -7,6 +7,7 @@ gui = false
 cursor = false
 remote_login = true
 screen_sharing = true
+# Off until the host opts in. Unrelated to `gui` / Tailscale.app.
 tailscale = false
 thunderbolt = true
 stay_awake = true

@@ -67,17 +67,25 @@ pub fn apply_thunderbolt(ip: &str, os: OsKind) -> Result<StepReport> {
 ///
 /// Does not run interactive `tailscale up` (needs browser / auth key). Soft-ok when
 /// the binary is missing or the node is not yet connected.
+///
+/// macOS Tailscale.app is a valid install: use its CLI and do not start brew
+/// `tailscaled` (the two fight). Role `gui` is unrelated.
 pub fn apply_tailscale(os: OsKind) -> Result<StepReport> {
-    let ts = which("tailscale");
-    let Some(ts) = ts else {
+    let gui = matches!(os, OsKind::Macos) && macos_tailscale_app();
+    let Some(ts) = find_tailscale_cli() else {
         return Ok(StepReport {
             ok: true,
-            detail: "tailscale not installed — skipped".into(),
+            detail: if gui {
+                "Tailscale.app present but CLI missing".into()
+            } else {
+                "not installed".into()
+            },
         });
     };
 
     let mut notes = Vec::new();
     match os {
+        OsKind::Macos if gui => notes.push("Tailscale.app".into()),
         OsKind::Macos => {
             if let Some(msg) = ensure_tailscaled_macos()? {
                 notes.push(msg);
@@ -98,7 +106,11 @@ pub fn apply_tailscale(os: OsKind) -> Result<StepReport> {
         .status()
         .map_err(RigError::Io)?;
     if !status.success() {
-        notes.push("not connected — run: sudo tailscale up --ssh".into());
+        notes.push(if gui {
+            "not connected — log in via Tailscale.app".into()
+        } else {
+            "not connected — run: sudo tailscale up --ssh".into()
+        });
         return Ok(StepReport {
             ok: true,
             detail: notes.join("; "),
@@ -315,6 +327,25 @@ fn sudo_write(path: &str, contents: &str) -> Result<bool> {
     }
     let status = child.wait().map_err(RigError::Io)?;
     Ok(status.success())
+}
+
+pub(crate) fn find_tailscale_cli() -> Option<std::path::PathBuf> {
+    which("tailscale").or_else(|| {
+        for p in [
+            "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+            "/Applications/Tailscale.app/Contents/MacOS/tailscale",
+        ] {
+            let path = std::path::PathBuf::from(p);
+            if path.is_file() {
+                return Some(path);
+            }
+        }
+        None
+    })
+}
+
+fn macos_tailscale_app() -> bool {
+    std::path::Path::new("/Applications/Tailscale.app").is_dir()
 }
 
 fn ensure_tailscaled_macos() -> Result<Option<String>> {

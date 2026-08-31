@@ -7,6 +7,7 @@ gui = true
 cursor = true
 remote_login = false
 screen_sharing = false
+# Off until the host opts in. Unrelated to `gui` / Tailscale.app.
 tailscale = false
 # Optional: [[ssh]] with link=thunderbolt puts this laptop on the TB bridge.
 thunderbolt = true

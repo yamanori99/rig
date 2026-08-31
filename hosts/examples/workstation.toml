@@ -38,3 +38,4 @@ schema_version = 1
 # [features]
 # stay_awake = true
 # screen_sharing = true
+# tailscale = true   # roles leave this off; Tailscale.app counts as installed
