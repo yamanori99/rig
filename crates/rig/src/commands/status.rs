@@ -4,6 +4,7 @@ use crate::error::Result;
 use crate::paths;
 use crate::schema;
 use crate::ui;
+use std::collections::HashSet;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
@@ -31,14 +32,7 @@ pub fn run(root: &Path) -> Result<()> {
             ui::kv("role", &h.role);
             if let Ok(role) = schema::load_role(root, &h.role) {
                 let f = role.features.with_host(&h.features);
-                ui::section("features");
-                ui::note("gui", yn(f.gui));
-                ui::note("cursor", yn(f.cursor));
-                ui::note("remote", yn(f.remote_login));
-                ui::note("screen", yn(f.screen_sharing));
-                ui::note("tailscale", yn(f.tailscale));
-                ui::note("thunderbolt", yn(f.thunderbolt));
-                ui::note("awake", yn(f.stay_awake));
+                ui::kv("want", feature_summary(&f));
                 let plan = apply::build_plan(h, &role);
                 apply::print_package_extras(root, &plan.package_sets, schema::detect_os())?;
                 live = apply::LiveWanted {
@@ -83,17 +77,10 @@ pub fn run(root: &Path) -> Result<()> {
             );
             ui::kvc(paths::state_path().display());
             if !st.steps.is_empty() {
-                ui::section("steps");
-                for (id, detail) in &st.steps {
-                    ui::note(id, detail);
-                }
+                let ids: Vec<&str> = st.steps.keys().map(String::as_str).collect();
+                ui::kv("steps", ids.join(" "));
             }
-            if !st.managed_files.is_empty() {
-                ui::section("files");
-                for p in &st.managed_files {
-                    ui::item(p);
-                }
-            }
+            // Paths are in state.json; listing them here just ellipsizes.
         }
         None => ui::kv("apply", "never  (rig apply --yes)"),
     }
@@ -104,10 +91,14 @@ pub fn run(root: &Path) -> Result<()> {
     if ssh.is_file() {
         ui::kv("ssh", ssh.display());
         if let Ok(s) = std::fs::read_to_string(&ssh) {
-            let aliases = apply::host_aliases(&s);
-            ui::kvc(format!("{} alias(es)", aliases.len()));
+            let skip = self_aliases(detected);
+            let aliases: Vec<String> = apply::host_aliases(&s)
+                .into_iter()
+                .filter(|a| !skip.contains(a))
+                .collect();
+            ui::kvc(format!("{} peer alias(es)", aliases.len()));
             for a in aliases {
-                ui::note("host", a);
+                ui::note("alias", a);
             }
         }
     } else {
@@ -155,7 +146,8 @@ fn print_machine(root: &Path) -> bool {
         }
         if let Some((k, v)) = line.split_once(':') {
             let v = v.trim();
-            if v.is_empty() {
+            if v.is_empty() || k.eq_ignore_ascii_case("shell") {
+                // fastfetch sees this process (`rig`), not the login shell
                 continue;
             }
             ui::kv(machine_key(k.trim()), v);
@@ -163,7 +155,40 @@ fn print_machine(root: &Path) -> bool {
             ui::kv("who", line);
         }
     }
+    if any {
+        ui::kv("shell", login_shell());
+    }
     any
+}
+
+fn login_shell() -> String {
+    let path = std::env::var("SHELL").unwrap_or_else(|_| "?".into());
+    let name = Path::new(&path)
+        .file_name()
+        .and_then(|s| s.to_str())
+        .unwrap_or(path.as_str());
+    let Ok(out) = Command::new(&path)
+        .arg("--version")
+        .stdin(Stdio::null())
+        .output()
+    else {
+        return name.to_string();
+    };
+    let first = String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_string();
+    if first.is_empty() {
+        return name.to_string();
+    }
+    // `zsh 5.9 (arm-apple-darwin…)` → `zsh 5.9`
+    first
+        .split_whitespace()
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn machine_key(k: &str) -> &'static str {
@@ -208,10 +233,32 @@ fn overlay_has_files(dir: &Path) -> bool {
     })
 }
 
-fn yn(v: bool) -> &'static str {
-    if v {
-        "on"
+fn feature_summary(f: &schema::RoleFeatures) -> String {
+    let pairs = [
+        ("gui", f.gui),
+        ("cursor", f.cursor),
+        ("remote", f.remote_login),
+        ("screen", f.screen_sharing),
+        ("tailscale", f.tailscale),
+        ("thunderbolt", f.thunderbolt),
+        ("awake", f.stay_awake),
+    ];
+    let on: Vec<&str> = pairs.iter().filter(|(_, v)| *v).map(|(k, _)| *k).collect();
+    let off: Vec<&str> = pairs.iter().filter(|(_, v)| !*v).map(|(k, _)| *k).collect();
+    if off.is_empty() {
+        on.join(" ")
+    } else if on.is_empty() {
+        format!("off {}", off.join(" "))
     } else {
-        "off"
+        format!("{}  off {}", on.join(" "), off.join(" "))
     }
+}
+
+fn self_aliases(detected: Option<&schema::Host>) -> HashSet<String> {
+    let Some(h) = detected else {
+        return HashSet::new();
+    };
+    let mut s: HashSet<String> = h.ssh_paths().into_iter().map(|p| p.alias).collect();
+    s.insert(h.name.clone());
+    s
 }

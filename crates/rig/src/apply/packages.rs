@@ -449,8 +449,7 @@ pub fn print_extras(root: &Path, sets: &[String], os: OsKind) -> Result<()> {
         return Ok(());
     }
     if extra.is_empty() {
-        crate::ui::kv("extra", "none");
-        crate::ui::kvc("on-request / casks all in role sets");
+        crate::ui::kv("extra", "none besides role sets");
         return Ok(());
     }
     crate::ui::kv("extra", format!("{} not in role sets", extra.len()));

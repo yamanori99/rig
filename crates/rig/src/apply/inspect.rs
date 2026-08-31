@@ -91,13 +91,18 @@ fn print_stay_awake(os: OsKind) {
 }
 
 fn print_remote_login(os: OsKind) {
+    // macOS launches sshd on demand — pgrep -x sshd is often empty while :22 is open.
+    let ok = match os {
+        OsKind::Macos => features::ssh_port_open(),
+        OsKind::Linux => sshd_listening() || features::ssh_port_open(),
+    };
     let label = match os {
-        OsKind::Macos => "sshd process",
-        OsKind::Linux => "sshd listening",
+        OsKind::Macos => "tcp/22",
+        OsKind::Linux => "sshd",
     };
     ui::note(
         "remote",
-        format!("{label}  {}", if sshd_listening() { "yes" } else { "no" }),
+        format!("{label}  {}", if ok { "yes" } else { "no" }),
     );
     let path = Path::new(SSHD_KEEPALIVE_PATH);
     match std::fs::read_to_string(path) {

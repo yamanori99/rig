@@ -823,7 +823,7 @@ fn remote_login_is_on() -> Result<bool> {
     Ok(ok && lower.contains("remote login: on"))
 }
 
-fn ssh_port_open() -> bool {
+pub(crate) fn ssh_port_open() -> bool {
     let Ok(addr) = "127.0.0.1:22".parse() else {
         return false;
     };
