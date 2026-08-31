@@ -308,11 +308,6 @@ pub fn pad(s: &str, width: usize) -> String {
     }
 }
 
-pub fn mark_pad(mark: &str, width: usize) -> String {
-    let pad = format!("{mark:<width$}");
-    wrap(color_out(), mark_code(mark), &pad)
-}
-
 pub fn sudo_command() -> std::process::Command {
     std::process::Command::new("sudo")
 }

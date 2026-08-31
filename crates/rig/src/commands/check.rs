@@ -30,53 +30,44 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         return Ok(());
     }
 
-    let paths: Vec<_> = peers.iter().flat_map(|p| p.ssh_paths()).collect();
-    let aw = paths
-        .iter()
-        .map(|p| p.alias.chars().count())
-        .max()
-        .unwrap_or(5)
-        .max(5);
-    let iw = paths
-        .iter()
-        .map(|p| p.ip.chars().count())
-        .max()
-        .unwrap_or(2)
-        .max(2);
-
-    let mut any_ssh = false;
+    let mut ssh_ok: Vec<(String, String, String)> = Vec::new();
     for peer in peers {
         ui::group(&peer.name);
         for path in peer.ssh_paths() {
-            let tcp = if tcp_port_open(&path.ip, 22) {
-                "ok"
+            let tcp = tcp_port_open(&path.ip, 22);
+            let ssh = tcp && ssh_batch_ok(&path.alias);
+            let link = path.link.as_str();
+            let detail = if ssh {
+                ssh_ok.push((
+                    peer.name.clone(),
+                    path.alias.clone(),
+                    path.link.comment().to_string(),
+                ));
+                format!("{}  {}  ssh ok", path.alias, path.ip)
+            } else if tcp {
+                format!(
+                    "{}  {}  tcp open  ssh no (try: rig host keys -y)",
+                    path.alias, path.ip
+                )
             } else {
-                "fail"
+                format!("{}  {}  no tcp/22", path.alias, path.ip)
             };
-            let ssh = if tcp == "ok" && ssh_batch_ok(&path.alias) {
-                any_ssh = true;
-                "ok"
-            } else if tcp == "ok" {
-                "fail"
+            if ssh {
+                ui::ok(link, &detail);
             } else {
-                "-"
-            };
-            ui::table_row(format!(
-                "  {}  {}  {}  {} {}",
-                ui::pad(path.link.as_str(), 3),
-                ui::pad(&path.alias, aw),
-                ui::pad(&path.ip, iw),
-                ui::mark_pad(tcp, 4),
-                ui::mark_pad(ssh, 3)
-            ));
+                ui::fail(link, &detail);
+            }
         }
     }
 
     ui::blank();
-    if any_ssh {
-        ui::empty("at least one passwordless SSH path works");
-    } else {
+    if ssh_ok.is_empty() {
         ui::empty("no passwordless SSH yet — try: rig host keys -y");
+    } else {
+        ui::section("can ssh");
+        for (peer, alias, how) in ssh_ok {
+            ui::kv("ssh", format!("ssh {alias}  {peer}  {how}"));
+        }
     }
     Ok(())
 }
