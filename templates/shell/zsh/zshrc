@@ -174,13 +174,49 @@ alias aliases='$RIG_CONFIG/shell/scripts/aliases.sh'
 
 # Sync all machines
 
-# fastfetch の OS 行 (macOS Golden Gate …) が 61 桁なので枠は 64
-typeset -g DOTS_BANNER_WIDTH=64
-_dots_hrule() {
-  print -- "${(l:$DOTS_BANNER_WIDTH::─:)}"
+# 起動バナーの幅は、中身の最長行に合わせる (ANSI は幅に数えない)
+_dots_visible_len() {
+  local s=$1
+  s=${s//$'\033'\[[0-9;]*[A-Za-z]/}
+  print -r -- ${#s}
 }
 
-# --- SSH 接続時にバナー表示: 接続元 IP → 接続先 IP + 経路 ---
+_dots_max_width() {
+  local line w=0 n
+  for line in "${(@f)1}"; do
+    n=$(_dots_visible_len "$line")
+    (( n > w )) && w=$n
+  done
+  print -r -- $w
+}
+
+_dots_hrule() {
+  local n=${1:-${DOTS_BANNER_WIDTH:-40}}
+  (( n < 1 )) && n=1
+  print -- "${(l:n::─:)}"
+}
+
+# 本文を枠で囲む。幅は最長行 (SSH 行があればそれも)
+_dots_frame() {
+  local body=$1
+  local w tw
+  w=$(_dots_max_width "$body")
+  if [[ -n ${DOTS_SSH_BANNER:-} ]]; then
+    tw=$(_dots_visible_len "$DOTS_SSH_BANNER")
+    (( tw > w )) && w=$tw
+  fi
+  (( w < 8 )) && w=8
+  typeset -g DOTS_BANNER_WIDTH=$w
+  if [[ -n ${DOTS_SSH_BANNER:-} ]]; then
+    echo "\033[36m${(r:w::─:)DOTS_SSH_BANNER}\033[0m"
+  else
+    _dots_hrule $w
+  fi
+  print -r -- "$body"
+  _dots_hrule $w
+}
+
+# --- SSH 接続時: 本文は後で fastfetch 枠の上辺にする ---
 if [[ -n "$SSH_CONNECTION" ]]; then
     _client_ip=$(echo "$SSH_CONNECTION" | awk '{print $1}')
     _server_ip=$(echo "$SSH_CONNECTION" | awk '{print $3}')
@@ -191,10 +227,8 @@ if [[ -n "$SSH_CONNECTION" ]]; then
     else
         export DOTS_SSH_ROUTE="SSH"
     fi
-    _sb="─── SSH: $_client_ip → $_server_ip ($DOTS_SSH_ROUTE) ───"
-    [[ ${#_sb} -gt $DOTS_BANNER_WIDTH ]] && _sb="${_sb:0:$DOTS_BANNER_WIDTH}"
-    echo "\033[36m${(r:$DOTS_BANNER_WIDTH::─:)_sb}\033[0m"
-    unset _client_ip _server_ip _sb
+    typeset -g DOTS_SSH_BANNER="─── SSH: $_client_ip → $_server_ip ($DOTS_SSH_ROUTE) ───"
+    unset _client_ip _server_ip
 fi
 
 # クイックナビゲーション
@@ -371,7 +405,7 @@ add-zsh-hook precmd notify_on_complete
 # SSH を切ってローカルに戻った直後にバナーと同じ色の罫線を表示
 _dots_precmd_after_ssh() {
   if [[ -n "${_dots_just_ran_ssh:-}" && -z "$SSH_CONNECTION" ]]; then
-    echo "\033[36m$(_dots_hrule)\033[0m"
+    echo "\033[36m$(_dots_hrule "${COLUMNS:-${DOTS_BANNER_WIDTH:-40}}")\033[0m"
     unset _dots_just_ran_ssh
   fi
 }
@@ -395,13 +429,14 @@ TRAPWINCH() {
 typeset -g DOTS_SHOW_STARTUP_INFO=true
 
 _show_fastfetch() {
-  _dots_hrule
-  fastfetch -c "$RIG_CONFIG/shell/fastfetch/config.jsonc" --pipe false
+  _dots_frame "$(fastfetch -c "$RIG_CONFIG/shell/fastfetch/config.jsonc" --pipe false)"
 }
 
 if $DOTS_SHOW_STARTUP_INFO; then
   _show_fastfetch
-  _dots_hrule
+elif [[ -n ${DOTS_SSH_BANNER:-} ]]; then
+  echo "\033[36m$DOTS_SSH_BANNER\033[0m"
+  typeset -g DOTS_BANNER_WIDTH=$(_dots_visible_len "$DOTS_SSH_BANNER")
 fi
 
 # Tips (起動時表示: true で有効、'tips' で手動表示可)
@@ -421,13 +456,13 @@ weather() {
 
 # システム情報表示 (ショート版)
 sysinfo() {
-  fastfetch -c "$RIG_CONFIG/shell/fastfetch/config.jsonc" --pipe false
+  _show_fastfetch
 }
 alias ff='sysinfo'
 
 # システム情報表示 (ロング版)
 sysinfo-full() {
-  fastfetch --pipe false
+  _dots_frame "$(fastfetch --pipe false)"
 }
 alias ffl='sysinfo-full'
 
