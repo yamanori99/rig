@@ -147,7 +147,7 @@ pub fn execute(
                 finish_step(&mut st, "remote-login", report)?;
             }
             "screen-sharing" if !step.skip => {
-                let report = features::apply_screen_sharing(os)?;
+                let report = features::apply_screen_sharing(os, &plan.user)?;
                 finish_step(&mut st, "screen-sharing", report)?;
             }
             "thunderbolt" if !step.skip => {

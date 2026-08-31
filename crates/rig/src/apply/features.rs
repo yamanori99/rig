@@ -8,7 +8,10 @@ pub struct StepReport {
 }
 
 /// Enable macOS Screen Sharing (VNC :5900). Linux is a no-op.
-pub fn apply_screen_sharing(os: OsKind) -> Result<StepReport> {
+///
+/// Listening on :5900 is not enough: Screen Sharing.app checks ARD access
+/// ("not permitted" if we only `launchctl bootstrap` the daemon).
+pub fn apply_screen_sharing(os: OsKind, user: &str) -> Result<StepReport> {
     if !matches!(os, OsKind::Macos) {
         return Ok(StepReport {
             ok: true,
@@ -21,7 +24,7 @@ pub fn apply_screen_sharing(os: OsKind) -> Result<StepReport> {
             detail: "sudo -v failed (password not accepted or cancelled)".into(),
         });
     }
-    enable_screen_sharing_macos()
+    enable_screen_sharing_macos(user)
 }
 
 /// Enable SSH remote login / ensure sshd is available.
@@ -593,34 +596,108 @@ const SSH_PLIST: &str = "/System/Library/LaunchDaemons/ssh.plist";
 const SSH_SERVICE: &str = "system/com.openssh.sshd";
 const SCREEN_SHARING_PLIST: &str = "/System/Library/LaunchDaemons/com.apple.screensharing.plist";
 const SCREEN_SHARING_SERVICE: &str = "system/com.apple.screensharing";
+const ARD_KICKSTART: &str =
+    "/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart";
 
-fn enable_screen_sharing_macos() -> Result<StepReport> {
-    if screen_sharing_is_on() {
-        return Ok(StepReport {
-            ok: true,
-            detail: "already On".into(),
-        });
+fn enable_screen_sharing_macos(user: &str) -> Result<StepReport> {
+    let mut notes = Vec::new();
+    let ard = configure_ard_access(user)?;
+    if !ard.is_empty() {
+        notes.push(ard);
     }
 
+    // Apple's own dialog: disable then re-enable. Clears the mixed
+    // Screen Sharing / Remote Management state that launchctl-only leaves.
+    let _ = sudo_output(&["launchctl", "bootout", "system", SCREEN_SHARING_PLIST]);
     let launch = bootstrap_screen_sharing()?;
+    if !launch.is_empty() {
+        notes.push(launch);
+    }
+
     std::thread::sleep(std::time::Duration::from_millis(500));
     if screen_sharing_is_on() {
         return Ok(StepReport {
             ok: true,
-            detail: "launchctl bootstrap com.apple.screensharing".into(),
+            detail: if notes.is_empty() {
+                "vnc :5900".into()
+            } else {
+                notes.join("; ")
+            },
         });
     }
 
     let mut detail = "Screen Sharing still off".to_string();
-    let launch = launch.trim();
-    if !launch.is_empty() {
+    if !notes.is_empty() {
         detail.push_str(": ");
-        detail.push_str(launch);
+        detail.push_str(&notes.join("; "));
     }
     detail.push_str(
         ". System Settings > General > Sharing > Screen Sharing, or grant Terminal Full Disk Access",
     );
     Ok(StepReport { ok: false, detail })
+}
+
+/// Grant RFB access. `launchctl` alone opens :5900 but Screen Sharing.app
+/// then says "Screen Sharing is not permitted".
+fn configure_ard_access(user: &str) -> Result<String> {
+    if !std::path::Path::new(ARD_KICKSTART).is_file() {
+        return Ok(String::new());
+    }
+    let mut notes = Vec::new();
+    let _ = sudo_output(&[ARD_KICKSTART, "-deactivate", "-stop"]);
+
+    let allow: &[&str] = if user.is_empty() {
+        &[ARD_KICKSTART, "-configure", "-allowAccessFor", "-allUsers"]
+    } else {
+        &[
+            ARD_KICKSTART,
+            "-configure",
+            "-allowAccessFor",
+            "-specifiedUsers",
+        ]
+    };
+    let (ok, out) = sudo_output(allow)?;
+    if !ok {
+        notes.push(format!("allowAccessFor: {}", out.trim()));
+    }
+
+    let (ok, out) = if user.is_empty() {
+        sudo_output(&[
+            ARD_KICKSTART,
+            "-activate",
+            "-configure",
+            "-access",
+            "-on",
+            "-privs",
+            "-all",
+            "-restart",
+            "-agent",
+        ])?
+    } else {
+        sudo_output(&[
+            ARD_KICKSTART,
+            "-activate",
+            "-configure",
+            "-access",
+            "-on",
+            "-privs",
+            "-all",
+            "-users",
+            user,
+            "-restart",
+            "-agent",
+        ])?
+    };
+    if !ok {
+        notes.push(format!("activate: {}", out.trim()));
+    } else if notes.is_empty() {
+        notes.push(if user.is_empty() {
+            "ARD access all users".into()
+        } else {
+            format!("ARD access {user}")
+        });
+    }
+    Ok(notes.join("; "))
 }
 
 fn bootstrap_screen_sharing() -> Result<String> {
