@@ -154,7 +154,9 @@ git に toml がすでにあるなら `rig init` は実行しない。init は
 | `workstation` | GUI のあるノート / デスクトップ。シェルは zsh |
 | `compute` | 画面なし。シェルは bash。SSH、画面共有、スリープしない |
 
-macOS 12.1 以降、`rig apply` は VNC `:5900` を上げるが、Screen Sharing.app の許可は付けない。システム設定 > 一般 > 共有で、画面共有を一度オフにしてオンにする。
+macOS 12.1 以降、`rig apply` は VNC `:5900` を上げるが、
+Screen Sharing.app の許可は付けない。システム設定 > 一般 > 共有で、
+画面共有を一度オフにしてオンにする。
 
 ## コマンド
 
