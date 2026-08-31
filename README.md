@@ -156,9 +156,9 @@ at that path. Fix the link. Do not run init again.
 | `workstation` | GUI laptop or desktop. Shell: zsh |
 | `compute` | No display. Shell: bash. SSH, screen sharing, no sleep |
 
-On macOS 12.1+, `rig apply` starts VNC `:5900` but cannot permit
-Screen Sharing.app. Turn Screen Sharing off and on once in
-System Settings > General > Sharing.
+On macOS 12.1+, `rig apply` turns on Remote Management (`:5900`).
+Permit it once in System Settings > General > Sharing >
+Remote Management (not Screen Sharing).
 
 ## Commands
 

@@ -7,11 +7,11 @@ pub struct StepReport {
     pub detail: String,
 }
 
-/// Enable macOS Screen Sharing (VNC :5900). Linux is a no-op.
+/// Enable macOS Remote Management (VNC :5900). Linux is a no-op.
 ///
-/// macOS 12.1+ will not grant Screen Sharing.app control from CLI (needs MDM
-/// or a one-time System Settings toggle). Mixing Remote Management (`kickstart
-/// -activate`) with `launchctl` Screen Sharing produces "not permitted".
+/// Screen Sharing.app talks to Remote Management. The Sharing-pane
+/// "Screen Sharing" switch is the wrong one and fights ARD. CLI still
+/// cannot grant TCC; toggle Remote Management once in System Settings.
 pub fn apply_screen_sharing(os: OsKind, user: &str) -> Result<StepReport> {
     if !matches!(os, OsKind::Macos) {
         return Ok(StepReport {
@@ -595,33 +595,27 @@ fn thunderbolt_plist(ip: &str) -> String {
 
 const SSH_PLIST: &str = "/System/Library/LaunchDaemons/ssh.plist";
 const SSH_SERVICE: &str = "system/com.openssh.sshd";
-const SCREEN_SHARING_PLIST: &str = "/System/Library/LaunchDaemons/com.apple.screensharing.plist";
-const SCREEN_SHARING_SERVICE: &str = "system/com.apple.screensharing";
 const ARD_KICKSTART: &str =
     "/System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart";
 
-const GUI_TOGGLE: &str = "toggle Screen Sharing off/on once in System Settings > Sharing";
+const GUI_TOGGLE: &str = "turn on Remote Management in System Settings > Sharing";
 
 fn enable_screen_sharing_macos(user: &str) -> Result<StepReport> {
-    let mut notes = Vec::new();
-    let ard = remote_management_running();
-    let vnc = screen_sharing_is_on();
-
-    // Remote Management + Screen Sharing → "not permitted". Drop RM; never activate it.
-    if ard && std::path::Path::new(ARD_KICKSTART).is_file() {
-        let _ = sudo_output(&[ARD_KICKSTART, "-deactivate", "-stop"]);
-        notes.push("stopped Remote Management".into());
-        std::thread::sleep(std::time::Duration::from_millis(300));
-    } else if vnc {
+    if remote_management_running() && screen_sharing_is_on() {
         return Ok(StepReport {
             ok: true,
-            detail: "vnc :5900".into(),
+            detail: "remote management :5900".into(),
         });
     }
 
-    let launch = bootstrap_screen_sharing()?;
-    if !launch.is_empty() {
-        notes.push(launch);
+    let mut notes = Vec::new();
+    if std::path::Path::new(ARD_KICKSTART).is_file() {
+        let ard = activate_remote_management(user)?;
+        if !ard.is_empty() {
+            notes.push(ard);
+        }
+    } else {
+        notes.push("ARD kickstart missing".into());
     }
     open_sharing_pane(user);
     notes.push(GUI_TOGGLE.into());
@@ -641,6 +635,64 @@ fn enable_screen_sharing_macos(user: &str) -> Result<StepReport> {
         detail.push_str(&notes.join("; "));
     }
     Ok(StepReport { ok: false, detail })
+}
+
+/// Do not `-deactivate`: that drops a working GUI grant. Do not
+/// `launchctl` Screen Sharing: it conflicts with Remote Management.
+fn activate_remote_management(user: &str) -> Result<String> {
+    let mut notes = Vec::new();
+    let allow: &[&str] = if user.is_empty() {
+        &[ARD_KICKSTART, "-configure", "-allowAccessFor", "-allUsers"]
+    } else {
+        &[
+            ARD_KICKSTART,
+            "-configure",
+            "-allowAccessFor",
+            "-specifiedUsers",
+        ]
+    };
+    let (ok, out) = sudo_output(allow)?;
+    if !ok {
+        notes.push(format!("allowAccessFor: {}", out.trim()));
+    }
+
+    let (ok, out) = if user.is_empty() {
+        sudo_output(&[
+            ARD_KICKSTART,
+            "-activate",
+            "-configure",
+            "-access",
+            "-on",
+            "-privs",
+            "-all",
+            "-restart",
+            "-agent",
+        ])?
+    } else {
+        sudo_output(&[
+            ARD_KICKSTART,
+            "-activate",
+            "-configure",
+            "-access",
+            "-on",
+            "-privs",
+            "-all",
+            "-users",
+            user,
+            "-restart",
+            "-agent",
+        ])?
+    };
+    if !ok {
+        notes.push(format!("activate: {}", out.trim()));
+    } else {
+        notes.push(if user.is_empty() {
+            "ARD access all users".into()
+        } else {
+            format!("ARD access {user}")
+        });
+    }
+    Ok(notes.join("; "))
 }
 
 fn open_sharing_pane(user: &str) {
@@ -675,30 +727,6 @@ fn console_user() -> Option<String> {
         .filter(|o| o.status.success())
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
         .filter(|s| !s.is_empty())
-}
-
-fn bootstrap_screen_sharing() -> Result<String> {
-    let mut notes = Vec::new();
-    let (en_ok, en_out) = sudo_output(&["launchctl", "enable", SCREEN_SHARING_SERVICE])?;
-    if !en_ok {
-        notes.push(format!("enable: {}", en_out.trim()));
-    }
-    let (boot_ok, boot_out) =
-        sudo_output(&["launchctl", "bootstrap", "system", SCREEN_SHARING_PLIST])?;
-    let boot = boot_out.to_ascii_lowercase();
-    if !boot_ok && !boot.contains("already") && !boot.contains("in progress") {
-        notes.push(format!("bootstrap: {}", boot_out.trim()));
-        let (load_ok, load_out) = sudo_output(&["launchctl", "load", "-w", SCREEN_SHARING_PLIST])?;
-        if !load_ok {
-            notes.push(format!("load -w: {}", load_out.trim()));
-        }
-    }
-    let (kick_ok, kick_out) =
-        sudo_output(&["launchctl", "kickstart", "-k", SCREEN_SHARING_SERVICE])?;
-    if !kick_ok {
-        notes.push(format!("kickstart: {}", kick_out.trim()));
-    }
-    Ok(notes.join("; "))
 }
 
 fn screen_sharing_is_on() -> bool {

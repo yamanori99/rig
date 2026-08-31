@@ -19,9 +19,8 @@ pub struct RoleFeatures {
     pub cursor: bool,
     #[serde(default)]
     pub remote_login: bool,
-    /// macOS Screen Sharing daemon (VNC :5900). Does not grant
-    /// Screen Sharing.app permission (macOS 12.1+: System Settings toggle or MDM).
-    /// No-op on Linux.
+    /// macOS Remote Management (VNC :5900) for Screen Sharing.app.
+    /// TCC still needs a one-time System Settings toggle. No-op on Linux.
     #[serde(default)]
     pub screen_sharing: bool,
     #[serde(default)]
