@@ -176,8 +176,11 @@ alias aliases='$RIG_CONFIG/shell/scripts/aliases.sh'
 
 # 起動バナーの幅は、中身の最長行に合わせる (ANSI は幅に数えない)
 _dots_visible_len() {
-  local s=$1
-  s=${s//$'\033'\[[0-9;]*[A-Za-z]/}
+  # EXTENDED_GLOB の # が「直前の 0 回以上」。glob の * だと行全体を食う
+  setopt localoptions extendedglob
+  local s="$1"
+  s=${s//$'\033'\[[0-9;]#[A-Za-z]/}
+  s=${s//$'\r'/}
   print -r -- ${#s}
 }
 
@@ -198,7 +201,7 @@ _dots_hrule() {
 
 # 本文を枠で囲む。幅は最長行 (SSH 行があればそれも)
 _dots_frame() {
-  local body=$1
+  local body="$1"
   local w tw
   w=$(_dots_max_width "$body")
   if [[ -n ${DOTS_SSH_BANNER:-} ]]; then
