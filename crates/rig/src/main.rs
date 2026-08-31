@@ -39,23 +39,27 @@ const DATA_DEFAULT: &str = "~/.local/share/rig/product/";
 const DATA_DEFAULT: &str = "pass --root / RIG_ROOT";
 
 fn after_help() -> String {
+    // Same indent as clap lists. Label width matches `templates/` (10) + gap.
+    let row = |id: &str, note: &str| format!("  {id:<12}{note}");
     format!(
         "\
-Flow
+Flow:
   rig init -R workstation|compute
-  edit hosts/<name>.toml              peers: [[ssh]]
+  edit hosts/<name>.toml
   rig apply -y
-  rig host check                      then: rig host keys -y
+  rig host check
+  rig host keys -y
 
-Layout  (product root)
-  hosts/       this host + peers
-  overlay/     your shell / tmux / Cursor
-  templates/   product defaults — do not edit
-  default      {DATA_DEFAULT}
-
-  -y write   -v version   -r root   -h help
-  rig host    list | check | keys
-"
+Layout:
+{}
+{}
+{}
+{}
+",
+        row("hosts/", "this host + peers"),
+        row("overlay/", "your shell / tmux / Cursor"),
+        row("templates/", "product defaults — do not edit"),
+        row("default", DATA_DEFAULT),
     )
 }
 
@@ -110,12 +114,6 @@ const UPDATE_LONG: &str = "\
 Install a GitHub Release binary to ~/.local/bin/rig.
 
 Preview first; --yes downloads. --force reinstalls the same tag.";
-
-const HOST_AFTER: &str = "
-  rig host list
-  rig host check
-  rig host keys -y
-";
 
 const HOST_LIST_LONG: &str = "\
 List hosts/*.toml: name, role, os, shell, network paths.";
@@ -255,8 +253,7 @@ enum Commands {
 #[command(
     arg_required_else_help = true,
     subcommand_required = true,
-    disable_help_subcommand = true,
-    after_help = HOST_AFTER
+    disable_help_subcommand = true
 )]
 enum HostCmd {
     /// List hosts/*.toml
