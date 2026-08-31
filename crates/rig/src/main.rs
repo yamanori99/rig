@@ -39,27 +39,52 @@ const DATA_DEFAULT: &str = "~/.local/share/rig/product/";
 const DATA_DEFAULT: &str = "pass --root / RIG_ROOT";
 
 fn after_help() -> String {
-    // Same indent as clap lists. Label width matches `templates/` (10) + gap.
-    let row = |id: &str, note: &str| format!("  {id:<12}{note}");
+    let h = ui::help_head;
+    let r = ui::help_row;
     format!(
         "\
-Flow:
-  rig init -R workstation|compute
-  edit hosts/<name>.toml
-  rig apply -y
-  rig host check
-  rig host keys -y
+{}
+{}
+{}
+{}
+{}
 
-Layout:
+{}
+{}
+{}
+{}
+
+{}
+{}
+{}
+{}
+{}
+
+{}
 {}
 {}
 {}
 {}
 ",
-        row("hosts/", "this host + peers"),
-        row("overlay/", "your shell / tmux / Cursor"),
-        row("templates/", "product defaults — do not edit"),
-        row("default", DATA_DEFAULT),
+        h("Commands"),
+        r("init, i", "Write hosts/<name>.toml"),
+        r("apply, a", "Apply this host (preview; -y writes)"),
+        r("status, s", "Show this machine"),
+        r("host, h", "Peers and SSH"),
+        h("Options"),
+        r("-v", "Print version"),
+        r("-r", "Product root (cwd / RIG_ROOT / unpack)"),
+        r("-h", "Print help (see --help)"),
+        h("Flow"),
+        r("init", "-R workstation|compute"),
+        r("apply", "-y"),
+        r("host", "check"),
+        r("host", "keys -y"),
+        h("Layout"),
+        r("hosts/", "This host + peers"),
+        r("overlay/", "Your shell / tmux / Cursor"),
+        r("templates/", "Product defaults — do not edit"),
+        r("product/", DATA_DEFAULT),
     )
 }
 
@@ -144,7 +169,12 @@ Prefers lan/thunderbolt, then vpn. Preview without --yes.";
     about = "Opinionated setup for workstation and compute machines",
     long_about = LONG_ABOUT,
     before_help = crate::ui::banner(),
-    after_help = after_help()
+    after_help = after_help(),
+    help_template = "\
+{before-help}\
+{about-with-newline}\
+{usage-heading} {usage}{after-help}\
+"
 )]
 struct Cli {
     /// Print version
@@ -168,7 +198,7 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Write hosts/<name>.toml
-    #[command(visible_alias = "i", long_about = INIT_LONG)]
+    #[command(alias = "i", long_about = INIT_LONG)]
     Init {
         /// Role: workstation or compute
         #[arg(short = 'R', long, default_value = "workstation")]
@@ -178,7 +208,7 @@ enum Commands {
         name: Option<String>,
     },
     /// Apply this host (preview; -y writes)
-    #[command(visible_alias = "a", long_about = APPLY_LONG)]
+    #[command(alias = "a", long_about = APPLY_LONG)]
     Apply {
         /// Write (default is preview)
         #[arg(short = 'y', long = "yes")]
@@ -194,10 +224,10 @@ enum Commands {
         packages: bool,
     },
     /// Show this machine
-    #[command(visible_alias = "s", long_about = STATUS_LONG)]
+    #[command(alias = "s", long_about = STATUS_LONG)]
     Status,
     /// Peers and SSH
-    #[command(visible_alias = "h", subcommand)]
+    #[command(alias = "h", subcommand)]
     Host(HostCmd),
     /// Role features and packages
     #[command(hide = true, long_about = ROLES_LONG)]

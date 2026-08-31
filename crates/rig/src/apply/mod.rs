@@ -52,7 +52,7 @@ pub fn execute(
     ui::blank();
     ui::section("run");
 
-    st.note_step("validate", format!("role={} ok", host.role));
+    st.note_step("validate", format!("{}  ok", host.role));
     ui::ok("validate", "");
 
     let thick_zsh = matches!(shell, crate::schema::ShellKind::Zsh);
@@ -78,7 +78,7 @@ pub fn execute(
     st.note_step(
         "link-shell",
         format!(
-            "config={} files={} rcs={} product_rc={}",
+            "{}  {} files  {} rcs  product_rc {}",
             link.config_dir.display(),
             link.written.len(),
             link.touched_rcs.len(),

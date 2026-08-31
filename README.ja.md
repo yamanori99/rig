@@ -77,9 +77,9 @@ curl -fsSL \
 1 台目:
 
 ```bash
-rig init --role workstation   # or: --role compute
-rig apply            # preview
-rig apply --yes
+rig init -R workstation   # or: -R compute
+rig apply                 # preview
+rig apply -y
 rig status
 ```
 
@@ -157,17 +157,19 @@ git に toml がすでにあるなら `rig init` は実行しない。init は
 ## コマンド
 
 ```text
-rig                 # この help
-rig -v
+init, i     hosts/<name>.toml を書く
+apply, a    このホストに載せる (preview。-y で実行)
+            --undo -y   apply を戻す
+status, s   このマシンを見る
+host, h     list | check | keys
 
-rig init -R workstation|compute
-rig apply -y
-rig status
-rig host            # list | check | keys
+-v          バージョン
+-r          データの根  (cwd / RIG_ROOT / 展開)
+-h          help        (長い説明は --help)
 ```
 
 多くのコマンドは、データのパスを stderr に出す。長い説明は
-`rig COMMAND --help` を見る。
+`rig COMMAND --help` である。
 
 ## 開発者向け
 

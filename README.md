@@ -78,9 +78,9 @@ those, run `rig apply --undo --yes` first, while the binary is still there.
 First machine:
 
 ```bash
-rig init --role workstation   # or: --role compute
-rig apply            # preview
-rig apply --yes
+rig init -R workstation   # or: -R compute
+rig apply                 # preview
+rig apply -y
 rig status
 ```
 
@@ -159,17 +159,18 @@ at that path. Fix the link. Do not run init again.
 ## Commands
 
 ```text
-rig                 # this help
-rig -v
+init, i     Write hosts/<name>.toml
+apply, a    Apply this host (preview; -y writes)
+            --undo -y   reverse apply
+status, s   Show this machine
+host, h     list | check | keys
 
-rig init -R workstation|compute
-rig apply -y
-rig status
-rig host            # list | check | keys
+-v          version
+-r          product root  (cwd / RIG_ROOT / unpack)
+-h          help          (--help for more)
 ```
 
-Most commands print the data path on stderr. For the long help, run
-`rig COMMAND --help`.
+Most commands print the data path on stderr. `rig COMMAND --help` has the long text.
 
 ## For developers
 

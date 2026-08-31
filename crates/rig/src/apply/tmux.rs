@@ -95,7 +95,7 @@ pub fn link_tmux(root: &Path) -> Result<TmuxReport> {
         "templates"
     };
     Ok(TmuxReport {
-        detail: format!("{kind} → {} (scripts={})", dst.display(), extra.len()),
+        detail: format!("{kind} → {}  {} scripts", dst.display(), extra.len()),
         linked: Some(dst),
         extra,
     })

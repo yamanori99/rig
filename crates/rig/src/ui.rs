@@ -3,11 +3,11 @@ use std::io::IsTerminal;
 use std::path::Path;
 use std::sync::OnceLock;
 
-/// `  ok  screen-sharing  detail` — values share this column.
+/// `  version    0.4.1` — labels share this column. Marks only on steps.
 const INDENT: usize = 2;
 const MARK: usize = 4;
-const LABEL: usize = 16;
-const VALUE_COL: usize = INDENT + MARK + 1 + LABEL + 1; // 24
+const LABEL: usize = 11;
+const VALUE_COL: usize = INDENT + LABEL + 1;
 
 const RESET: &str = "\x1b[0m";
 const DIM: &str = "\x1b[2m";
@@ -140,7 +140,7 @@ fn tidy(s: &str) -> String {
     if !std::io::stdout().is_terminal() {
         return s;
     }
-    let budget = term_cols().saturating_sub(VALUE_COL).max(24);
+    let budget = term_cols().saturating_sub(VALUE_COL + MARK + 1).max(20);
     ellipsize(&s, budget)
 }
 
@@ -160,25 +160,23 @@ pub fn title(name: &str, preview: bool) {
     let on = color_out();
     let n = paint(on, &[BOLD, CYAN], name);
     if preview {
-        println!("{n}  {}", wrap(on, DIM, "preview"));
+        println!("  {n}  {}", wrap(on, DIM, "preview"));
     } else {
-        println!("{n}");
+        println!("  {n}");
     }
 }
 
 pub fn kv(key: &str, value: impl Display) {
     let on = color_out();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label(key));
-    println!("  {m} {k} {}", val(on, &tidy(&value.to_string())));
+    println!("  {k} {}", val(on, &tidy(&value.to_string())));
 }
 
 pub fn kvc(value: impl Display) {
     let on = color_out();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label(""));
     let v = wrap(on, DIM, &tidy(&value.to_string()));
-    println!("  {m} {k} {v}");
+    println!("  {k} {v}");
 }
 
 pub fn blank() {
@@ -196,23 +194,20 @@ pub fn note(key: &str, value: impl Display) {
 
 pub fn item(s: impl Display) {
     let on = color_out();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label(""));
-    println!("  {m} {k} {}", wrap(on, DIM, &tidy(&s.to_string())));
+    println!("  {k} {}", wrap(on, DIM, &tidy(&s.to_string())));
 }
 
 pub fn item2(s: impl Display) {
     let on = color_out();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label(""));
-    println!("  {m} {k} {}", val(on, &tidy(&s.to_string())));
+    println!("  {k} {}", val(on, &tidy(&s.to_string())));
 }
 
 pub fn progress(s: impl Display) {
     let on = color_out();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label(""));
-    println!("  {m} {k} {}", wrap(on, CYAN, &tidy(&s.to_string())));
+    println!("  {k} {}", wrap(on, CYAN, &tidy(&s.to_string())));
 }
 
 pub fn plan(do_it: bool, id: &str, detail: &str) {
@@ -266,42 +261,29 @@ pub fn next(cmd: &str) {
 }
 
 pub fn error(msg: impl Display) {
-    eprintln!("{}", paint(color_err(), &[BOLD, RED], "error"));
-    eprintln!("  {}", tidy(&msg.to_string()));
+    let on = color_err();
+    let k = wrap(on, DIM, &label("error"));
+    eprintln!("  {k} {}", paint(on, &[BOLD, RED], &tidy(&msg.to_string())));
 }
 
 pub fn error_help(help: impl Display) {
     let on = color_err();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label("help"));
-    eprintln!("  {m} {k} {help}");
+    eprintln!("  {k} {help}");
 }
 
 pub fn error_cause(msg: impl Display) {
     let on = color_err();
-    let m = wrap(on, DIM, &mark_field(""));
     let k = wrap(on, DIM, &label("cause"));
-    eprintln!("  {m} {k} {msg}");
+    eprintln!("  {k} {msg}");
 }
 
 pub fn data_hint(root: &Path, os: &str) {
     let on = color_err();
-    eprintln!("{}", paint(on, &[BOLD, CYAN], "data"));
-    let m = wrap(on, DIM, &mark_field(""));
-    let root_k = wrap(on, DIM, &label("root"));
-    let hosts_k = wrap(on, DIM, &label("hosts"));
-    let overlay_k = wrap(on, DIM, &label("overlay"));
-    let root_s = val(on, &tidy(&root.display().to_string()));
-    let os_s = format!("os={}", val(on, os));
-    eprintln!("  {m} {root_k} {root_s}  {os_s}");
-    eprintln!(
-        "  {m} {hosts_k} {}",
-        val(on, &tidy(&format!("{}/", root.join("hosts").display())))
-    );
-    eprintln!(
-        "  {m} {overlay_k} {}",
-        val(on, &tidy(&format!("{}/", root.join("overlay").display())))
-    );
+    let k = wrap(on, DIM, &label("data"));
+    let path = val(on, &tidy(&format!("{}/", root.display())));
+    let os_s = wrap(on, DIM, os);
+    eprintln!("  {k} {path}  {os_s}");
 }
 
 pub fn table_head(line: &str) {
@@ -321,7 +303,19 @@ pub fn sudo_command() -> std::process::Command {
     std::process::Command::new("sudo")
 }
 
-/// Wordmark for `rig` / `rig -h`. Original slant art; hues are ours, not OMZ.
+/// Same indent and label width as `kv`.
+pub fn help_head(name: &str) -> String {
+    let on = color_out();
+    format!("  {}", paint(on, &[BOLD, CYAN], name))
+}
+
+pub fn help_row(id: &str, note: &str) -> String {
+    let on = color_out();
+    let k = wrap(on, CYAN, &label(id));
+    format!("  {k} {note}")
+}
+
+/// Wordmark for `rig` / `rig -h`. One hue per line.
 pub fn banner() -> String {
     let on = color_out();
     let art = r#"        _
@@ -330,23 +324,11 @@ pub fn banner() -> String {
  / / / / /_/ /
 /_/ /_/\__, /
       /____/"#;
-    let hues = [YELLOW, GREEN, CYAN, MAGENTA];
-    let mut i = 0usize;
+    let hues = [YELLOW, GREEN, CYAN, MAGENTA, CYAN, CYAN];
     let mut lines: Vec<String> = art
         .lines()
-        .map(|line| {
-            let mut out = String::from("  ");
-            for ch in line.chars() {
-                if ch == ' ' {
-                    out.push(' ');
-                    continue;
-                }
-                let s = ch.to_string();
-                out.push_str(&paint(on, &[BOLD, hues[i % hues.len()]], &s));
-                i += 1;
-            }
-            out
-        })
+        .enumerate()
+        .map(|(i, line)| paint(on, &[BOLD, hues[i.min(hues.len() - 1)]], line))
         .collect();
     if let Some(last) = lines.last_mut() {
         last.push_str("  ");

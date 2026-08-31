@@ -38,7 +38,7 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
     let mut steps = Vec::new();
     steps.push(ApplyStep {
         id: "validate".into(),
-        detail: format!("role={} schema={}", host.role, host.schema_version),
+        detail: format!("{}  schema {}", host.role, host.schema_version),
         skip: false,
     });
     if matches!(shell, ShellKind::Zsh) {

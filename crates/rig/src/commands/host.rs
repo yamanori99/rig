@@ -11,7 +11,7 @@ pub fn list(root: &std::path::Path) -> Result<()> {
         return Ok(());
     }
     ui::table_head(&format!(
-        "{:<16} {:<12} {:<8} {:<6} {}",
+        "{:<14} {:<12} {:<6} {:<5} {}",
         "name", "role", "os", "shell", "net"
     ));
     for (_, h) in hosts {
@@ -22,7 +22,7 @@ pub fn list(root: &std::path::Path) -> Result<()> {
             .collect::<Vec<_>>()
             .join("  ");
         ui::table_row(format!(
-            "{:<16} {:<12} {:<8} {:<6} {}",
+            "{:<14} {:<12} {:<6} {:<5} {}",
             h.name,
             h.role,
             h.resolved_os().as_str(),
@@ -42,7 +42,7 @@ pub fn detect(root: &std::path::Path) -> Result<()> {
     ui::kv("hosts", format!("{}/", root.join("hosts").display()));
     match schema::detect_current_host(&hosts) {
         Some(h) => {
-            ui::kv("matched", format!("{}  role={}", h.name, h.role));
+            ui::kv("matched", format!("{}  {}", h.name, h.role));
             ui::kv("edit", format!("{}/hosts/{}.toml", root.display(), h.name));
         }
         None => {

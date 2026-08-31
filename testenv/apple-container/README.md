@@ -58,7 +58,7 @@ What smoke checks:
 
 1. Each node: `rig` install + init + apply (`--skip-packages`)
 2. Each workstation: peer `hosts/<name>.toml` with `[[ssh]]` (`link = lan`),
-   then `rig ssh-config --yes`
+   then `rig apply -y -S` (writes ssh config)
 3. From each workstation: `ssh <peer>-lan echo ok` to every other node
    (alias chosen by fleet-smoke; product lets you pick any alias)
 

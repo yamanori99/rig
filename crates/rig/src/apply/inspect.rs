@@ -138,7 +138,7 @@ fn print_thunderbolt(os: OsKind) {
             ui::note(
                 "tb",
                 format!(
-                    "bridge0  {}  inet={}",
+                    "bridge0  {}  inet {}",
                     status.unwrap_or("-"),
                     inet.unwrap_or("-")
                 ),
@@ -200,7 +200,7 @@ fn pmset_keys(text: &str) -> String {
             _ => {}
         }
     }
-    format!("sleep={sleep} displaysleep={display} disksleep={disk} powernap={nap}")
+    format!("sleep {sleep}  display {display}  disk {disk}  nap {nap}")
 }
 
 fn ifconfig_field<'a>(text: &'a str, prefix: &str) -> Option<&'a str> {
@@ -294,7 +294,7 @@ mod tests {
 ";
         assert_eq!(
             pmset_keys(t),
-            "sleep=0 displaysleep=120 disksleep=10 powernap=1"
+            "sleep 0  display 120  disk 10  nap 1"
         );
     }
 }
