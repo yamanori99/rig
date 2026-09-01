@@ -6,8 +6,10 @@ use miette::Result;
 
 pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
-    let host = schema::detect_current_host(&hosts)
+    let host_file = schema::detect_current_host_file(&hosts)
         .ok_or_else(|| RigError::Msg(schema::unregistered_hint(root, &hosts)))?;
+    let host = host_file.1;
+    let host_toml = host_file.0;
     let role = schema::load_role(root, &host.role)?;
     let plan = build_plan(host, &role);
 
@@ -24,7 +26,13 @@ pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()>
         ),
     );
     ui::kv("shell", &plan.shell);
-    ui::kv("user", &plan.user);
+    ui::kv("user", {
+        let here = whoami::username();
+        match host.user_write_needed() {
+            Some(d) => d,
+            None => here,
+        }
+    });
     ui::kv(
         "packages",
         format!(
@@ -39,12 +47,15 @@ pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()>
         let do_it = !(step.skip || (skip_packages && step.id == "packages"));
         ui::plan(do_it, &step.id, &step.detail);
     }
+    if let Some(detail) = host.user_write_needed() {
+        ui::plan(true, "user", &detail);
+    }
 
     if !yes {
         ui::preview("apply");
         return Ok(());
     }
 
-    apply::execute(root, host, &role, yes, skip_packages)?;
+    apply::execute(root, host_toml, host, &role, yes, skip_packages)?;
     Ok(())
 }

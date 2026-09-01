@@ -56,11 +56,14 @@ pub fn apply_login_shell(shell: ShellKind, os: OsKind, user: &str) -> Result<Ste
         }
     }
 
-    if !chsh_to(&wanted, user)? {
-        return Ok(StepReport {
-            ok: false,
-            detail: format!("chsh -s {wanted_s} failed"),
-        });
+    match chsh_to(&wanted, user)? {
+        Ok(()) => {}
+        Err(why) => {
+            return Ok(StepReport {
+                ok: false,
+                detail: format!("chsh -s {wanted_s} {user}: {why}"),
+            });
+        }
     }
 
     Ok(StepReport {
@@ -96,6 +99,16 @@ fn wanted_shell_path(shell: ShellKind, os: OsKind) -> Option<PathBuf> {
 }
 
 fn brew_formula_bin(formula: &str) -> Option<PathBuf> {
+    // Prefer the PATH symlink Homebrew documents for /etc/shells.
+    // `brew --prefix bash` is the keg (`.../opt/bash/bin/bash`); chsh is picky.
+    for p in [
+        PathBuf::from("/opt/homebrew/bin").join(formula),
+        PathBuf::from("/usr/local/bin").join(formula),
+    ] {
+        if p.is_file() {
+            return Some(p);
+        }
+    }
     if let Some(brew) = which("brew") {
         if let Ok(out) = Command::new(brew)
             .args(["--prefix", formula])
@@ -111,14 +124,6 @@ fn brew_formula_bin(formula: &str) -> Option<PathBuf> {
                     }
                 }
             }
-        }
-    }
-    for p in [
-        PathBuf::from("/opt/homebrew/bin").join(formula),
-        PathBuf::from("/usr/local/bin").join(formula),
-    ] {
-        if p.is_file() {
-            return Some(p);
         }
     }
     None
@@ -200,26 +205,31 @@ fn append_etc_shells(path: &Path) -> Result<bool> {
     Ok(status.success())
 }
 
-fn chsh_to(path: &Path, user: &str) -> Result<bool> {
+fn chsh_to(path: &Path, user: &str) -> Result<std::result::Result<(), String>> {
     let path_s = path.to_string_lossy();
-    let status = Command::new("chsh")
-        .args(["-s", path_s.as_ref(), user])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map_err(RigError::Io)?;
-    if status.success() {
-        return Ok(true);
+    let args = ["-s", path_s.as_ref(), user];
+    if chsh_output(Command::new("chsh").args(args))?.is_some() {
+        if let Some(err) = chsh_output(crate::ui::sudo_command().args(["chsh"]).args(args))? {
+            return Ok(Err(err));
+        }
     }
-    let status = crate::ui::sudo_command()
-        .args(["chsh", "-s", path_s.as_ref(), user])
+    Ok(Ok(()))
+}
+
+fn chsh_output(cmd: &mut Command) -> Result<Option<String>> {
+    let out = cmd
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
+        .output()
         .map_err(RigError::Io)?;
-    Ok(status.success())
+    if out.status.success() {
+        return Ok(None);
+    }
+    let msg = String::from_utf8_lossy(&out.stderr).trim().replace('\n', "; ");
+    Ok(Some(if msg.is_empty() {
+        "failed".into()
+    } else {
+        msg
+    }))
 }
 
 fn ensure_sudo_ticket() -> Result<bool> {

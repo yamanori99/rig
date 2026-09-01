@@ -1,6 +1,7 @@
 use super::role::OsKind;
 use crate::error::{Result, RigError};
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -209,6 +210,60 @@ impl Host {
     pub fn resolved_user(&self) -> String {
         self.user.clone().unwrap_or_else(|| whoami::username())
     }
+
+    pub fn user_write_needed(&self) -> Option<String> {
+        user_write_needed(self.user.as_deref(), &whoami::username())
+    }
+}
+
+fn user_write_needed(toml_user: Option<&str>, local: &str) -> Option<String> {
+    match toml_user.map(str::trim).filter(|s| !s.is_empty()) {
+        Some(u) if u == local => None,
+        Some(u) => Some(format!("{u} → {local}")),
+        None => Some(format!("write {local}")),
+    }
+}
+
+/// Set or insert `user = "..."` without dropping comments.
+pub fn set_user_line(toml: &str, user: &str) -> String {
+    let assign = format!("user = \"{user}\"");
+    let mut out = Vec::new();
+    let mut done = false;
+    for line in toml.lines() {
+        let t = line.trim_start();
+        if !done && t.starts_with("user") && t.contains('=') && !t.starts_with('#') {
+            out.push(assign.clone());
+            done = true;
+        } else {
+            out.push(line.to_string());
+        }
+    }
+    if !done {
+        let mut with = Vec::new();
+        let mut inserted = false;
+        for line in &out {
+            with.push(line.clone());
+            if !inserted && line.trim_start().starts_with("role") {
+                with.push(assign.clone());
+                inserted = true;
+            }
+        }
+        if !inserted {
+            with.push(assign);
+        }
+        out = with;
+    }
+    out.join("\n") + "\n"
+}
+
+pub fn persist_user(path: &Path, user: &str) -> Result<bool> {
+    let raw = fs::read_to_string(path).map_err(RigError::Io)?;
+    let next = set_user_line(&raw, user);
+    if next == raw {
+        return Ok(false);
+    }
+    fs::write(path, next).map_err(RigError::Io)?;
+    Ok(true)
 }
 
 fn validate_ip(path: &Path, label: &str, ip: &str) -> Result<()> {
@@ -219,4 +274,46 @@ fn validate_ip(path: &Path, label: &str, ip: &str) -> Result<()> {
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn user_write_skip_when_matches() {
+        assert!(user_write_needed(Some("admin"), "admin").is_none());
+    }
+
+    #[test]
+    fn user_write_when_differs() {
+        assert_eq!(
+            user_write_needed(Some("tak"), "admin").as_deref(),
+            Some("tak → admin")
+        );
+    }
+
+    #[test]
+    fn user_write_when_omitted() {
+        assert_eq!(
+            user_write_needed(None, "admin").as_deref(),
+            Some("write admin")
+        );
+    }
+
+    #[test]
+    fn set_user_replaces_line() {
+        let t = "name = \"x\"\nrole = \"compute\"\nuser = \"tak\"\n";
+        assert_eq!(
+            set_user_line(t, "admin"),
+            "name = \"x\"\nrole = \"compute\"\nuser = \"admin\"\n"
+        );
+    }
+
+    #[test]
+    fn set_user_inserts_after_role() {
+        let t = "name = \"x\"\nrole = \"compute\"\nschema_version = 1\n";
+        let out = set_user_line(t, "admin");
+        assert!(out.contains("role = \"compute\"\nuser = \"admin\"\n"));
+    }
 }

@@ -29,6 +29,7 @@ pub use state::load as load_state;
 /// Run a real apply (caller already printed the plan). Requires `yes` for safety.
 pub fn execute(
     root: &Path,
+    host_toml: &Path,
     host: &Host,
     role: &Role,
     yes: bool,
@@ -55,6 +56,14 @@ pub fn execute(
 
     st.note_step("validate", format!("{}  ok", host.role));
     ui::ok("validate", "");
+
+    let local_user = whoami::username();
+    if let Some(detail) = host.user_write_needed() {
+        crate::schema::persist_user(host_toml, &local_user)?;
+        st.note_file(host_toml);
+        st.note_step("user", &detail);
+        ui::ok("user", &detail);
+    }
 
     let thick_zsh = matches!(shell, crate::schema::ShellKind::Zsh);
     if thick_zsh {
@@ -135,7 +144,8 @@ pub fn execute(
         }
     }
 
-    let sh = login_shell::apply_login_shell(shell, os, &plan.user)?;
+    let local_user = whoami::username();
+    let sh = login_shell::apply_login_shell(shell, os, &local_user)?;
     st.note_step("login-shell", &sh.detail);
     if sh.ok {
         ui::ok("login-shell", &sh.detail);
@@ -158,7 +168,7 @@ pub fn execute(
                 finish_step(&mut st, "remote-login", report)?;
             }
             "screen-sharing" if !step.skip => {
-                let report = features::apply_screen_sharing(os, &plan.user)?;
+                let report = features::apply_screen_sharing(os, &local_user)?;
                 finish_step(&mut st, "screen-sharing", report)?;
             }
             "thunderbolt" if !step.skip => {

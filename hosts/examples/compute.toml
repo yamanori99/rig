@@ -14,7 +14,7 @@ schema_version = 1
 # Omit os / shell to auto-detect at `rig apply` (recommended).
 # os = "macos"          # or "linux"
 # shell = "bash"        # or "zsh"
-# user = "you"          # SSH / local account; default = current user
+# user = "admin"     # account on that machine; omit if it is you
 
 # --- Reachable paths (fill by hand) ---
 # alias = whatever you want to type: `ssh <alias>`

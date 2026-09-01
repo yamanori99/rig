@@ -17,7 +17,7 @@ schema_version = 1
 # Omit os / shell to auto-detect at `rig apply` (recommended).
 # os = "macos"          # or "linux"
 # shell = "zsh"         # or "bash"
-# user = "you"          # default = current user
+# user = "admin"     # account on that machine; omit if it is you
 
 # --- Paths on THIS machine (optional) ---
 # alias = SSH `Host` name (fully user-chosen)

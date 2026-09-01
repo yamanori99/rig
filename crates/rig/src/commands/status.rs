@@ -30,6 +30,9 @@ pub fn run(root: &Path) -> Result<()> {
         Some(h) => {
             ui::kv("host", format!("{}  matched {}", h.name, hn));
             ui::kv("role", &h.role);
+            if let Some(detail) = h.user_write_needed() {
+                ui::note("user", detail);
+            }
             if let Ok(role) = schema::load_role(root, &h.role) {
                 let f = role.features.with_host(&h.features);
                 ui::kv("want", feature_summary(&f));

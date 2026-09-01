@@ -52,6 +52,9 @@ pub fn detect(root: &std::path::Path) -> Result<()> {
     match schema::detect_current_host(&hosts) {
         Some(h) => {
             ui::kv("matched", format!("{}  {}", h.name, h.role));
+            if let Some(detail) = h.user_write_needed() {
+                ui::note("user", detail);
+            }
             ui::kv(
                 "edit",
                 crate::paths::hosts_dir(root)

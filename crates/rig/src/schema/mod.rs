@@ -1,7 +1,7 @@
 mod host;
 mod role;
 
-pub use host::{Host, LinkKind, ShellKind, SshPath};
+pub use host::{persist_user, Host, LinkKind, ShellKind, SshPath};
 pub use role::{OsKind, Role, RoleFeatures};
 
 use crate::error::{Result, RigError};
@@ -64,11 +64,17 @@ pub fn list_roles(root: &Path) -> Result<Vec<String>> {
 }
 
 pub fn detect_current_host<'a>(hosts: &'a [(std::path::PathBuf, Host)]) -> Option<&'a Host> {
+    detect_current_host_file(hosts).map(|(_, h)| h)
+}
+
+pub fn detect_current_host_file<'a>(
+    hosts: &'a [(std::path::PathBuf, Host)],
+) -> Option<(&'a std::path::Path, &'a Host)> {
     let ids = machine_ids();
     hosts.iter().find_map(|(path, h)| {
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
         if identity_hit(&ids, &h.name, stem) {
-            Some(h)
+            Some((path.as_path(), h))
         } else {
             None
         }
