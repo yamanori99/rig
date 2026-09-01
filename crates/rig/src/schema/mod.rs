@@ -88,9 +88,7 @@ pub fn unregistered_hint(root: &Path, hosts: &[(std::path::PathBuf, Host)]) -> S
     let dir = paths::hosts_dir(root);
     if hosts.is_empty() {
         return format!(
-            "no host toml in {} (this OS hostname is {hn}, short {short}). \
-             clone the inventory git into ~/.rig-hosts or run `rig init`. \
-             product hosts/ is examples only",
+            "no toml in {} (host {short}). copy files there or rig init",
             dir.display()
         );
     }

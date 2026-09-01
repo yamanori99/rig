@@ -101,7 +101,7 @@ rig host check
 `--root` を使うと、そちらが根になる。
 
 ```text
-~/.rig-hosts/              # マシン定義。非公開 git にしてよい
+~/.rig-hosts/              # マシン定義の正本。実ディレクトリ
   m4-mba-neva.toml
   m4-mini-tak.toml
 
@@ -121,10 +121,12 @@ $(rig root)/
 ### 2 台目
 
 `rig apply` が見るのは `~/.rig-hosts/` である。製品の `hosts/` ではない。
-2 台目ではその git をホームへ clone する。
+toml をそのディレクトリへコピーする。git は任意である。
 
 ```bash
-git clone <url> ~/.rig-hosts
+# 例: 使っている人だけ
+# git clone <url> ~/.rig-hosts
+cp peer.toml ~/.rig-hosts/
 rig status
 rig apply --yes
 ```

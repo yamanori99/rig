@@ -88,9 +88,10 @@ pub fn hosts_examples_dir(root: &Path) -> PathBuf {
     root.join("hosts").join("examples")
 }
 
-/// Move a legacy product `hosts/` symlink or loose tomls into `~/.rig-hosts`.
+/// Copy inventory into a real `~/.rig-hosts` (not a symlink). Git is optional.
 pub fn ensure_hosts_inventory(root: &Path) -> Result<PathBuf> {
     let dest = hosts_dir(root);
+    materialize_if_symlink(&dest)?;
     migrate_legacy_hosts(root, &dest)?;
     Ok(dest)
 }
@@ -105,7 +106,9 @@ fn migrate_legacy_hosts(root: &Path, dest: &Path) -> Result<()> {
         Err(_) => return Ok(()),
     };
     if meta.file_type().is_symlink() {
-        fs::rename(&legacy, dest).map_err(RigError::Io)?;
+        let target = fs::canonicalize(&legacy).map_err(RigError::Io)?;
+        copy_tree(&target, dest)?;
+        fs::remove_file(&legacy).map_err(RigError::Io)?;
         fs::create_dir_all(&legacy).map_err(RigError::Io)?;
         return Ok(());
     }
@@ -124,6 +127,48 @@ fn migrate_legacy_hosts(root: &Path, dest: &Path) -> Result<()> {
             moved = true;
         }
         fs::rename(&path, dest.join(entry.file_name())).map_err(RigError::Io)?;
+    }
+    Ok(())
+}
+
+fn materialize_if_symlink(dest: &Path) -> Result<()> {
+    let meta = match fs::symlink_metadata(dest) {
+        Ok(m) => m,
+        Err(_) => return Ok(()),
+    };
+    if !meta.file_type().is_symlink() {
+        return Ok(());
+    }
+    match fs::canonicalize(dest) {
+        Ok(target) => {
+            let tmp = dest.with_file_name(".rig-hosts.materializing");
+            let _ = fs::remove_dir_all(&tmp);
+            copy_tree(&target, &tmp)?;
+            fs::remove_file(dest).map_err(RigError::Io)?;
+            fs::rename(&tmp, dest).map_err(RigError::Io)?;
+            Ok(())
+        }
+        Err(_) => {
+            // Dangling link: exists() is false, mkdir fails with EEXIST.
+            fs::remove_file(dest).map_err(RigError::Io)?;
+            fs::create_dir_all(dest).map_err(RigError::Io)?;
+            Ok(())
+        }
+    }
+}
+
+fn copy_tree(src: &Path, dst: &Path) -> Result<()> {
+    fs::create_dir_all(dst).map_err(RigError::Io)?;
+    for entry in fs::read_dir(src).map_err(RigError::Io)? {
+        let entry = entry.map_err(RigError::Io)?;
+        let from = entry.path();
+        let to = dst.join(entry.file_name());
+        let ft = entry.file_type().map_err(RigError::Io)?;
+        if ft.is_dir() {
+            copy_tree(&from, &to)?;
+        } else {
+            fs::copy(&from, &to).map_err(RigError::Io)?;
+        }
     }
     Ok(())
 }
@@ -187,7 +232,7 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn moves_hosts_symlink_to_home_inventory() {
+    fn copies_hosts_symlink_into_real_inventory() {
         let root = scratch();
         let dest = root.join("inv");
         let real = root.join("inventory");
@@ -195,10 +240,41 @@ mod tests {
         fs::write(real.join("mini.toml"), "x").unwrap();
         std::os::unix::fs::symlink(&real, root.join("hosts")).unwrap();
         migrate_legacy_hosts(&root, &dest).unwrap();
-        assert!(dest.symlink_metadata().unwrap().is_symlink());
+        assert!(dest.is_dir());
+        assert!(!dest.symlink_metadata().unwrap().is_symlink());
         assert!(root.join("hosts").is_dir());
         assert!(!root.join("hosts").symlink_metadata().unwrap().is_symlink());
         assert!(dest.join("mini.toml").is_file());
+        assert!(real.join("mini.toml").is_file());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_dangling_inventory_symlink() {
+        let root = scratch();
+        let dest = root.join("inv");
+        std::os::unix::fs::symlink(root.join("missing"), &dest).unwrap();
+        materialize_if_symlink(&dest).unwrap();
+        assert!(dest.is_dir());
+        assert!(!dest.symlink_metadata().unwrap().is_symlink());
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn materializes_inventory_symlink_to_real_dir() {
+        let root = scratch();
+        let dest = root.join("inv");
+        let real = root.join("inventory");
+        fs::create_dir_all(&real).unwrap();
+        fs::write(real.join("mini.toml"), "x").unwrap();
+        std::os::unix::fs::symlink(&real, &dest).unwrap();
+        materialize_if_symlink(&dest).unwrap();
+        assert!(dest.is_dir());
+        assert!(!dest.symlink_metadata().unwrap().is_symlink());
+        assert!(dest.join("mini.toml").is_file());
+        assert!(real.join("mini.toml").is_file());
         let _ = fs::remove_dir_all(&root);
     }
 }

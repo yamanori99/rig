@@ -102,7 +102,7 @@ The exact path is the first line of `rig root`. A checkout of this repo
 or `--root` uses that tree instead.
 
 ```text
-~/.rig-hosts/              # machine files. a private git is fine
+~/.rig-hosts/              # inventory. a real directory, not a link
   m4-mba-neva.toml
   m4-mini-tak.toml
 
@@ -121,16 +121,18 @@ Put `[[ssh]]` on the toml of the machine you connect **to**.
 
 ### A second machine
 
-`rig apply` reads `~/.rig-hosts/`, not product `hosts/`. Clone that git
-into the home directory:
+`rig apply` reads `~/.rig-hosts/`, not product `hosts/`. Copy toml files
+there. Git is optional.
 
 ```bash
-git clone <url> ~/.rig-hosts
+# only if you use git:
+# git clone <url> ~/.rig-hosts
+cp peer.toml ~/.rig-hosts/
 rig status
 rig apply --yes
 ```
 
-If the toml is already in git, do not run `rig init`. Init only creates
+If the toml is already there, do not run `rig init`. Init only creates
 a file when `~/.rig-hosts/` is empty.
 
 If you see `File exists`, the file is already there. Do not run init

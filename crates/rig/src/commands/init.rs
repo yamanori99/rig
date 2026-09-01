@@ -28,7 +28,7 @@ pub fn run(root: &std::path::Path, role: &str, name: Option<&str>) -> Result<()>
     if dest.symlink_metadata().is_ok() {
         return Err(RigError::Msg(format!(
             "already exists: {}. skip init; `rig apply` uses ~/.rig-hosts/. \
-             clone the inventory git there if it lives elsewhere",
+             copy toml files there if the inventory lives elsewhere",
             dest.display()
         ))
         .into());
