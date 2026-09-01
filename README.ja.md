@@ -103,14 +103,7 @@ rig host check            # ssh ok を確認
 更新される。
 
 `rig apply` が見るのは `~/.rig-hosts/` である。製品の `hosts/` ではない。
-git は任意である。
-
-```bash
-# 例: 使っている人だけ
-# git clone <url> ~/.rig-hosts
-cp peer.toml ~/.rig-hosts/
-rig apply --yes
-```
+GitHub にログインする機材なら、`~/.rig-hosts/` を git で管理すると便利である。
 
 ## ロール
 

@@ -103,15 +103,8 @@ its own key.
 After you add or edit peer toml files, apply again (or
 `rig host ssh-config -y`) so `~/.ssh/config.d/rig.conf` updates.
 
-`rig apply` reads `~/.rig-hosts/`, not product `hosts/`. Git is
-optional:
-
-```bash
-# only if you use git:
-# git clone <url> ~/.rig-hosts
-cp peer.toml ~/.rig-hosts/
-rig apply --yes
-```
+`rig apply` reads `~/.rig-hosts/`, not product `hosts/`. On a machine
+that signs in to GitHub, keep `~/.rig-hosts/` in git.
 
 ## Roles
 
