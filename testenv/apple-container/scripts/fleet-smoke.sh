@@ -85,7 +85,7 @@ from pathlib import Path
 
 me = os.environ["RIG_FLEET_NAME"]
 nodes = json.loads(base64.b64decode(os.environ["PEERS_B64"]))
-hosts = Path("hosts")
+hosts = Path.home() / ".rig-hosts"
 hosts.mkdir(exist_ok=True)
 for n in nodes:
     if n["name"] == me:

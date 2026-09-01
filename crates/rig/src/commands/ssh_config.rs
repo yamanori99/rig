@@ -25,7 +25,7 @@ pub fn run(root: &std::path::Path, yes: bool) -> Result<()> {
         "source",
         format!(
             "{}/  (edit [[ssh]] there, not the generated file)",
-            root.join("hosts").display()
+            crate::paths::hosts_dir(root).display()
         ),
     );
     Ok(())

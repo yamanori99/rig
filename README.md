@@ -51,7 +51,7 @@ rig update           # preview
 rig update --yes
 ```
 
-Only `~/.local/bin/rig` is replaced. `hosts/` and `overlay/` stay.
+Only `~/.local/bin/rig` is replaced. `~/.rig-hosts/` and `overlay/` stay.
 If the version went up, templates refresh on the next run.
 
 ## Uninstall
@@ -61,8 +61,8 @@ curl -fsSL \
   https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | sh
 ```
 
-Removes `~/.local/bin/rig`. Hosts, overlay, and state stay. To delete
-those too:
+Removes `~/.local/bin/rig`. `~/.rig-hosts`, overlay, and state stay.
+To delete those too:
 
 ```bash
 curl -fsSL \
@@ -102,13 +102,12 @@ The exact path is the first line of `rig root`. A checkout of this repo
 or `--root` uses that tree instead.
 
 ```text
+~/.rig-hosts/              # machine files. a private git is fine
+  m4-mba-neva.toml
+  m4-mini-tak.toml
+
 $(rig root)/
-  hosts/
-    examples/              # samples. leave them
-      workstation.toml
-      compute.toml
-    m4-mba-neva.toml       # your machines. edit these
-    m4-mini-tak.toml
+  hosts/examples/          # samples. leave them
   overlay/                 # your shell / tmux / Cursor
   templates/               # defaults. leave them
   roles/
@@ -122,32 +121,20 @@ Put `[[ssh]]` on the toml of the machine you connect **to**.
 
 ### A second machine
 
-`rig apply` only looks at `hosts/` above. A git repo of machine files
-(`~/rig-hosts` or similar) is a different directory until you symlink
-it.
-
-```text
-~/rig-hosts/               # private git
-  m4-mba-neva.toml
-  m4-mini-tak.toml
-
-$(rig root)/hosts  ->  ~/rig-hosts
-```
-
-`git pull` in `~/rig-hosts` does not update `rig apply` on a machine
-without that symlink. On the second machine:
+`rig apply` reads `~/.rig-hosts/`, not product `hosts/`. Clone that git
+into the home directory:
 
 ```bash
-ln -sfn ~/rig-hosts "$(rig root | head -1)/hosts"
-rig status                 # this machine should match a host file
+git clone <url> ~/.rig-hosts
+rig status
 rig apply --yes
 ```
 
 If the toml is already in git, do not run `rig init`. Init only creates
-a file when `hosts/` is empty.
+a file when `~/.rig-hosts/` is empty.
 
-If you see `File exists`, there is already a file or a broken symlink
-at that path. Fix the link. Do not run init again.
+If you see `File exists`, the file is already there. Do not run init
+again.
 
 ## Roles
 
@@ -166,7 +153,7 @@ Remote Management (not Screen Sharing).
 ## Commands
 
 ```text
-init, i     Write hosts/<name>.toml
+init, i     Write ~/.rig-hosts/<name>.toml
 apply, a    Apply this host (preview; -y writes)
             --undo -y   reverse apply
 status, s   Show this machine

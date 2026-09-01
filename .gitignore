@@ -3,7 +3,7 @@
 .DS_Store
 *.swp
 
-# Real machine inventory (personal / lab) — never commit
+# Real machine inventory lives in ~/.rig-hosts — never commit it here
 /hosts/*.toml
 !/hosts/examples/
 

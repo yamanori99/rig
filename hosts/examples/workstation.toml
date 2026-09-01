@@ -1,6 +1,6 @@
 # Host example for role=workstation (laptop / desktop).
 # Copy via:  rig init --role workstation
-# Or copy this file to ../<name>.toml and edit.
+# Or copy this file to ~/.rig-hosts/<name>.toml and edit.
 #
 # `name` is yours (inventory id). SSH Host aliases are also yours via [[ssh]].
 # rig never changes the OS hostname. For `rig apply` on this machine, keep

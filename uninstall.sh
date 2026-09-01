@@ -50,7 +50,7 @@ if [ "${RIG_PURGE:-}" = "1" ]; then
     echo "  missing  $data"
   fi
 else
-  echo "  data     kept (hosts / overlay / state)"
+  echo "  data     kept (~/.rig-hosts / overlay / state)"
   echo "  purge    curl -fsSL https://raw.githubusercontent.com/${REPO}/main/uninstall.sh | RIG_PURGE=1 sh"
 fi
 

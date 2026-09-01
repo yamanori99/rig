@@ -67,7 +67,7 @@ fn after_help() -> String {
 {}
 ",
         h("Commands"),
-        r("init, i", "Write hosts/<name>.toml"),
+        r("init, i", "Write ~/.rig-hosts/<name>.toml"),
         r("apply, a", "Apply this host (preview; -y writes)"),
         r("status, s", "Show this machine"),
         r("host, h", "Peers and SSH"),
@@ -81,7 +81,7 @@ fn after_help() -> String {
         r("host", "check"),
         r("host", "keys -y"),
         h("Layout"),
-        r("hosts/", "This host + peers"),
+        r("~/.rig-hosts/", "This host + peers"),
         r("overlay/", "Your shell / tmux / Cursor"),
         r("templates/", "Product defaults — do not edit"),
         r("product/", DATA_DEFAULT),
@@ -89,7 +89,7 @@ fn after_help() -> String {
 }
 
 const INIT_LONG: &str = "\
-Write hosts/<name>.toml from a role template (workstation or compute).
+Write ~/.rig-hosts/<name>.toml from a role template (workstation or compute).
 
 `name` defaults to the short hostname so `rig apply` can match this
 machine. Edit [[ssh]] on peer files, not only on this host.";
@@ -111,7 +111,7 @@ Same as `rig apply --undo`. Removes apply state and managed links.
 --packages also uninstalls role brew/apt packages (destructive).";
 
 const SSH_CONFIG_LONG: &str = "\
-Build ~/.ssh/config.d/rig.conf from every hosts/*.toml [[ssh]] path.
+Build ~/.ssh/config.d/rig.conf from every ~/.rig-hosts/*.toml [[ssh]] path.
 
 Preview first; --yes (alias --write) installs the Include snippet
 in ~/.ssh/config if needed.";
@@ -141,10 +141,10 @@ Install a GitHub Release binary to ~/.local/bin/rig.
 Preview first; --yes downloads. --force reinstalls the same tag.";
 
 const HOST_LIST_LONG: &str = "\
-List hosts/*.toml: name, role, os, shell, network paths.";
+List ~/.rig-hosts/*.toml: name, role, os, shell, network paths.";
 
 const HOST_DETECT_LONG: &str = "\
-Match the current short hostname to hosts/<name>.toml.
+Match the current short hostname to ~/.rig-hosts/<name>.toml.
 
 Apply uses the same match. If none, run `rig init`.";
 
@@ -197,7 +197,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Write hosts/<name>.toml
+    /// Write ~/.rig-hosts/<name>.toml
     #[command(alias = "i", long_about = INIT_LONG)]
     Init {
         /// Role: workstation or compute
@@ -283,7 +283,7 @@ enum Commands {
     disable_help_subcommand = true
 )]
 enum HostCmd {
-    /// List hosts/*.toml
+    /// List ~/.rig-hosts/*.toml
     #[command(long_about = HOST_LIST_LONG)]
     List,
     /// Match this hostname to a host file
@@ -384,8 +384,11 @@ fn try_main() -> Result<()> {
             println!("{}", root.display());
             crate::ui::title("root", false);
             crate::ui::kv("os", schema::detect_os().as_str());
-            crate::ui::kvc("(auto-detect; override in hosts/*.toml)");
-            crate::ui::kv("hosts", format!("{}/", root.join("hosts").display()));
+            crate::ui::kvc("(auto-detect; override in ~/.rig-hosts/*.toml)");
+            crate::ui::kv(
+                "hosts",
+                format!("{}/", crate::paths::hosts_dir(&root).display()),
+            );
             crate::ui::kv("overlay", format!("{}/", root.join("overlay").display()));
             crate::ui::kv(
                 "templates",

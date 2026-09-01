@@ -87,7 +87,7 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
     });
     steps.push(ApplyStep {
         id: "ssh-config".into(),
-        detail: "generate ssh config from hosts/*.toml".into(),
+        detail: "generate ssh config from ~/.rig-hosts/*.toml".into(),
         skip: false,
     });
 

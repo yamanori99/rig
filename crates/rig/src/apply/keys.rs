@@ -70,7 +70,7 @@ pub fn distribute(root: &Path, self_name: &str, yes: bool) -> Result<DistributeR
         return Ok(DistributeReport {
             key: key_note,
             ok: Vec::new(),
-            skip: vec!["no peers with [[ssh]] in hosts/".into()],
+            skip: vec!["no peers with [[ssh]] in ~/.rig-hosts".into()],
             fail: Vec::new(),
         });
     }

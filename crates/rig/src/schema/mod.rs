@@ -75,7 +75,7 @@ pub fn detect_current_host<'a>(hosts: &'a [(std::path::PathBuf, Host)]) -> Optio
     })
 }
 
-/// Why `rig apply` / `keys` could not bind this machine to hosts/*.toml.
+/// Why `rig apply` / `keys` could not bind this machine to ~/.rig-hosts.
 pub fn unregistered_hint(root: &Path, hosts: &[(std::path::PathBuf, Host)]) -> String {
     let hn = current_hostname();
     let short = short_host(&hn);
@@ -83,14 +83,14 @@ pub fn unregistered_hint(root: &Path, hosts: &[(std::path::PathBuf, Host)]) -> S
     if hosts.is_empty() {
         return format!(
             "no host toml in {} (this OS hostname is {hn}, short {short}). \
-             `rig init` only seeds an empty product dir. Point that hosts/ at your \
-             inventory clone (symlink ~/rig-hosts), then apply — do not init over a symlink",
+             clone the inventory git into ~/.rig-hosts or run `rig init`. \
+             product hosts/ is examples only",
             dir.display()
         );
     }
     let names: Vec<&str> = hosts.iter().map(|(_, h)| h.name.as_str()).collect();
     format!(
-        "this machine is not in hosts/ (hostname={hn}, short={short}). \
+        "this machine is not in ~/.rig-hosts (hostname={hn}, short={short}). \
          have: {}. expected {}/{short}.toml with name = \"{short}\"",
         names.join(", "),
         dir.display()

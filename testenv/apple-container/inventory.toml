@@ -5,7 +5,7 @@
 #   role  → "workstation" | "compute"  (passed to `rig init --role`)
 #
 # IPs are discovered after boot and written into the workstation's
-# hosts/<peer>.toml as [[ssh]] (alias/ip/link=lan) by fleet-smoke.
+# ~/.rig-hosts/<peer>.toml as [[ssh]] (alias/ip/link=lan) by fleet-smoke.
 # User inside guests is always `dev`; SSH keys come from mounted-keys/.
 #
 # Grow the fleet by adding blocks, then:

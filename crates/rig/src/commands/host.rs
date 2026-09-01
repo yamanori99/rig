@@ -10,7 +10,7 @@ pub fn list(root: &std::path::Path) -> Result<()> {
     let hosts = schema::load_hosts(root)?;
     ui::title("host list", false);
     if hosts.is_empty() {
-        ui::empty("none — copy hosts/examples/*.toml to hosts/ and edit");
+        ui::empty("none — copy hosts/examples/*.toml to ~/.rig-hosts/ and edit");
         return Ok(());
     }
     let nw = col_w(4, hosts.iter().map(|(_, h)| h.name.as_str())).max(4);
@@ -48,18 +48,28 @@ pub fn detect(root: &std::path::Path) -> Result<()> {
     let short = hn.split('.').next().unwrap_or(&hn);
     ui::title("host detect", false);
     ui::kv("hostname", &hn);
-    ui::kv("hosts", format!("{}/", root.join("hosts").display()));
+    ui::kv("hosts", format!("{}/", crate::paths::hosts_dir(root).display()));
     match schema::detect_current_host(&hosts) {
         Some(h) => {
             ui::kv("matched", format!("{}  {}", h.name, h.role));
-            ui::kv("edit", format!("{}/hosts/{}.toml", root.display(), h.name));
+            ui::kv(
+                "edit",
+                crate::paths::hosts_dir(root)
+                    .join(format!("{}.toml", h.name))
+                    .display(),
+            );
         }
         None => {
             ui::kv(
                 "matched",
-                format!("none — rig init or add hosts/{short}.toml"),
+                format!("none — rig init or add ~/.rig-hosts/{short}.toml"),
             );
-            ui::kv("expected", format!("{}/hosts/{short}.toml", root.display()));
+            ui::kv(
+                "expected",
+                crate::paths::hosts_dir(root)
+                    .join(format!("{short}.toml"))
+                    .display(),
+            );
         }
     }
     Ok(())

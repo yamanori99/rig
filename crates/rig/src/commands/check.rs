@@ -26,7 +26,7 @@ pub fn run(root: &std::path::Path) -> Result<()> {
         .collect();
 
     if peers.is_empty() {
-        ui::empty("no peers with [[ssh]] — add alias/ip/link in hosts/*.toml");
+        ui::empty("no peers with [[ssh]] — add alias/ip/link in ~/.rig-hosts");
         return Ok(());
     }
 

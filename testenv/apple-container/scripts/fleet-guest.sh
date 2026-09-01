@@ -20,9 +20,9 @@ cargo --version
 echo "  step    cargo install rig"
 cargo install --path crates/rig --force
 
-echo "  step    write hosts/${NAME}.toml"
-mkdir -p hosts
-cat > "hosts/${NAME}.toml" <<EOF
+echo "  step    write ~/.rig-hosts/${NAME}.toml"
+mkdir -p "${HOME}/.rig-hosts"
+cat > "${HOME}/.rig-hosts/${NAME}.toml" <<EOF
 name = "${NAME}"
 role = "${ROLE}"
 schema_version = 1

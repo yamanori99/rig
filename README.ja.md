@@ -50,7 +50,7 @@ rig update           # preview
 rig update --yes
 ```
 
-`~/.local/bin/rig` だけ入れ替わる。`hosts/` と `overlay/` はそのまま
+`~/.local/bin/rig` だけ入れ替わる。`~/.rig-hosts/` と `overlay/` はそのまま
 残る。バージョンが上がっていれば、次の実行で templates が更新される。
 
 ## アンインストール
@@ -60,7 +60,7 @@ curl -fsSL \
   https://raw.githubusercontent.com/yamanori99/rig/main/uninstall.sh | sh
 ```
 
-`~/.local/bin/rig` を消す。hosts / overlay / state は残る。まとめて
+`~/.local/bin/rig` を消す。~/.rig-hosts / overlay / state は残る。まとめて
 消すなら:
 
 ```bash
@@ -101,13 +101,12 @@ rig host check
 `--root` を使うと、そちらが根になる。
 
 ```text
+~/.rig-hosts/              # マシン定義。非公開 git にしてよい
+  m4-mba-neva.toml
+  m4-mini-tak.toml
+
 $(rig root)/
-  hosts/
-    examples/              # サンプル。触らない
-      workstation.toml
-      compute.toml
-    m4-mba-neva.toml       # 自分のマシン。編集する
-    m4-mini-tak.toml
+  hosts/examples/          # サンプル。触らない
   overlay/                 # 自分用の shell / tmux / Cursor
   templates/               # 既定値。触らない
   roles/
@@ -121,31 +120,19 @@ $(rig root)/
 
 ### 2 台目
 
-`rig apply` が見るのは、上の `hosts/` だけである。マシン定義を入れた
-git (`~/rig-hosts` など) は、symlink するまで別ディレクトリである。
-
-```text
-~/rig-hosts/               # 非公開の git
-  m4-mba-neva.toml
-  m4-mini-tak.toml
-
-$(rig root)/hosts  ->  ~/rig-hosts
-```
-
-`~/rig-hosts` で `git pull` しても、symlink していないマシンでは
-`rig apply` に反映されない。2 台目では:
+`rig apply` が見るのは `~/.rig-hosts/` である。製品の `hosts/` ではない。
+2 台目ではその git をホームへ clone する。
 
 ```bash
-ln -sfn ~/rig-hosts "$(rig root | head -1)/hosts"
-rig status                 # このマシンが host ファイルに載ること
+git clone <url> ~/.rig-hosts
+rig status
 rig apply --yes
 ```
 
 git に toml がすでにあるなら `rig init` は実行しない。init は
-`hosts/` が空のときにファイルを作るコマンドである。
+`~/.rig-hosts/` が空のときにファイルを作るコマンドである。
 
-`File exists` と出たら、そのパスにファイルか壊れた symlink がある。
-リンクを直す。init はやり直さない。
+`File exists` と出たら、そのパスにファイルがある。init はやり直さない。
 
 ## ロール
 
@@ -164,7 +151,7 @@ macOS 12.1 以降、`rig apply` はリモートマネジメント (`:5900`) を�
 ## コマンド
 
 ```text
-init, i     hosts/<name>.toml を書く
+init, i     ~/.rig-hosts/<name>.toml を書く
 apply, a    このホストに載せる (preview。-y で実行)
             --undo -y   apply を戻す
 status, s   このマシンを見る

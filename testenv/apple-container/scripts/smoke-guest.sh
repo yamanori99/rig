@@ -21,13 +21,13 @@ cargo install --path crates/rig --force
 
 echo "  step    init compute host"
 hn="$(hostname -s | tr '[:upper:]' '[:lower:]')"
-rm -f "hosts/${hn}.toml"
+rm -f "${HOME}/.rig-hosts/${hn}.toml"
 rig init --role compute --name "${hn}"
 python3 - <<'PY'
 from pathlib import Path
 import socket
 short = socket.gethostname().split(".")[0].lower()
-path = Path("hosts") / f"{short}.toml"
+path = Path.home() / ".rig-hosts" / f"{short}.toml"
 text = path.read_text().splitlines()
 out, seen_os, seen_shell = [], False, False
 for ln in text:

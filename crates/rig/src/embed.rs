@@ -26,7 +26,7 @@ struct EmbeddedHostExamples;
 const PRODUCT_VERSION_FILE: &str = ".rig-product-version";
 
 /// Writable product tree: roles, packages, templates, hosts/examples.
-/// User hosts (`hosts/*.toml`) and `overlay/` live beside these and are preserved
+/// User inventory (`~/.rig-hosts/*.toml`) and `overlay/` are preserved
 /// across upgrades.
 pub fn product_data_root() -> PathBuf {
     directories::ProjectDirs::from("dev", "rig", "rig")

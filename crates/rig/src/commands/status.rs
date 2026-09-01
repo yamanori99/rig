@@ -46,7 +46,10 @@ pub fn run(root: &Path) -> Result<()> {
             }
         }
         None => {
-            ui::kv("host", format!("{short}  no hosts/{short}.toml — rig init"));
+            ui::kv(
+                "host",
+                format!("{short}  no ~/.rig-hosts/{short}.toml — rig init"),
+            );
         }
     }
 
