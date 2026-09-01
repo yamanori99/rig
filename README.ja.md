@@ -154,6 +154,9 @@ git に toml がすでにあるなら `rig init` は実行しない。init は
 | `workstation` | GUI のあるノート / デスクトップ。シェルは zsh |
 | `compute` | 画面なし。シェルは bash。SSH、画面共有、スリープしない |
 
+macOS ではロールのシェルを Homebrew のバイナリにする。
+workstation は zsh、compute は bash。`/bin/zsh` と `/bin/bash` は使わない。
+
 macOS 12.1 以降、`rig apply` はリモートマネジメント (`:5900`) を付ける。
 許可はシステム設定 > 一般 > 共有でリモートマネジメントをオン。
 画面共有スイッチではない。

@@ -10,6 +10,7 @@ mod gui;
 mod inspect;
 mod keys;
 mod link;
+mod login_shell;
 mod omz;
 mod packages;
 mod plan;
@@ -132,6 +133,16 @@ pub fn execute(
                 report.detail
             )));
         }
+    }
+
+    let sh = login_shell::apply_login_shell(shell, os, &plan.user)?;
+    st.note_step("login-shell", &sh.detail);
+    if sh.ok {
+        ui::ok("login-shell", &sh.detail);
+    } else {
+        ui::fail("login-shell", &sh.detail);
+        let _ = state::save(&st);
+        return Err(RigError::Msg(format!("login-shell failed: {}", sh.detail)));
     }
 
     let hosts = crate::schema::load_hosts(root)?;

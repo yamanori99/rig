@@ -156,6 +156,9 @@ at that path. Fix the link. Do not run init again.
 | `workstation` | GUI laptop or desktop. Shell: zsh |
 | `compute` | No display. Shell: bash. SSH, screen sharing, no sleep |
 
+On macOS the login shell is Homebrew: zsh for workstation, bash for
+compute. Not `/bin/zsh` or `/bin/bash` 3.2.
+
 On macOS 12.1+, `rig apply` turns on Remote Management (`:5900`).
 Permit it once in System Settings > General > Sharing >
 Remote Management (not Screen Sharing).

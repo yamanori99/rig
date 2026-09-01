@@ -81,6 +81,11 @@ pub fn build_plan(host: &Host, role: &Role) -> ApplyPlan {
         skip: package_sets.is_empty(),
     });
     steps.push(ApplyStep {
+        id: "login-shell".into(),
+        detail: super::login_shell::plan_detail(shell, os),
+        skip: false,
+    });
+    steps.push(ApplyStep {
         id: "ssh-config".into(),
         detail: "generate ssh config from hosts/*.toml".into(),
         skip: false,

@@ -4,7 +4,8 @@
 #   Julia  → juliaup  (then: juliaup update)
 #   Python → uv + pyenv (+ build deps below; pyenv install X / uv sync)
 #   R      → r
-#   C/C++  → cmake, ninja, llvm, pkgconf (also need Xcode CLT: xcode-select --install)
+#   C/C++  → cmake, ninja, llvm, gcc, libomp, pkgconf
+#            (also need Xcode CLT: xcode-select --install)
 #   Rust   → rustup   (then: rustup default stable)
 #   Java   → openjdk@17 + maven
 
@@ -34,6 +35,8 @@ brew "cmake"
 brew "ninja"
 brew "pkgconf"
 brew "llvm"
+brew "libomp"
+brew "gcc"
 
 cask "cursor"
 cask "betterdisplay"

@@ -24,6 +24,15 @@ if command -v brew >/dev/null 2>&1; then
   unset _rig_rustup
 fi
 
+# Homebrew LLVM (keg-only). OpenMP: clang -fopenmp, or gcc-14 -fopenmp.
+if command -v brew >/dev/null 2>&1; then
+  _rig_llvm="$(brew --prefix llvm 2>/dev/null || true)"
+  if [ -n "${_rig_llvm:-}" ] && [ -d "$_rig_llvm/bin" ]; then
+    export PATH="$_rig_llvm/bin:$PATH"
+  fi
+  unset _rig_llvm
+fi
+
 # Safer defaults
 set -o noclobber 2>/dev/null || true
 

@@ -8,12 +8,15 @@
 # frei0r, …; not GUI casks; not toys like c2048/nsnake/vitetris).
 
 # Build / languages
-# Julia → juliaup | Python → uv+pyenv | R → r | C/C++ → cmake/ninja/llvm
+# Julia → juliaup | Python → uv+pyenv | R → r
+# C/C++ → cmake/ninja/llvm/gcc/libomp (OpenMP: gcc-14 or clang -fopenmp)
 # Rust → rustup (rustup default stable) | Java → openjdk@17
 brew "cmake"
 brew "ninja"
 brew "pkgconf"
 brew "llvm"
+brew "libomp"
+brew "gcc"
 brew "uv"
 brew "pyenv"
 brew "openssl@3"
