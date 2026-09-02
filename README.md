@@ -2,6 +2,8 @@
 
 [日本語](README.ja.md)
 
+**In development.** Commands, host files, and apply can still change.
+
 `rig` installs a development environment on your Mac or Linux machines.
 Use the same steps on a laptop and on a Mini.
 
