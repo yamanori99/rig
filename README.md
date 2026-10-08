@@ -51,8 +51,10 @@ You need `curl` and `tar`.
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
-`rig` goes in `~/.local/bin`. That path is also added to zsh and bash
-startup files. When it finishes, close the terminal and open a new one.
+`rig` goes in `~/.local/bin`. That directory is added to zsh and bash
+startup files. The terminal that ran the install does not have it on
+PATH yet. The first commands use that path. A new terminal can run
+`rig` on its own.
 
 Latest release: <https://github.com/yamanori99/rig/releases>
 
@@ -68,11 +70,13 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh \
 
 ### 4. Init and apply
 
+Right after install, call the binary where it landed:
+
 ```bash
-rig init -R workstation   # or: -R compute
-rig apply                 # preview
-rig apply -y
-rig status
+~/.local/bin/rig init -R workstation   # or: -R compute
+~/.local/bin/rig apply                 # preview
+~/.local/bin/rig apply -y
+~/.local/bin/rig status
 ```
 
 Init writes `~/.rig-hosts/<name>.toml` only when that file is missing.

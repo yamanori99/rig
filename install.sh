@@ -44,9 +44,6 @@ install_bin_to_path() {
   install -m 755 "$bin" "$dir/rig"
   echo "installed  $dir/rig"
   persist_path "$dir"
-  echo
-  echo "  next     close this terminal, open a new one, then"
-  echo "           rig --version"
 }
 
 # Login + interactive rc, so Terminal.app and Cursor both see PATH.
@@ -100,13 +97,15 @@ install_from_release() {
     [ -n "$found" ] || return 1
     install_bin_to_path "$found"
   fi
+  rig="$dir/rig"
   echo
   echo "done"
   echo "  packages  macOS brew / Linux apt"
-  echo "  skip      rig apply --yes --skip-packages"
-  echo "  next      rig init --role workstation   # or compute"
-  echo "            rig apply            # preview"
-  echo "            rig apply --yes"
+  echo "  skip      $rig apply --yes --skip-packages"
+  echo "  next      $rig init --role workstation   # or compute"
+  echo "            $rig apply            # preview"
+  echo "            $rig apply --yes"
+  echo "  shell     a new terminal can run rig on its own"
   return 0
 }
 

@@ -49,8 +49,9 @@ Mac では init の前に、システム設定 > 一般 > 共有のコンピュ�
 curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh | sh
 ```
 
-`rig` は `~/.local/bin` に入る。そのパスは zsh / bash の起動ファイルにも
-追加される。終わったら端末を閉じ、開き直す。
+`rig` は `~/.local/bin` に入る。そのディレクトリは zsh / bash の起動ファイルに
+追加される。インストールを実行した端末の PATH には、まだ入っていない。
+最初のコマンドは、入った場所から実行する。端末を開き直すと `rig` だけで動く。
 
 最新版: <https://github.com/yamanori99/rig/releases>
 
@@ -66,11 +67,13 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh \
 
 ### 4. init と apply
 
+インストール直後は、入った場所から実行する。
+
 ```bash
-rig init -R workstation   # or: -R compute
-rig apply                 # preview
-rig apply -y
-rig status
+~/.local/bin/rig init -R workstation   # or: -R compute
+~/.local/bin/rig apply                 # preview
+~/.local/bin/rig apply -y
+~/.local/bin/rig status
 ```
 
 init は `~/.rig-hosts/<name>.toml` が無いときだけ書く。
