@@ -37,11 +37,12 @@ jobs:
         run: cargo clippy -p rig --locked --all-targets -- -D warnings
 
   test:
+    name: test (${{ matrix.runner }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+        runner: [ubuntu-latest, xcode-27]
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v5
 
