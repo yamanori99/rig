@@ -27,10 +27,9 @@ pub fn run(root: &std::path::Path, yes: bool, skip_packages: bool) -> Result<()>
     );
     ui::kv("shell", &plan.shell);
     ui::kv("user", {
-        let here = whoami::username();
         match host.user_write_needed() {
             Some(d) => d,
-            None => here,
+            None => crate::schema::current_username(),
         }
     });
     ui::kv(

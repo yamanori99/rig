@@ -57,7 +57,7 @@ pub fn execute(
     st.note_step("validate", format!("{}  ok", host.role));
     ui::ok("validate", "");
 
-    let local_user = whoami::username();
+    let local_user = crate::schema::current_username();
     if let Some(detail) = host.user_write_needed() {
         crate::schema::persist_user(host_toml, &local_user)?;
         st.note_file(host_toml);
@@ -144,7 +144,7 @@ pub fn execute(
         }
     }
 
-    let local_user = whoami::username();
+    let local_user = crate::schema::current_username();
     let sh = login_shell::apply_login_shell(shell, os, &local_user)?;
     st.note_step("login-shell", &sh.detail);
     if sh.ok {

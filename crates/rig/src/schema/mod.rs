@@ -102,9 +102,13 @@ pub fn unregistered_hint(root: &Path, hosts: &[(std::path::PathBuf, Host)]) -> S
 }
 
 pub fn current_hostname() -> String {
-    whoami::fallible::hostname()
+    whoami::hostname()
         .unwrap_or_else(|_| "unknown".into())
         .to_lowercase()
+}
+
+pub fn current_username() -> String {
+    whoami::username().unwrap_or_else(|_| "unknown".into())
 }
 
 fn short_host(name: &str) -> &str {
