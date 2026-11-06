@@ -74,9 +74,7 @@ pub fn apply_login_shell(shell: ShellKind, os: OsKind, user: &str) -> Result<Ste
 
 pub fn plan_detail(shell: ShellKind, os: OsKind) -> String {
     match (shell, os) {
-        (ShellKind::Bash, OsKind::Macos) => {
-            "chsh to Homebrew bash (not /bin/bash 3.2)".into()
-        }
+        (ShellKind::Bash, OsKind::Macos) => "chsh to Homebrew bash (not /bin/bash 3.2)".into(),
         (ShellKind::Zsh, OsKind::Macos) => "chsh to Homebrew zsh (not /bin/zsh)".into(),
         (ShellKind::Bash, OsKind::Linux) => "chsh to bash".into(),
         (ShellKind::Zsh, OsKind::Linux) => "chsh to zsh".into(),
@@ -158,7 +156,10 @@ fn current_login_shell(user: &str, os: OsKind) -> Option<PathBuf> {
                 return None;
             }
             let line = String::from_utf8_lossy(&out.stdout);
-            line.trim().rsplit(':').next().map(|s| PathBuf::from(s.trim()))
+            line.trim()
+                .rsplit(':')
+                .next()
+                .map(|s| PathBuf::from(s.trim()))
         }
     }
 }
@@ -217,19 +218,14 @@ fn chsh_to(path: &Path, user: &str) -> Result<std::result::Result<(), String>> {
 }
 
 fn chsh_output(cmd: &mut Command) -> Result<Option<String>> {
-    let out = cmd
-        .stdin(Stdio::null())
-        .output()
-        .map_err(RigError::Io)?;
+    let out = cmd.stdin(Stdio::null()).output().map_err(RigError::Io)?;
     if out.status.success() {
         return Ok(None);
     }
-    let msg = String::from_utf8_lossy(&out.stderr).trim().replace('\n', "; ");
-    Ok(Some(if msg.is_empty() {
-        "failed".into()
-    } else {
-        msg
-    }))
+    let msg = String::from_utf8_lossy(&out.stderr)
+        .trim()
+        .replace('\n', "; ");
+    Ok(Some(if msg.is_empty() { "failed".into() } else { msg }))
 }
 
 fn ensure_sudo_ticket() -> Result<bool> {
