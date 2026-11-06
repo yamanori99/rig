@@ -380,9 +380,7 @@ pub fn extras_not_recommended(
 }
 
 fn brew_installed_requested() -> Option<Vec<String>> {
-    if which("brew").is_none() {
-        return None;
-    }
+    which("brew")?;
     let mut formulae = brew_list_lines(&["list", "--formula", "--installed-on-request", "-1"]);
     if formulae.is_empty() {
         formulae = brew_list_lines(&["leaves", "-1"]);
@@ -416,9 +414,7 @@ fn brew_list_lines(args: &[&str]) -> Vec<String> {
 }
 
 fn apt_manual_installed() -> Option<Vec<String>> {
-    if which("apt-mark").is_none() {
-        return None;
-    }
+    which("apt-mark")?;
     let out = Command::new("apt-mark").args(["showmanual"]).output();
     let Ok(out) = out else {
         return None;

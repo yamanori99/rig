@@ -99,10 +99,7 @@ pub fn execute(root: &Path, yes: bool, packages: bool) -> Result<CleanReport> {
 }
 
 fn stay_awake_was_applied(st: &state::RigState) -> bool {
-    match st.steps.get("stay-awake") {
-        Some(d) if d != "skipped" => true,
-        _ => false,
-    }
+    matches!(st.steps.get("stay-awake"), Some(d) if d != "skipped")
 }
 
 fn clean_stay_awake(st: &state::RigState, preview: bool) -> Result<Option<String>> {

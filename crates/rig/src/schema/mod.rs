@@ -63,13 +63,13 @@ pub fn list_roles(root: &Path) -> Result<Vec<String>> {
     Ok(names)
 }
 
-pub fn detect_current_host<'a>(hosts: &'a [(std::path::PathBuf, Host)]) -> Option<&'a Host> {
+pub fn detect_current_host(hosts: &[(std::path::PathBuf, Host)]) -> Option<&Host> {
     detect_current_host_file(hosts).map(|(_, h)| h)
 }
 
-pub fn detect_current_host_file<'a>(
-    hosts: &'a [(std::path::PathBuf, Host)],
-) -> Option<(&'a std::path::Path, &'a Host)> {
+pub fn detect_current_host_file(
+    hosts: &[(std::path::PathBuf, Host)],
+) -> Option<(&std::path::Path, &Host)> {
     let ids = machine_ids();
     hosts.iter().find_map(|(path, h)| {
         let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
@@ -161,20 +161,6 @@ fn scutil_get(key: &str) -> Option<String> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn identity_matches_bonjour_suffix() {
-        let ids = vec!["m4-mini-tak.local".into(), "m4-mini-tak".into()];
-        assert!(identity_hit(&ids, "m4-mini-tak", "m4-mini-tak"));
-        assert!(identity_hit(&ids, "M4-Mini-Tak", "other"));
-        assert!(identity_hit(&ids, "nope", "m4-mini-tak"));
-        assert!(!identity_hit(&ids, "m4-mba-neva", "m4-mba-neva"));
-    }
-}
-
 pub fn detect_shell() -> ShellKind {
     let shell = std::env::var("SHELL").unwrap_or_default();
     if shell.ends_with("/bash") || shell == "bash" {
@@ -191,5 +177,19 @@ pub fn detect_os() -> OsKind {
         OsKind::Linux
     } else {
         OsKind::Macos
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identity_matches_bonjour_suffix() {
+        let ids = vec!["m4-mini-tak.local".into(), "m4-mini-tak".into()];
+        assert!(identity_hit(&ids, "m4-mini-tak", "m4-mini-tak"));
+        assert!(identity_hit(&ids, "M4-Mini-Tak", "other"));
+        assert!(identity_hit(&ids, "nope", "m4-mini-tak"));
+        assert!(!identity_hit(&ids, "m4-mba-neva", "m4-mba-neva"));
     }
 }

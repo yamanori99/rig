@@ -199,13 +199,13 @@ pub fn execute(
                 let report = gui::apply_gui(root, &plan.package_sets, os)?;
                 finish_step(&mut st, "gui", report)?;
             }
+            // Enabled steps are handled above; remaining matches are skips.
             "gui" | "cursor" | "tailscale" | "thunderbolt" | "remote-login" | "screen-sharing"
-            | "stay-awake" => {
-                // Enabled steps are handled above; remaining matches are skips.
-                if step.skip {
-                    st.note_step(&step.id, "skipped");
-                    ui::skip(&step.id, &step.detail);
-                }
+            | "stay-awake"
+                if step.skip =>
+            {
+                st.note_step(&step.id, "skipped");
+                ui::skip(&step.id, &step.detail);
             }
             _ => {}
         }

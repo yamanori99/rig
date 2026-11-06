@@ -48,7 +48,10 @@ pub fn detect(root: &std::path::Path) -> Result<()> {
     let short = hn.split('.').next().unwrap_or(&hn);
     ui::title("host detect", false);
     ui::kv("hostname", &hn);
-    ui::kv("hosts", format!("{}/", crate::paths::hosts_dir(root).display()));
+    ui::kv(
+        "hosts",
+        format!("{}/", crate::paths::hosts_dir(root).display()),
+    );
     match schema::detect_current_host(&hosts) {
         Some(h) => {
             ui::kv("matched", format!("{}  {}", h.name, h.role));
