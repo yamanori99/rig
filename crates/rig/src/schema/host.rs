@@ -208,11 +208,11 @@ impl Host {
     }
 
     pub fn resolved_user(&self) -> String {
-        self.user.clone().unwrap_or_else(whoami::username)
+        self.user.clone().unwrap_or_else(super::current_username)
     }
 
     pub fn user_write_needed(&self) -> Option<String> {
-        user_write_needed(self.user.as_deref(), &whoami::username())
+        user_write_needed(self.user.as_deref(), &super::current_username())
     }
 }
 
