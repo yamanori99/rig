@@ -2,7 +2,7 @@
 #
 # Role packages = common + compute. From packages/brew/common.Brewfile you
 # already get: bash zsh git openssh tmux fzf eza bat zoxide rsync tree btop
-# fastfetch tldr gitleaks thefuck watch
+# fastfetch tlrc gitleaks thefuck watch
 #
 # Intentional apps from ~/dotfiles Brewfile (not ffmpeg leaf deps like aom,
 # frei0r, …; not GUI casks; not toys like c2048/nsnake/vitetris).

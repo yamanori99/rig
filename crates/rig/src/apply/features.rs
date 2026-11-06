@@ -412,11 +412,13 @@ fn ensure_tailscaled_macos() -> Result<Option<String>> {
         let _ = sudo(&["launchctl", "unload", &path]);
         let _ = sudo(&["launchctl", "load", &path]);
         // Prefer system LaunchDaemon over brew user service.
-        let _ = Command::new("brew")
-            .args(["services", "stop", "tailscale"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
+        if let Some(brew) = super::packages::resolve_brew() {
+            let _ = Command::new(brew)
+                .args(["services", "stop", "tailscale"])
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status();
+        }
     }
 
     if !pgrep("tailscaled") {

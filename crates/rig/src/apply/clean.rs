@@ -224,8 +224,12 @@ fn uninstall_packages(
                 }
                 return Ok(msgs);
             }
+            let Some(brew) = super::packages::resolve_brew() else {
+                msgs.push("brew not found — skip uninstall".into());
+                return Ok(msgs);
+            };
             if !names.is_empty() {
-                let status = Command::new("brew")
+                let status = Command::new(&brew)
                     .arg("uninstall")
                     .args(&names)
                     .arg("--ignore-dependencies")
@@ -240,7 +244,7 @@ fn uninstall_packages(
                 });
             }
             if !casks.is_empty() {
-                let status = Command::new("brew")
+                let status = Command::new(&brew)
                     .args(["uninstall", "--cask"])
                     .args(&casks)
                     .stdout(Stdio::null())

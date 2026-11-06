@@ -13,13 +13,10 @@ your machines.
 Rust is not required. A release binary is enough. Extra files are
 written to disk on first run.
 
-## Setup
+Do this on every machine. One machine only: stop after Install.
+Several machines: continue through Commands (`host check` / `host keys`).
 
-Do this on every machine. One machine only: stop after apply.
-Several machines: continue through host files, reachability, then
-`host check` / `host keys`.
-
-### 1. Package manager
+## Requirements
 
 `rig apply` uses Homebrew (`brew`) on macOS and `apt` on
 Debian/Ubuntu. Rig does not install brew or apt.
@@ -27,13 +24,12 @@ Debian/Ubuntu. Rig does not install brew or apt.
 - macOS: install [Homebrew](https://brew.sh/) first
 - Debian/Ubuntu: `apt` is already there
 
-To skip packages later:
+On macOS, after installing Homebrew, load it in **this** shell before
+you run `rig` (Apple Silicon shown; Intel uses `/usr/local`):
 
 ```bash
-rig apply --yes --skip-packages
+eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
-
-### 2. Machine name
 
 `rig init` / `rig apply` match this machine by short hostname
 (`hostname -s`). That string becomes `name` in the host file.
@@ -43,7 +39,13 @@ On a Mac, set it in System Settings > General > Sharing
 (Computer Name / Local Hostname) **before** init. Use a short name
 without `.local` (`m4-mini-tak`, not `m4-mini-tak.local`).
 
-### 3. Install rig
+To skip packages later:
+
+```bash
+rig apply --yes --skip-packages
+```
+
+## Install
 
 You need `curl` and `tar`.
 
@@ -68,8 +70,6 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh \
 
 `RIG_VERSION=vX.Y.Z` works the same way.
 
-### 4. Init and apply
-
 Right after install, call the binary where it landed:
 
 ```bash
@@ -83,13 +83,14 @@ Init writes `~/.rig-hosts/<name>.toml` only when that file is missing.
 If you already have inventory there (copy or git), skip init.
 `File exists` means the file is already there. Do not run init again.
 
-### 5. Other machines
+## Commands
 
 Needed only if machines should SSH to each other.
 
 1. Put every host toml in `~/.rig-hosts/` on each machine
    (`[[ssh]]` goes on the toml of the machine you connect **to**).
-2. On each peer: same install, name, init (if empty), then `rig apply -y`.
+2. On each peer: same Requirements and Install (init if empty), then
+   `rig apply -y`.
 3. Make the machines reachable (same LAN / Thunderbolt / VPN, SSH
    listening). On macOS 12.1+, compute apply turns on Remote
    Management (`:5900`). Permit it once in System Settings >
@@ -111,6 +112,20 @@ After you add or edit peer toml files, apply again (or
 
 `rig apply` reads `~/.rig-hosts/`, not product `hosts/`. On a machine
 that signs in to GitHub, keep `~/.rig-hosts/` in git.
+
+```text
+init, i     Write ~/.rig-hosts/<name>.toml
+apply, a    Apply this host (preview; -y writes)
+            --undo -y   reverse apply
+status, s   Show this machine
+host, h     list | check | keys
+
+-v          version
+-r          product root  (cwd / RIG_ROOT / unpack)
+-h          help          (--help for more)
+```
+
+Most commands print the data path on stderr. `rig COMMAND --help` has the long text.
 
 ## Roles
 
@@ -144,22 +159,6 @@ $(rig root)/
   roles/
   packages/
 ```
-
-## Commands
-
-```text
-init, i     Write ~/.rig-hosts/<name>.toml
-apply, a    Apply this host (preview; -y writes)
-            --undo -y   reverse apply
-status, s   Show this machine
-host, h     list | check | keys
-
--v          version
--r          product root  (cwd / RIG_ROOT / unpack)
--h          help          (--help for more)
-```
-
-Most commands print the data path on stderr. `rig COMMAND --help` has the long text.
 
 ## Update
 
