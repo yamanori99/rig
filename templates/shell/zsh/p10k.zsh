@@ -1736,6 +1736,33 @@
     ' "$file"
   }
 
+  # TOML ルート (最初の [section] より前) の key = "value" を読む
+  # Julia Project.toml の name / version 用
+  function _p10k_toml_root_str() {
+    local file=$1 key=$2
+    [[ -f $file ]] || return 1
+    awk -v key="$key" '
+      $0 ~ /^\[/ { exit }
+      $1 == key && $2 == "=" {
+        val=$3
+        for (i=4; i<=NF; i++) val=val " " $i
+        gsub(/^["'\'']|["'\'']$/, "", val)
+        print val
+        exit
+      }
+    ' "$file"
+  }
+
+  # label に版があれば " v$version" を付ける (Pkg.status 寄せ)
+  function _p10k_with_version() {
+    local label=$1 version=$2
+    if [[ -n $version ]]; then
+      print -r -- "${label} v${version}"
+    else
+      print -r -- "$label"
+    fi
+  }
+
   # workspace 配列 (members / default-members) の先頭パスと要素数
   # 出力: 1行目=path  2行目=count (なければ何も出さない)
   function _p10k_cargo_workspace_members() {
@@ -1816,13 +1843,16 @@
   function prompt_project_info() {
     local content=""
     local color=141  # デフォルト色 (紫)
-    local name
+    local name version
 
-    # Julia (Project.toml)
+    # Julia (Project.toml) — name/version はルート
     if [[ -f Project.toml ]]; then
-      name=$(_p10k_toml_section_str Project.toml package name)
+      name=$(_p10k_toml_root_str Project.toml name)
+      [[ -n $name ]] || name=$(_p10k_toml_section_str Project.toml package name)
       [[ -n $name ]] || name=$(grep -m1 '^name' Project.toml 2>/dev/null | cut -d'"' -f2)
-      content="JL:${name:-${PWD:t}}"
+      version=$(_p10k_toml_root_str Project.toml version)
+      [[ -n $version ]] || version=$(_p10k_toml_section_str Project.toml package version)
+      content=$(_p10k_with_version "JL:${name:-${PWD:t}}" "$version")
       color=141
     # R (.Rproj or renv) — find は遅いので glob
     elif [[ -n *.Rproj(#qN[1]) ]]; then
@@ -1835,7 +1865,9 @@
     elif [[ -f pyproject.toml ]]; then
       name=$(_p10k_toml_section_str pyproject.toml project name)
       [[ -n $name ]] || name=$(_p10k_toml_section_str pyproject.toml tool.poetry name)
-      content="PY:${name:-${PWD:t}}"
+      version=$(_p10k_toml_section_str pyproject.toml project version)
+      [[ -n $version ]] || version=$(_p10k_toml_section_str pyproject.toml tool.poetry version)
+      content=$(_p10k_with_version "PY:${name:-${PWD:t}}" "$version")
       color=221
     elif [[ -f setup.py ]]; then
       content="PY:setup.py"
@@ -1849,7 +1881,8 @@
     # Rust (単一クレート / workspace)
     elif [[ -f Cargo.toml ]]; then
       name=$(_p10k_rust_project_label)
-      content="RS:${name:-cargo}"
+      version=$(_p10k_toml_section_str Cargo.toml package version)
+      content=$(_p10k_with_version "RS:${name:-cargo}" "$version")
       color=208
     # C/C++
     elif [[ -f CMakeLists.txt ]]; then

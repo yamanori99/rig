@@ -76,9 +76,9 @@
 [TIP:DOT] Prompt shows RUN time for commands >3 seconds
 [TIP:DOT] Prompt shows TIME (current time)
 [TIP:DOT] Prompt shows virtualenv when activated
-[TIP:DOT] Prompt shows Julia project when Project.toml exists
-[TIP:DOT] Prompt shows Python project when pyproject.toml exists
-[TIP:DOT] Prompt shows Rust project when Cargo.toml exists
+[TIP:DOT] Prompt shows Julia project+version (JL:Name v0.1.0) when Project.toml exists
+[TIP:DOT] Prompt shows Python project+version when pyproject.toml has them
+[TIP:DOT] Prompt shows Rust project+version when Cargo.toml has them
 [TIP:DOT] Prompt shows C/C++ project when Makefile/CMakeLists.txt exists
 [TIP:DOT] Prompt shows Java project when pom.xml/build.gradle exists
 [TIP:DOT] Prompt shows R project when .Rproj exists
