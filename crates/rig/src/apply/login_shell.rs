@@ -107,7 +107,7 @@ fn brew_formula_bin(formula: &str) -> Option<PathBuf> {
             return Some(p);
         }
     }
-    if let Some(brew) = which("brew") {
+    if let Some(brew) = super::packages::resolve_brew() {
         if let Ok(out) = Command::new(brew)
             .args(["--prefix", formula])
             .stdin(Stdio::null())

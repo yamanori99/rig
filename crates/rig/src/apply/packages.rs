@@ -26,12 +26,12 @@ pub fn apply_packages(root: &Path, sets: &[String], os: OsKind) -> Result<Packag
 }
 
 fn brew_bundle(root: &Path, sets: &[String]) -> Result<PackageReport> {
-    if which("brew").is_none() {
+    if resolve_brew().is_none() {
         return Ok(PackageReport {
             backend: "brew",
             sets: sets.to_vec(),
             ok: false,
-            detail: "brew not found on PATH".into(),
+            detail: "brew not found (PATH, /opt/homebrew/bin, /usr/local/bin)".into(),
         });
     }
 
@@ -79,8 +79,11 @@ pub(crate) fn run_brew(args: &[&str]) -> Result<bool> {
 }
 
 fn run_brew_stats(args: &[&str]) -> Result<(bool, usize)> {
+    let brew = resolve_brew().ok_or_else(|| {
+        RigError::Msg("brew not found (PATH, /opt/homebrew/bin, /usr/local/bin)".into())
+    })?;
     let already = Arc::new(std::sync::atomic::AtomicUsize::new(0));
-    let mut child = Command::new("brew")
+    let mut child = Command::new(&brew)
         .args(args)
         .env("HOMEBREW_COLOR", "1")
         .env("HOMEBREW_NO_ENV_HINTS", "1")
@@ -380,7 +383,7 @@ pub fn extras_not_recommended(
 }
 
 fn brew_installed_requested() -> Option<Vec<String>> {
-    which("brew")?;
+    resolve_brew()?;
     let mut formulae = brew_list_lines(&["list", "--formula", "--installed-on-request", "-1"]);
     if formulae.is_empty() {
         formulae = brew_list_lines(&["leaves", "-1"]);
@@ -399,7 +402,10 @@ pub(crate) fn brew_installed_casks() -> Vec<String> {
 }
 
 fn brew_list_lines(args: &[&str]) -> Vec<String> {
-    let out = Command::new("brew").args(args).output();
+    let Some(brew) = resolve_brew() else {
+        return Vec::new();
+    };
+    let out = Command::new(brew).args(args).output();
     let Ok(out) = out else {
         return Vec::new();
     };
@@ -458,6 +464,18 @@ pub fn print_extras(root: &Path, sets: &[String], os: OsKind) -> Result<()> {
         crate::ui::item(format!("… {} more", extra.len() - EXTRA_SHOW));
     }
     Ok(())
+}
+
+/// Resolve the Homebrew binary: PATH first, then common install prefixes.
+pub(crate) fn resolve_brew() -> Option<PathBuf> {
+    which("brew").or_else(|| {
+        [
+            PathBuf::from("/opt/homebrew/bin/brew"),
+            PathBuf::from("/usr/local/bin/brew"),
+        ]
+        .into_iter()
+        .find(|candidate| candidate.is_file())
+    })
 }
 
 fn which(bin: &str) -> Option<PathBuf> {

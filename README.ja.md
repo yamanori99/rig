@@ -12,12 +12,10 @@
 Rust は不要である。リリースのバイナリを入れれば足りる。付属ファイルは
 初回実行でディスクに書き出される。
 
-## セットアップ
+各マシンでこの順に進める。1 台だけなら Install まででよい。
+複数台なら Commands (`host check` / `host keys`) まで続ける。
 
-各マシンでこの順に進める。1 台だけなら apply まででよい。
-複数台なら、ホストファイル、接続、`host check` / `host keys` まで続ける。
-
-### 1. パッケージマネージャ
+## Requirements
 
 `rig apply` は、macOS では Homebrew (`brew`)、Debian/Ubuntu では
 `apt` でパッケージを入れる。brew と apt 自体は rig が入れない。
@@ -25,13 +23,12 @@ Rust は不要である。リリースのバイナリを入れれば足りる。
 - macOS: 先に [Homebrew](https://brew.sh/) を入れる
 - Debian/Ubuntu: `apt` は既にある
 
-パッケージを飛ばすなら:
+macOS では、Homebrew を入れたあと、`rig` を動かす**この**シェルで
+先に読み込む (Apple Silicon。Intel なら `/usr/local`):
 
 ```bash
-rig apply --yes --skip-packages
+eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
-
-### 2. マシン名
 
 `rig init` / `rig apply` は、短いホスト名 (`hostname -s`) でこの
 マシンを探す。その文字列がホストファイルの `name` になる。
@@ -41,7 +38,13 @@ Mac では init の前に、システム設定 > 一般 > 共有のコンピュ�
 ローカルホスト名を決める。`.local` は付けない (`m4-mini-tak` であり、
 `m4-mini-tak.local` ではない)。
 
-### 3. rig のインストール
+パッケージを飛ばすなら:
+
+```bash
+rig apply --yes --skip-packages
+```
+
+## Install
 
 `curl` と `tar` が必要である。
 
@@ -65,8 +68,6 @@ curl -fsSL https://raw.githubusercontent.com/yamanori99/rig/main/install.sh \
 
 `RIG_VERSION=vX.Y.Z` も同じである。
 
-### 4. init と apply
-
 インストール直後は、入った場所から実行する。
 
 ```bash
@@ -80,14 +81,14 @@ init は `~/.rig-hosts/<name>.toml` が無いときだけ書く。
 inventory が既にある (コピーや git) なら init は実行しない。
 `File exists` と出たら、そのパスにファイルがある。init はやり直さない。
 
-### 5. 他のマシン
+## Commands
 
 マシン同士で SSH するときだけ必要である。
 
 1. 各マシンの `~/.rig-hosts/` に、全ホストの toml を置く
    (`[[ssh]]` は接続先のマシンの toml に書く)。
-2. 相手側でも同じようにインストール、名前、init (空なら)、
-   `rig apply -y` を実行する。
+2. 相手側でも同じように Requirements と Install (空なら init)、
+   それから `rig apply -y` を実行する。
 3. 機器を接続できる状態にする (同じ LAN / Thunderbolt / VPN、SSH
    待ち受け)。macOS 12.1 以降、compute の apply はリモートマネジメント
    (`:5900`) を付ける。許可はシステム設定 > 一般 > 共有で
@@ -109,6 +110,21 @@ rig host check            # ssh ok を確認
 
 `rig apply` が見るのは `~/.rig-hosts/` である。製品の `hosts/` ではない。
 GitHub にログインする機材なら、`~/.rig-hosts/` を git で管理すると便利である。
+
+```text
+init, i     ~/.rig-hosts/<name>.toml を書く
+apply, a    このホストに載せる (preview。-y で実行)
+            --undo -y   apply を戻す
+status, s   このマシンを見る
+host, h     list | check | keys
+
+-v          バージョン
+-r          データの根  (cwd / RIG_ROOT / 展開)
+-h          help        (長い説明は --help)
+```
+
+多くのコマンドは、データのパスを stderr に出す。長い説明は
+`rig COMMAND --help` である。
 
 ## ロール
 
@@ -142,23 +158,6 @@ $(rig root)/
   roles/
   packages/
 ```
-
-## コマンド
-
-```text
-init, i     ~/.rig-hosts/<name>.toml を書く
-apply, a    このホストに載せる (preview。-y で実行)
-            --undo -y   apply を戻す
-status, s   このマシンを見る
-host, h     list | check | keys
-
--v          バージョン
--r          データの根  (cwd / RIG_ROOT / 展開)
--h          help        (長い説明は --help)
-```
-
-多くのコマンドは、データのパスを stderr に出す。長い説明は
-`rig COMMAND --help` である。
 
 ## 更新
 

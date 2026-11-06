@@ -22,7 +22,7 @@ pub fn apply_gui(root: &Path, package_sets: &[String], os: OsKind) -> Result<Ste
 }
 
 fn install_casks(root: &Path, package_sets: &[String]) -> Result<StepReport> {
-    if which("brew").is_none() {
+    if pkg::resolve_brew().is_none() {
         return Ok(StepReport {
             ok: true,
             detail: "brew not found — skip GUI casks".into(),
@@ -72,17 +72,5 @@ fn install_casks(root: &Path, package_sets: &[String]) -> Result<StepReport> {
             "{} cask(s): {already} already, {installed} installed",
             casks.len()
         ),
-    })
-}
-
-fn which(bin: &str) -> Option<std::path::PathBuf> {
-    std::env::var_os("PATH").and_then(|paths| {
-        for dir in std::env::split_paths(&paths) {
-            let p = dir.join(bin);
-            if p.is_file() {
-                return Some(p);
-            }
-        }
-        None
     })
 }
