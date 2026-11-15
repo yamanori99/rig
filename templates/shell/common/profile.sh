@@ -13,7 +13,7 @@ elif [ -x /usr/local/bin/brew ]; then
 fi
 
 # Shared PATH bits for login shells (bash/zsh thin profiles also source common.sh)
-export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.elan/bin:$HOME/bin:$PATH"
 
 # Homebrew rustup is keg-only
 if command -v brew >/dev/null 2>&1; then

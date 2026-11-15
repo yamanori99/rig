@@ -7,6 +7,7 @@
 #   C/C++  → cmake, ninja, llvm, gcc, libomp, pkgconf
 #            (also need Xcode CLT: xcode-select --install)
 #   Rust   → rustup   (then: rustup default stable)
+#   Lean   → elan-init (then: elan default stable)
 #   Java   → openjdk@17 + maven
 
 brew "gh"
@@ -31,6 +32,7 @@ brew "r"
 brew "openjdk@17"
 brew "maven"
 brew "rustup"
+brew "elan-init"
 brew "cmake"
 brew "ninja"
 brew "pkgconf"

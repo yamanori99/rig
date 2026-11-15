@@ -10,7 +10,8 @@
 # Build / languages
 # Julia → juliaup | Python → uv+pyenv | R → r
 # C/C++ → cmake/ninja/llvm/gcc/libomp (OpenMP: gcc-14 or clang -fopenmp)
-# Rust → rustup (rustup default stable) | Java → openjdk@17
+# Rust → rustup (rustup default stable) | Lean → elan-init (elan default stable)
+# Java → openjdk@17
 brew "cmake"
 brew "ninja"
 brew "pkgconf"
@@ -29,6 +30,7 @@ brew "r"
 brew "openjdk@17"
 brew "maven"
 brew "rustup"
+brew "elan-init"
 brew "zeromq"
 
 # Containers / remote / VCS

@@ -5,6 +5,9 @@
 # R      → r-base
 # C/C++  → build-essential + cmake/ninja/clang + libomp (OpenMP)
 # Rust   → rustup from https://rustup.rs/ (prefer over apt rustc)
+# Lean   → elan upstream installer (do NOT use apt elan; bookworm≈1.4.2, trixie≈3.1.1):
+#          curl -fsSL https://elan.lean-lang.org/elan-init.sh | sh -s -- -y --default-toolchain stable --no-modify-path
+#          then: elan default stable
 # Java   → openjdk-17-jdk + maven
 
 gh
@@ -23,4 +26,5 @@ uv
 r-base
 openjdk-17-jdk
 maven
-# rustup / juliaup: use upstream installers when not packaged
+# elan / rustup / juliaup: use upstream installers when not packaged
+# (elan: https://elan.lean-lang.org/elan-init.sh  rustup: https://rustup.rs/  juliaup: https://julialang.org/install/)

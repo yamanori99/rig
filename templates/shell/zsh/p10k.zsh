@@ -1716,7 +1716,7 @@
 
   #####################################[ project_info: 統合プロジェクト情報 ]#####################################
   # 各種プロジェクトを検出し、検出時のみ表示 (自動改行付き)
-  # 対応: Julia, R, Python, Rust, C/C++, Java
+  # 対応: Julia, R, Python, Rust, Lean, C/C++, Java
   #
   # TOML の [section] 内 key = "value" を読む (ホームブリュー awk 対応)
   function _p10k_toml_section_str() {
@@ -1760,6 +1760,54 @@
       print -r -- "${label} v${version}"
     else
       print -r -- "$label"
+    fi
+  }
+
+  # Lean: 親ディレクトリを stat のみで辿る (lean-toolchain / lakefile.*)
+  function _p10k_lean_project_root() {
+    local dir=$PWD
+    while [[ -n $dir && $dir != / ]]; do
+      if [[ -f $dir/lean-toolchain || -f $dir/lakefile.lean || -f $dir/lakefile.toml ]]; then
+        print -r -- "$dir"
+        return 0
+      fi
+      dir=${dir:h}
+    done
+    return 1
+  }
+
+  function _p10k_lean_nearest_toolchain() {
+    local dir=$PWD
+    while [[ -n $dir && $dir != / ]]; do
+      [[ -f $dir/lean-toolchain ]] || { dir=${dir:h}; continue }
+      print -r -- "$dir/lean-toolchain"
+      return 0
+    done
+    return 1
+  }
+
+  function _p10k_lean_toolchain_version() {
+    local file=$1 ver
+    [[ -f $file ]] || return 1
+    ver=$(<"$file")
+    ver=${ver%%$'\n'*}
+    ver=${ver#leanprover/lean4:}
+    ver=${ver#[[:space:]]}
+    ver=${ver%%[[:space:]]*}
+    [[ -n $ver ]] || return 1
+    print -r -- "$ver"
+  }
+
+  function _p10k_lean_prompt_label() {
+    local root=$1 name=$2 ver=$3
+    local label="LN:${name:-${root:t}}"
+    if [[ -z $ver ]]; then
+      print -r -- "$label"
+    elif [[ $ver == stable ]]; then
+      print -r -- "${label} stable"
+    else
+      ver=${ver#v}
+      print -r -- "${label} v${ver}"
     fi
   }
 
@@ -1884,6 +1932,17 @@
       version=$(_p10k_toml_section_str Cargo.toml package version)
       content=$(_p10k_with_version "RS:${name:-cargo}" "$version")
       color=208
+    # Lean (lake / lean-toolchain; 親ディレクトリまで stat のみ)
+    elif root=$(_p10k_lean_project_root); then
+      name=$(_p10k_toml_root_str "$root/lakefile.toml" name)
+      [[ -n $name ]] || name=${root:t}
+      if toolchain=$(_p10k_lean_nearest_toolchain); then
+        version=$(_p10k_lean_toolchain_version "$toolchain")
+      else
+        version=
+      fi
+      content=$(_p10k_lean_prompt_label "$root" "$name" "$version")
+      color=36
     # C/C++
     elif [[ -f CMakeLists.txt ]]; then
       content="C:cmake"
