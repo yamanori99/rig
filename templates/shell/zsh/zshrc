@@ -286,6 +286,15 @@ alias pytest='uv run pytest'
 alias pyinstall='uv pip install'
 alias pysync='uv sync'
 
+# Lean (lake / elan)
+alias lk='lake'
+alias lkbuild='lake build'
+alias lktest='lake test'
+alias lkup='lake update'
+alias lku='elan'
+alias lknew='lake new'
+alias lkinit='lake init'
+
 # Rust
 alias cr='cargo run'
 alias cb='cargo build'
@@ -515,7 +524,7 @@ if command -v brew &>/dev/null; then
   [ -n "$_rig_rustup" ] && [ -d "$_rig_rustup/bin" ] && export PATH="$_rig_rustup/bin:$PATH"
   unset _rig_rustup
 fi
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$HOME/.elan/bin:$PATH"
 
 # LLVM/Clang from Homebrew (optional; Xcode CLT remains the macOS SDK source)
 if command -v brew &>/dev/null; then
